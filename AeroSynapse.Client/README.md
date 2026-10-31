@@ -36,7 +36,7 @@ indicatorii și panourile pentru desktop și telefon, fără servicii externe de
 
 ## Organizare
 
-- core/http: ApiClient, API_BASE_URL și interceptor funcțional pentru normalizarea erorilor.
+- core/http: ApiClient, configurare runtime, DemoDataClient și interceptor funcțional pentru normalizarea erorilor.
 - shared: resource HTTP reutilizabil, loading/empty/error cu retry și pagina 404.
 - features/control-tower: modele, store și dashboard.
 - features/scenario: store, selecție și previzualizare de scenarii.
@@ -63,12 +63,35 @@ vizualizării. Exteriorul și nivelul detaliat se încarcă la cerere; un eșec 
 și păstrează modelul deja încărcat. Entitățile au identificatori stabili în manifest,
 fără a crea date în backend. Vezi [documentația modelelor 3D](../docs/airport-3d-assets.md).
 
-## HTTP și backend viitor
+## HTTP și configurare runtime
 
-ApiClient folosește HttpClient și API_BASE_URL (implicit șir gol). Un backend viitor
-poate suprascrie tokenul în app.config.ts și adapta endpointurile din store-uri.
-Nu sunt necesare credențiale pentru fixture-uri. Interceptorul păstrează statusul
-HTTP și produce mesaje utile fără a afișa detalii interne de la server.
+`public/runtime-config.js` este încărcat înaintea aplicației și configurează adresele
+publice ale serviciilor, implicit `apiBaseUrl: '/api'` și
+`intelligenceBaseUrl: '/intelligence'`. La găzduire, fișierul livrat poate fi înlocuit
+fără recompilarea aplicației; servește-l fără cache pentru a evita configurații vechi.
+Fișierul este public și nu trebuie să conțină parole sau chei API. Configurația implicită
+se aplică și dacă variabila globală nu este definită.
+
+ApiClient citește `API_BASE_URL` din această configurație. DemoDataClient citește
+separat fixture-urile din `/data`, astfel încât schimbarea adresei backendului nu mută
+datele demonstrative. Interceptorul păstrează statusul HTTP și produce mesaje utile
+fără a afișa detalii interne de la server.
+
+`npm start` activează `proxy.conf.json` pentru dezvoltare:
+
+| Cerere din browser | Destinație |
+| --- | --- |
+| `/api/health` | `http://127.0.0.1:5080/health` |
+| `/api/**` | `http://127.0.0.1:5080/api/**`, cu ruta păstrată pentru hărțile aeroporturilor |
+| `/intelligence/**` | `http://127.0.0.1:8000/**`, fără prefixul `/intelligence` |
+
+Proxy-ul Angular este doar pentru dezvoltare. Găzduirea de producție trebuie să
+configureze propriul proxy sau adrese compatibile cu politica CORS a serviciilor.
+
+Footer-ul verifică o dată, la încărcarea aplicației, endpoint-urile de sănătate API și
+FastAPI, cu timeout de 4 secunde. Afișează verificare, conectat sau indisponibil,
+independent pentru fiecare serviciu. Serviciul FastAPI nu este inclus încă în acest
+repository; absența lui sau a API-ului nu împiedică explorarea datelor demo.
 
 Resource-ul reutilizabil expune loading, ready, empty și error. Refresh/retry anulează
 cererea precedentă prin switchMap; distrugerea feature-ului anulează abonamentul.

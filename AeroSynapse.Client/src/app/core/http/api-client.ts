@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, InjectionToken } from '@angular/core';
-// Override this token when the API is available. Empty URL serves local fixtures.
+import { runtimeConfig } from './runtime-config';
+// Public runtime-config.js supplies endpoint URLs without rebuilding the application.
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
-  factory: () => '',
+  factory: () => runtimeConfig().apiBaseUrl,
 });
 @Injectable({ providedIn: 'root' })
 export class ApiClient {

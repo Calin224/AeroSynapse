@@ -38,6 +38,12 @@ filtre de resurse și selecție de zone. Exteriorul folosește două niveluri de
 Detalii despre organizare, fixture-uri și gestionarea resurselor 3D: [AeroSynapse.Client/README.md](AeroSynapse.Client/README.md).
 Dimensiuni, identificatori și proveniență: [modelele aeroportului](docs/airport-3d-assets.md).
 
+Adresele API se configurează prin `AeroSynapse.Client/public/runtime-config.js`,
+fără schimbarea datelor demo. Serverul Angular include un proxy local pentru API-ul
+de pe portul 5080 și pentru un viitor serviciu FastAPI pe portul 8000. Footer-ul
+afișează separat conectivitatea fiecărui serviciu; frontend-ul demo rămâne utilizabil
+și când acestea sunt indisponibile.
+
 ## Pornire backend
 
 Instalează SDK-ul .NET indicat în `global.json` (10.0.301 sau un feature band compatibil din .NET 10). Rulează din rădăcina repository-ului:

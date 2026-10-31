@@ -1,0 +1,16 @@
+{
+  "/api/health": {
+    "target": "http://127.0.0.1:5080",
+    "secure": false,
+    "pathRewrite": { "^/api/health$": "/health" }
+  },
+  "/api/**": {
+    "target": "http://127.0.0.1:5080",
+    "secure": false
+  },
+  "/intelligence/**": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "pathRewrite": { "^/intelligence": "" }
+  }
+}

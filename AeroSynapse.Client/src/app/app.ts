@@ -1,8 +1,9 @@
 import { Component, ElementRef, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ServiceStatus } from './shared/ui/service-status';
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, ServiceStatus],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

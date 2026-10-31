@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiClient } from '../../core/http/api-client';
+import { DemoDataClient } from '../../core/http/demo-data-client';
 import { createDataResource } from '../../shared/data-resource';
 import { TwinScene } from '../digital-twin/twin-model';
 export interface AirportSnapshot {
@@ -11,9 +11,9 @@ export interface AirportSnapshot {
 }
 @Injectable()
 export class ControlTowerStore {
-  private readonly api = inject(ApiClient);
+  private readonly api = inject(DemoDataClient);
   readonly resource = createDataResource(
-    () => this.api.get<AirportSnapshot | null>('data/control-tower.json'),
+    () => this.api.get<AirportSnapshot | null>('control-tower.json'),
     (data) => data === null,
   );
 }

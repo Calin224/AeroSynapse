@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiClient } from '../../core/http/api-client';
+import { DemoDataClient } from '../../core/http/demo-data-client';
 import { createDataResource } from '../../shared/data-resource';
 import { TwinScene } from '../digital-twin/twin-model';
 export interface AirportScenario {
@@ -11,9 +11,9 @@ export interface AirportScenario {
 }
 @Injectable()
 export class ScenarioStore {
-  private readonly api = inject(ApiClient);
+  private readonly api = inject(DemoDataClient);
   readonly resource = createDataResource(
-    () => this.api.get<AirportScenario[]>('data/scenarios.json'),
+    () => this.api.get<AirportScenario[]>('scenarios.json'),
     (data) => data.length === 0,
   );
 }
