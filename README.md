@@ -128,6 +128,20 @@ Importul verifică structura hărții și limitele contractului de navigație: 1
 
 O hartă poate fi proiectată în graf chiar dacă are zone inactive sau componente deconectate. Importul folosește `AirportMapValidator.Validate(map, validateNavigation: false)` pentru verificările structurale; salvarea hărților folosește în continuare validarea completă implicită. Graful unei hărți salvate este disponibil prin `GET /api/airports/{airportId}/navigation`, doar în `Development`. Exportul nu modifică harta; o hartă validă pentru stocare poate primi 422 la export dacă depășește limitele mai stricte ale navigației. Calculul traseelor va fi integrat separat.
 
+## Modele pentru simulare
+
+`AeroSynapse.Domain.DigitalTwin` include modelele importate din proiectul local pentru scene și simulări, fără dependențe externe:
+
+| Fișier | Modele |
+| --- | --- |
+| `Entities.cs` | Scene, terminale, checkpoint-uri, porți, zone de check-in, personal, rute de pasageri, rulări și evenimente. |
+| `RunResults.cs` | Metrici, snapshot-uri de rezultat, recomandări și candidați pentru comparație. |
+| `SimulationCommand.cs` | Datele comenzii de execuție: corelare, dispatch, reluarea încercărilor și erori. |
+| `Operations.cs` | Evenimente operaționale, cursor de secvență și progresul rulării. |
+| `SimulationBatches.cs` | Loturi, variante și replicări cu seed-uri, termene și starea anulării. |
+
+Acestea sunt definiții de domeniu; nu creează tabele și nu pornesc simulări. Persistența, validarea intrărilor operaționale și integrarea motorului vor fi adăugate separat. Tipurile `Terminal`, `Checkpoint` și `Gate` din `DigitalTwin` descriu scena operațională și sunt distincte de tipurile cu aceleași nume din `Domain.Airports`, folosite pentru hărți.
+
 ## Scop
 
 Backendul include modelele, validarea, stocarea hărților, conversia lor în grafuri de navigație și endpoint-urile HTTP pentru dezvoltare locală. Frontend-ul include Control Tower și scenarii cu date demonstrative locale; conectarea lui la API, autentificarea, simularea și serviciul Python vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.
