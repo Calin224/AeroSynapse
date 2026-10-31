@@ -30,13 +30,22 @@ la 21.1.10, iar @primeuix/themes la 2.0.3. Aceste versiuni evită configurarea
 unei chei de licență introdusă în generația PrimeNG 22.
 Documentația furnizorului: https://primeui.dev/licenses/community.
 
-Tema Aura este configurată prin providePrimeNG în app.config.ts; clasa app-dark
-din index.html activează paleta întunecată. CSS responsiv adaptează navigarea,
-indicatorii și panourile pentru desktop și telefon, fără servicii externe de fonturi.
+Tema Aura folosește presetul din `core/theme/app-theme.ts`, configurat prin
+providePrimeNG în app.config.ts; clasa app-dark din index.html activează paleta
+întunecată. Culorile, tipografia, spațierea, bordurile și suprafețele comune sunt
+definite în `src/styles.css`, în straturi CSS care permit ajustări locale în componente.
+Controalele native și PrimeNG folosesc aceeași paletă, fără servicii externe de fonturi.
+
+Navigarea este o componentă separată, `core/layout/app-sidebar.ts`: sidebar complet
+pe desktop, bară cu pictograme pe tabletă și navigare cu etichete pe telefon.
+Linkurile active folosesc `aria-current`, etichetele rămân accesibile pe tabletă,
+iar țintele de navigare pe telefon au minimum 44 px. Cardurile, listele de zboruri,
+selectorul de scenarii și stările loading/empty/error folosesc aceleași stiluri.
 
 ## Organizare
 
 - core/http: ApiClient, configurare runtime, DemoDataClient și interceptor funcțional pentru normalizarea erorilor.
+- core/layout și core/theme: navigarea responsivă și presetul vizual PrimeNG.
 - shared: resource HTTP reutilizabil, loading/empty/error cu retry și pagina 404.
 - features/control-tower: modele, store și dashboard.
 - features/scenario: store, selecție și previzualizare de scenarii.

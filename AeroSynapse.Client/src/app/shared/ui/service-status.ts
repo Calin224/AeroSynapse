@@ -29,17 +29,18 @@ const healthState = (request: Observable<HealthResponse>) =>
   styles: `
     .connection {
       display: inline-block;
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #dbb264;
-      margin-right: 4px;
+      background: var(--warning);
+      margin-right: 6px;
     }
     .connection.ok {
       background: var(--accent);
     }
     .separator {
-      padding: 0 8px;
+      padding: 0 10px;
+      color: var(--border-strong);
     }
   `,
 })

@@ -9,10 +9,12 @@ import { MessageModule } from 'primeng/message';
     @switch (status()) {
       @case ('loading') {
         <p>Se încarcă {{ label() }}…</p>
-        <p-skeleton height="7rem" /><p-skeleton width="65%" height="1rem" />
+        <div class="skeletons">
+          <p-skeleton height="7rem" /><p-skeleton width="65%" height="1rem" />
+        </div>
       }
       @case ('empty') {
-        <i class="pi pi-inbox" aria-hidden="true"></i>
+        <span class="state-icon"><i class="pi pi-inbox" aria-hidden="true"></i></span>
         <h2>Nu există date</h2>
         <p>{{ emptyMessage() }}</p>
         <p-button
@@ -23,7 +25,10 @@ import { MessageModule } from 'primeng/message';
         />
       }
       @case ('error') {
-        <p-message severity="error">{{ message() }}</p-message
+        <span class="state-icon error"
+          ><i class="pi pi-exclamation-triangle" aria-hidden="true"></i
+        ></span>
+        <p-message severity="error">{{ message() || 'Datele nu pot fi încărcate.' }}</p-message
         ><p-button label="Încearcă din nou" icon="pi pi-refresh" (onClick)="retry.emit()" />
       }
     }
@@ -31,19 +36,39 @@ import { MessageModule } from 'primeng/message';
   styles: `
     .state {
       display: grid;
-      gap: 18px;
-      padding: 32px;
+      justify-items: center;
+      gap: 14px;
+      padding: 40px 24px;
       min-height: 240px;
       align-content: center;
+      text-align: center;
+    }
+    .skeletons {
+      display: grid;
+      gap: 12px;
+      width: 100%;
     }
     p {
       margin: 0;
-      color: var(--muted);
+      max-width: 52ch;
+      color: var(--text-muted);
       font-size: 13px;
     }
-    i {
+    .state-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid var(--accent-line);
+      background: var(--accent-soft);
       color: var(--accent);
-      font-size: 24px;
+      font-size: 20px;
+    }
+    .state-icon.error {
+      border-color: var(--danger-line);
+      background: var(--danger-soft);
+      color: var(--danger);
     }
   `,
 })

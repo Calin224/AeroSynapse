@@ -16,6 +16,10 @@ AeroSynapse include un backend .NET 10 cu ASP.NET Core Minimal API, MediatR și 
 
 Clientul Angular standalone folosește PrimeNG/Aura și Three.js. Include navigare responsivă, dashboard-ul Control Tower, selecția scenariilor demonstrative, vizualizare 3D cu rotire și zoom, stări de încărcare/eroare și retry. Datele JSON sunt locale; frontend-ul poate fi explorat fără pornirea backendului.
 
+Tema comună armonizează controalele PrimeNG și native, cardurile și formularele.
+Navigarea se adaptează de la sidebar pe desktop la o bară compactă pe tabletă și
+linkuri cu etichete pe telefon.
+
 Din rădăcina repository-ului, cu Node.js 22.12+ sau Node.js 24 LTS și npm:
 
 ```sh

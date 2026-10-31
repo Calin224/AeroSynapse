@@ -1,35 +1,14 @@
 <a class="skip-link" href="#main-content" (click)="skipToContent($event)">Sari la conținut</a>
 <div class="app-shell">
-  <aside class="sidebar" aria-label="Navigare principală">
-    <a class="brand" routerLink="/control-tower"
-      ><span class="brand-mark"><i class="pi pi-send" aria-hidden="true"></i></span
-      ><span>AeroSynapse<small>DIGITAL TWIN PLATFORM</small></span></a
-    >
-    <span class="nav-label">WORKSPACE</span>
-    <nav>
-      <a routerLink="/control-tower" routerLinkActive="active" ariaCurrentWhenActive="page"
-        ><i class="pi pi-th-large" aria-hidden="true"></i> Control Tower</a
-      >
-      <a routerLink="/scenario" routerLinkActive="active" ariaCurrentWhenActive="page"
-        ><i class="pi pi-sliders-h" aria-hidden="true"></i> Scenario</a
-      >
-    </nav>
-    <div class="sidebar-footer">
-      <span class="status-dot"></span> Mediu demonstrativ<small
-        >Date locale · fără conexiune live</small
-      >
-    </div>
-  </aside>
+  <app-sidebar />
   <div class="workspace">
     <header class="topbar">
-      <span>OPERAȚIUNI AEROPORTUARE <span class="header-divider">/</span> Digital Twin</span
-      ><span class="environment"
-        ><span class="status-dot"></span> DEMO <i class="pi pi-globe" aria-hidden="true"></i
-      ></span>
+      <span class="crumbs"
+        >Operațiuni aeroportuare <span class="header-divider">/</span>
+        <strong>Digital Twin</strong></span
+      ><span class="environment"><span class="status-dot"></span>DEMO</span>
     </header>
     <main #mainContent id="main-content" tabindex="-1"><router-outlet /></main>
-    <footer class="workspace-footer">
-      <span>AeroSynapse AI</span><app-service-status />
-    </footer>
+    <footer class="workspace-footer"><span>AeroSynapse AI</span><app-service-status /></footer>
   </div>
 </div>

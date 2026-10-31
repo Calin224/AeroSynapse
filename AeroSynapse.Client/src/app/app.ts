@@ -1,9 +1,10 @@
 import { Component, ElementRef, viewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
+import { AppSidebar } from './core/layout/app-sidebar';
 import { ServiceStatus } from './shared/ui/service-status';
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, ServiceStatus],
+  imports: [AppSidebar, RouterOutlet, ServiceStatus],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
