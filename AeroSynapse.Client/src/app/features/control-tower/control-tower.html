@@ -1,0 +1,92 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">AIRPORT INTELLIGENCE</p>
+    <h1>Control Tower</h1>
+    <p class="page-description">O perspectivă comună asupra operațiunilor aeroportuare.</p>
+  </div>
+  <p-button
+    label="Actualizează"
+    icon="pi pi-refresh"
+    [outlined]="true"
+    [disabled]="resource.state().status === 'loading'"
+    (onClick)="resource.reload()"
+  />
+</div>
+@let state = resource.state();
+@if (state.status === 'ready') {
+  @if (state.data; as snapshot) {
+    <div class="metrics">
+      @for (metric of snapshot.metrics; track metric.label) {
+        <article class="panel metric">
+          <div class="metric-label">
+            {{ metric.label }}<i [class]="'pi ' + metric.icon" aria-hidden="true"></i>
+          </div>
+          <strong>{{ metric.value }}</strong
+          ><span>{{ metric.detail }}</span>
+        </article>
+      }
+    </div>
+    <div class="dashboard-grid">
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Digital Twin · {{ snapshot.airport }}</h2>
+            <p>{{ snapshot.code }} / Model aeroportuar demonstrativ</p>
+          </div>
+          <span class="pill">SCENĂ DEMO</span>
+        </div>
+        <app-digital-twin [scene]="snapshot.scene" />
+        <div class="twin-footer">
+          <span><span class="status-dot"></span> Vizualizare 3D interactivă</span
+          ><span>Trage pentru rotire · Scroll pentru zoom</span>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Mișcări aeronave</h2>
+            <p>Planificare ilustrativă · date locale</p>
+          </div>
+          <i class="pi pi-arrows-v" aria-hidden="true"></i>
+        </div>
+        @if (snapshot.flights.length) {
+          <div class="flight-list">
+            @for (flight of snapshot.flights; track flight.id) {
+              <article class="flight">
+                <div class="flight-icon"><i class="pi pi-send" aria-hidden="true"></i></div>
+                <div>
+                  <strong>{{ flight.id }}</strong
+                  ><span>{{ flight.destination }} · {{ flight.gate }}</span>
+                </div>
+                <span class="flight-status">{{ flight.status }}</span>
+              </article>
+            }
+          </div>
+        } @else {
+          <app-data-state
+            status="empty"
+            emptyMessage="Nu există mișcări de aeronave planificate."
+            (retry)="resource.reload()"
+          />
+        }
+        <div class="demo-note">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          <p>
+            Acest mediu demonstrează infrastructura Digital Twin. Datele nu reflectă operațiuni
+            reale.
+          </p>
+        </div>
+      </section>
+    </div>
+  }
+} @else {
+  <div class="panel">
+    <app-data-state
+      [status]="state.status"
+      label="operațiunile aeroportului"
+      [message]="state.status === 'error' ? state.message : ''"
+      emptyMessage="Nu există un aeroport configurat."
+      (retry)="resource.reload()"
+    />
+  </div>
+}

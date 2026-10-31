@@ -1,0 +1,21 @@
+{
+  "airport": "Craiova International", "code": "CRA / LRCV",
+  "metrics": [
+    { "label": "Aeronave în model", "value": "04", "detail": "Poziții demonstrative", "icon": "pi-send" },
+    { "label": "Porți disponibile", "value": "06", "detail": "Configurație ilustrativă", "icon": "pi-building" },
+    { "label": "Piste în model", "value": "01", "detail": "Orientare 09 / 27", "icon": "pi-arrows-h" },
+    { "label": "Sursă de date", "value": "Demo", "detail": "Snapshot local · fără telemetrie", "icon": "pi-database" }
+  ],
+  "flights": [
+    { "id": "AS 201", "destination": "București", "gate": "Poarta A1", "status": "La poartă" },
+    { "id": "AS 305", "destination": "Londra", "gate": "Poarta A2", "status": "Îmbarcare" },
+    { "id": "AS 412", "destination": "Roma", "gate": "Poarta A3", "status": "La poartă" },
+    { "id": "AS 508", "destination": "Milano", "gate": "Taxiway", "status": "Rulare" }
+  ],
+  "scene": { "aircraft": [
+    { "id": "AS 201", "x": -12, "z": 8, "heading": 0 },
+    { "id": "AS 305", "x": 0, "z": 8, "heading": 0 },
+    { "id": "AS 412", "x": 12, "z": 8, "heading": 0 },
+    { "id": "AS 508", "x": 24, "z": -7, "heading": 90 }
+  ] }
+}

@@ -1,6 +1,6 @@
 # AeroSynapse
 
-Backend AeroSynapse: .NET 10, ASP.NET Core Minimal API, MediatR și persistență SQLite pentru hărțile aeroporturilor.
+AeroSynapse include un backend .NET 10 cu ASP.NET Core Minimal API, MediatR și persistență SQLite pentru hărțile aeroporturilor, plus un frontend Angular cu Control Tower și previzualizări 3D demonstrative.
 
 ## Arhitectură
 
@@ -12,7 +12,28 @@ Backend AeroSynapse: .NET 10, ASP.NET Core Minimal API, MediatR și persistenț�
 | `backend/src/AeroSynapse.API` | Pornirea aplicației, compunerea dependențelor, health și endpoint-urile hărților pentru Development. Depinde de Application și Infrastructure. |
 | `backend/tests/AeroSynapse.Tests` | Teste xUnit pentru domeniu, API și persistența hărților, inclusiv restart, concurență, constrângeri SQL și restricționarea rutelor după mediu. |
 
-## Pornire
+## Frontend
+
+Clientul Angular standalone folosește PrimeNG/Aura și Three.js. Include navigare responsivă, dashboard-ul Control Tower, selecția scenariilor demonstrative, vizualizare 3D cu rotire și zoom, stări de încărcare/eroare și retry. Datele JSON sunt locale; frontend-ul poate fi explorat fără pornirea backendului.
+
+Din rădăcina repository-ului, cu Node.js 22.12+ sau Node.js 24 LTS și npm:
+
+```sh
+cd AeroSynapse.Client
+npm ci
+npm start
+```
+
+Deschide `http://localhost:4200/control-tower` sau `http://localhost:4200/scenario`. Pentru verificare, din directorul clientului:
+
+```sh
+npm test -- --watch=false
+npm run build
+```
+
+Detalii despre organizare, fixture-uri și gestionarea resurselor 3D: [AeroSynapse.Client/README.md](AeroSynapse.Client/README.md).
+
+## Pornire backend
 
 Instalează SDK-ul .NET indicat în `global.json` (10.0.301 sau un feature band compatibil din .NET 10). Rulează din rădăcina repository-ului:
 
@@ -77,4 +98,4 @@ Hărțile cu erori sunt respinse prin `AirportMapValidationException`, iar reuti
 
 ## Scop
 
-Backendul include modelele, validarea, stocarea hărților și endpoint-urile HTTP pentru dezvoltare locală. Autentificarea, simularea, serviciul Python și frontend-ul vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.
+Backendul include modelele, validarea, stocarea hărților și endpoint-urile HTTP pentru dezvoltare locală. Frontend-ul include Control Tower și scenarii cu date demonstrative locale; conectarea lui la API, autentificarea, simularea și serviciul Python vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.

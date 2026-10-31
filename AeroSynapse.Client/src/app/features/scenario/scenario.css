@@ -1,0 +1,56 @@
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.options {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+.scenario-option {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  text-align: left;
+  gap: 12px;
+  padding: 18px;
+  color: #dfe8f2;
+  background: #182430;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.scenario-option strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.scenario-option span {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.scenario-option i {
+  color: var(--accent);
+}
+.scenario-option.selected {
+  border-color: var(--accent);
+  background: #18302f;
+}
+.scenario-option:hover {
+  border-color: #6e9f98;
+}
+@media (max-width: 1050px) {
+  .scenario-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

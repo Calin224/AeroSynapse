@@ -1,0 +1,67 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">WHAT-IF EXPLORATION</p>
+    <h1>Scenario</h1>
+    <p class="page-description">Explorează configurații demonstrative în același model 3D.</p>
+  </div>
+  <p-button
+    label="Actualizează"
+    icon="pi pi-refresh"
+    [outlined]="true"
+    [disabled]="resource.state().status === 'loading'"
+    (onClick)="resource.reload()"
+  />
+</div>
+@let state = resource.state();
+@if (state.status === 'ready') {
+  <div class="scenario-grid">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Scenarii disponibile</h2>
+          <p>Selectează o configurație</p>
+        </div>
+        <span class="pill">DEMO</span>
+      </div>
+      <div class="options">
+        @for (item of state.data; track item.id) {
+          <button
+            class="scenario-option"
+            [class.selected]="selected()?.id === item.id"
+            [attr.aria-pressed]="selected()?.id === item.id"
+            (click)="selectedId.set(item.id)"
+          >
+            <i class="pi pi-sliders-h" aria-hidden="true"></i><strong>{{ item.name }}</strong
+            ><span>{{ item.description }}</span>
+          </button>
+        }
+      </div>
+    </section>
+    @if (selected(); as scenario) {
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>{{ scenario.name }}</h2>
+            <p>{{ scenario.impact }}</p>
+          </div>
+          <span class="pill">PREVIZUALIZARE</span>
+        </div>
+        <app-digital-twin [scene]="scenario.scene" />
+        <div class="twin-footer">
+          <span>Configurație ilustrativă, fără motor de simulare.</span
+          ><span>Trage pentru rotire · Scroll pentru zoom</span>
+        </div>
+      </section>
+    }
+  </div>
+} @else {
+  <div class="panel">
+    <app-data-state
+      [status]="state.status"
+      label="scenariile"
+      [message]="state.status === 'error' ? state.message : ''"
+      emptyMessage="Nu există scenarii disponibile pentru acest aeroport."
+      (retry)="resource.reload()"
+    />
+  </div>
+}

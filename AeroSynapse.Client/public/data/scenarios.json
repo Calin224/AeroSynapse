@@ -1,0 +1,8 @@
+[
+  { "id": "baseline", "name": "Operațiuni standard", "description": "Trei aeronave la terminal și o aeronavă pe taxiway.", "impact": "Configurația de referință · 4 aeronave", "scene": { "aircraft": [
+    { "id": "AS 201", "x": -12, "z": 8, "heading": 0 }, { "id": "AS 305", "x": 0, "z": 8, "heading": 0 }, { "id": "AS 412", "x": 12, "z": 8, "heading": 0 }, { "id": "AS 508", "x": 24, "z": -7, "heading": 90 }
+  ] } },
+  { "id": "peak", "name": "Trafic intens", "description": "Ocupare crescută a platformei și a căii de rulare.", "impact": "Configurație de trafic intens · 6 aeronave", "scene": { "aircraft": [
+    { "id": "AS 201", "x": -18, "z": 8, "heading": 0 }, { "id": "AS 305", "x": -6, "z": 8, "heading": 0 }, { "id": "AS 412", "x": 6, "z": 8, "heading": 0 }, { "id": "AS 508", "x": 18, "z": 8, "heading": 0 }, { "id": "AS 609", "x": 24, "z": -7, "heading": 90 }, { "id": "AS 710", "x": -24, "z": -22, "heading": 90 }
+  ] } }
+]

@@ -1,0 +1,126 @@
+@import 'primeicons/primeicons.css';
+:root {
+  color-scheme: dark;
+  --accent: #59d9ba;
+  --muted: #8e9caf;
+  --border: #25313e;
+  --panel: #131e29;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0c141e;
+  color: #e8eef5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+a {
+  color: var(--accent);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 550;
+  letter-spacing: -1px;
+}
+h2 {
+  font-size: 15px;
+  font-weight: 550;
+  margin: 0;
+}
+p {
+  line-height: 1.6;
+}
+.page-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.panel-heading {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.panel-body {
+  padding: 20px;
+}
+.pill {
+  border: 1px solid #2e4c49;
+  background: #183632;
+  color: var(--accent);
+  font-size: 9px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.twin-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 20px;
+  color: var(--muted);
+  font-size: 10px;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+}
+.p-button {
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .panel-heading {
+    padding: 16px;
+  }
+  .twin-footer {
+    flex-wrap: wrap;
+  }
+}
