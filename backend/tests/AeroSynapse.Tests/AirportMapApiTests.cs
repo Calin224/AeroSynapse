@@ -297,6 +297,38 @@ public sealed class AirportMapApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Navigation_preview_validates_unsaved_maps_without_persisting_them(bool invalid)
+    {
+        var map = MapFixture.Create();
+        if (invalid) map.Zones[0].Name = new string('x', 161);
+        using var response = await client.PostAsJsonAsync("/api/airports/navigation/preview", map, MapFixture.Json);
+        Assert.Equal(invalid ? HttpStatusCode.UnprocessableEntity : HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        if (invalid)
+            Assert.Contains(body.GetProperty("issues").EnumerateArray(), issue =>
+                issue.GetProperty("code").GetString() == "navigation_limit");
+        else
+        {
+            Assert.Equal("1.0", body.GetProperty("navigationVersion").GetString());
+            Assert.Equal(map.Zones.Count, body.GetProperty("graph").GetProperty("nodes").GetArrayLength());
+            Assert.Equal(map.Routes.Count, body.GetProperty("graph").GetProperty("edges").GetArrayLength());
+        }
+        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{\"unknown\":true}")]
+    public async Task Navigation_preview_rejects_malformed_json(string json)
+    {
+        using var body = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/api/airports/navigation/preview", body);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private sealed class AirportApiFactory(string path) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)

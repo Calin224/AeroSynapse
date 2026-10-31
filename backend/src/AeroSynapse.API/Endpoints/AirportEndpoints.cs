@@ -38,18 +38,15 @@ public static class AirportEndpoints
         }).WithTags("Airports").WithSummary("Validate and create a complete airport map")
             .Produces<AirportMapSnapshot>(201).Produces(422).Produces(409).Produces(400);
 
+        app.MapPost("/api/airports/navigation/preview", (AirportMap map) => ExportNavigation(map))
+            .WithTags("Airports").WithSummary("Preview navigation without saving an airport map")
+            .Produces<NavigationConfig>().Produces(400).Produces(422);
+
         app.MapGet("/api/airports/{airportId:guid}/navigation", async (Guid airportId, ISender sender, CancellationToken cancellationToken) =>
         {
             var snapshot = await sender.Send(new GetAirportSnapshotQuery(airportId), cancellationToken);
             if (snapshot is null) return Results.NotFound();
-            try
-            {
-                return Results.Ok(NavigationGraphImporter.FromMap(snapshot.Map));
-            }
-            catch (AirportMapValidationException exception)
-            {
-                return Results.UnprocessableEntity(new { message = "Map cannot be exported for navigation.", issues = exception.Issues });
-            }
+            return ExportNavigation(snapshot.Map);
         }).WithTags("Airports").WithSummary("Export an airport map as a navigation graph")
             .Produces<NavigationConfig>().Produces(404).Produces(422);
 
@@ -59,5 +56,17 @@ public static class AirportEndpoints
             return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
         }).WithTags("Airports").WithSummary("Get a versioned airport map snapshot")
             .Produces<AirportMapSnapshot>().Produces(404);
+    }
+
+    private static IResult ExportNavigation(AirportMap map)
+    {
+        try
+        {
+            return Results.Ok(NavigationGraphImporter.FromMap(map));
+        }
+        catch (AirportMapValidationException exception)
+        {
+            return Results.UnprocessableEntity(new { message = "Map cannot be exported for navigation.", issues = exception.Issues });
+        }
     }
 }
