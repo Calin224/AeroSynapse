@@ -1,0 +1,32 @@
+name: .NET-Python contracts
+on:
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'backend/**'
+      - 'intelligence/**'
+      - 'scripts/test-contracts.*'
+      - 'compose.contracts.yaml'
+      - 'global.json'
+      - '.github/workflows/contracts.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'contracts/**'
+      - 'backend/**'
+      - 'intelligence/**'
+      - 'scripts/test-contracts.*'
+      - 'compose.contracts.yaml'
+      - 'global.json'
+      - '.github/workflows/contracts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate schemas, DTOs and differential HTTP behavior
+        run: sh scripts/test-contracts.sh

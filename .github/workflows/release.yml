@@ -1,0 +1,37 @@
+name: Portable local release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24" }
+      - run: node --test scripts/local-release/lib.test.mjs
+      - run: node --test scripts/readiness/acceptance.test.mjs scripts/readiness/scope.test.mjs
+      - run: node scripts/test-critical.mjs
+      - run: node scripts/validate-demo.mjs
+      - run: node scripts/prepare-release.mjs --out artifacts/release
+      - run: node scripts/test-release.mjs --bundle artifacts/release
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-test-reports
+          path: |
+            artifacts/critical/
+            artifacts/release-smoke/
+            artifacts/readiness/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: local-demo-release
+          path: artifacts/release/
+          include-hidden-files: true
+          retention-days: 30

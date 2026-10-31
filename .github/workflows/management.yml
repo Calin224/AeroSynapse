@@ -1,0 +1,33 @@
+name: Scenario and run management
+on:
+  pull_request:
+    paths: ['backend/**', 'intelligence/**', 'contracts/**', 'AeroSynapse.Client/**', 'compose.management-tests.yaml', 'scripts/test-management.*', '.github/workflows/management.yml', 'AeroSynapse.sln']
+  push:
+    branches: [main]
+    paths: ['backend/**', 'intelligence/**', 'contracts/**', 'AeroSynapse.Client/**', 'compose.management-tests.yaml', 'scripts/test-management.*', '.github/workflows/management.yml', 'AeroSynapse.sln']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  management:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh scripts/test-management.sh
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: AeroSynapse.Client/package-lock.json
+      - run: npm ci
+        working-directory: AeroSynapse.Client
+      - run: npm test -- --watch=false
+        working-directory: AeroSynapse.Client
+      - run: npm run build
+        working-directory: AeroSynapse.Client

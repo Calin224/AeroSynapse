@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "reportSha256": "",
+  "presentationDeviceConfirmed": false,
+  "externalConnectionDisabled": false,
+  "budgetsAccepted": false,
+  "screenReaderChecked": false,
+  "projectorChecked": false,
+  "syntheticLimitationsExplained": false,
+  "teamAcknowledged": false,
+  "owners": { "presenter": "", "operator": "", "recovery": "" },
+  "browser": "",
+  "gpu": "",
+  "rehearsalAtUtc": null,
+  "timedDemoSeconds": null,
+  "pitchBudgetSeconds": 300,
+  "render": {
+    "mode": "pending",
+    "fps": null,
+    "sampleSeconds": null,
+    "reason": ""
+  }
+}

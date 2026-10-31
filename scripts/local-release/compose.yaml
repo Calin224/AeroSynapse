@@ -1,0 +1,90 @@
+# Portable runtime only: image IDs come from manifest.json, never a registry lookup.
+services:
+  postgres:
+    image: ${RELEASE_POSTGRES_IMAGE:?Use release.mjs}
+    pull_policy: never
+    environment:
+      POSTGRES_DB: aerosynapse
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Use release.mjs}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -U, aerosynapse, -d, aerosynapse]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  intelligence:
+    image: ${RELEASE_INTELLIGENCE_IMAGE:?Use release.mjs}
+    pull_policy: never
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: aerosynapse
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      QUEUE_ML_PREDICTOR: disabled
+      ROOT_PATH: /intelligence
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)",
+        ]
+      interval: 2s
+      timeout: 4s
+      retries: 30
+    logging: *logging
+  api:
+    image: ${RELEASE_API_IMAGE:?Use release.mjs}
+    pull_policy: never
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Postgres__Host: postgres
+      Postgres__Database: aerosynapse
+      Postgres__Username: aerosynapse
+      Postgres__Password: ${POSTGRES_PASSWORD}
+      Database__ApplyMigrations: "true"
+      Database__SeedSynthetic: "true"
+      Intelligence__BaseUrl: http://intelligence:8000
+      Simulation__WorkerEnabled: "true"
+      Identity__Demo__Enabled: "true"
+      Identity__Demo__ViewerPassword: ${IDENTITY_DEMO_VIEWER_PASSWORD}
+      Identity__Demo__OperatorPassword: ${IDENTITY_DEMO_OPERATOR_PASSWORD}
+      Identity__Demo__AdminPassword: ${IDENTITY_DEMO_ADMIN_PASSWORD}
+      Identity__KeyDirectory: /data/keys
+      CopilotTranscripts__KeyDirectory: /data/keys
+      Copilot__Enabled: "false"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft: Warning
+    volumes: [api-data:/data]
+    depends_on: { intelligence: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/health/ready]
+      interval: 2s
+      timeout: 4s
+      retries: 40
+    logging: *logging
+  frontend:
+    image: ${RELEASE_FRONTEND_IMAGE:?Use release.mjs}
+    pull_policy: never
+    environment: { API_UPSTREAM: "api:8080" }
+    depends_on: { api: { condition: service_healthy } }
+    ports: ["127.0.0.1:${DEMO_PORT:-8080}:80"]
+    networks: [default, ingress]
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1/health]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging: *logging
+volumes:
+  postgres-data:
+  api-data:
+networks:
+  default: { internal: true }
+  ingress: {}
