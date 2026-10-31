@@ -1,0 +1,746 @@
+<header class="heading">
+  <div>
+    <h1>Energie & capacitate</h1>
+  </div>
+</header>
+<aside class="scope">
+  <strong>Ipoteze demonstrative, fără măsurători aeroportuare.</strong> Consumul și costul sunt
+  estimări ale modelului. Nicio integrare cu contoare, clădiri sau infrastructură reală. Acest
+  raport nu reprezintă consumul real al aeroportului.
+</aside>
+
+<form class="panel config" (submit)="$event.preventDefault(); compare()">
+  <div class="heading">
+    <h2>Configurează comparația</h2>
+  </div>
+  <fieldset>
+    <legend>Populație și orizont comun</legend>
+    <div class="fields">
+      <label
+        >Seed sintetic<input
+          type="number"
+          name="seed"
+          [(ngModel)]="draft.seed"
+          (ngModelChange)="changed()"
+          min="0"
+          max="2147483647"
+          step="1"
+          required
+      /></label>
+      <label
+        >Orizont (minute)<input
+          type="number"
+          name="duration"
+          [(ngModel)]="draft.durationMinutes"
+          (ngModelChange)="changed()"
+          min="1"
+          max="180"
+          step="1"
+          required
+      /></label>
+      <label
+        >Populație (pasageri)<input
+          type="number"
+          name="population"
+          [(ngModel)]="draft.passengerCount"
+          (ngModelChange)="changed()"
+          min="0"
+          max="2000"
+          step="1"
+          required
+      /></label>
+      <label
+        >Sosiri (pasageri/min)<input
+          type="number"
+          name="arrivals"
+          [(ngModel)]="draft.arrivalRatePerMinute"
+          (ngModelChange)="changed()"
+          min="0"
+          max="1000"
+          step="0.1"
+          required
+      /></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Coeficienți și constrângere energetică</legend>
+    <div class="fields">
+      <label
+        >Putere checkpoint (kW/unitate)<input
+          type="number"
+          name="checkpointPower"
+          [(ngModel)]="draft.checkpointPowerKw"
+          (ngModelChange)="changed()"
+          min="0"
+          max="100"
+          step="0.05"
+          placeholder="Implicit: 1.5"
+        /><small>{{
+          draft.checkpointPowerKw === null
+            ? 'Lipsă → ipoteză implicită 1.5 kW/unitate'
+            : 'Ipoteză configurată · nu este măsurătoare'
+        }}</small></label
+      >
+      <label
+        >Tarif ipotetic (RON/kWh)<input
+          type="number"
+          name="tariff"
+          [(ngModel)]="draft.tariffRonPerKwh"
+          (ngModelChange)="changed()"
+          min="0"
+          max="10000"
+          step="0.01"
+          placeholder="Gol: cost indisponibil"
+        /><small>{{
+          draft.tariffRonPerKwh === null
+            ? 'Lipsă → cost indisponibil'
+            : 'Ipoteză configurată · nu este factură'
+        }}</small></label
+      >
+      <label
+        >Buget energetic simulat (kWh)<input
+          data-testid="energy-budget"
+          type="number"
+          name="budget"
+          [(ngModel)]="draft.energyBudgetKwh"
+          (ngModelChange)="changed()"
+          min="0"
+          max="1000000"
+          step="0.1"
+          placeholder="Gol: fără limită"
+        /><small>Constrângere strictă la optimizare; 0 kWh este un buget valid.</small></label
+      >
+      <label
+        >Sensibilitate OAT (±%)<input
+          type="number"
+          name="sensitivity"
+          [(ngModel)]="draft.sensitivityPercent"
+          (ngModelChange)="changed()"
+          min="1"
+          max="50"
+          step="1"
+          required
+        /><small>Un parametru la un moment dat, trafic fix.</small></label
+      >
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Capacitate checkpoint-uri</legend>
+
+    @for (checkpoint of draft.checkpoints; track checkpoint.id; let i = $index) {
+      <div class="editor">
+        <div class="fields">
+          <label
+            >Nume checkpoint {{ i + 1
+            }}<input
+              [name]="'cp-label-' + i"
+              [(ngModel)]="checkpoint.label"
+              (ngModelChange)="changed()"
+              maxlength="80"
+              required
+          /></label>
+          <label
+            >Serviciu CP {{ i + 1 }} (pasageri/min/unitate)<input
+              type="number"
+              [name]="'cp-rate-' + i"
+              [(ngModel)]="checkpoint.serviceRatePerMinute"
+              (ngModelChange)="changed()"
+              min="0.000001"
+              max="1000"
+              step="0.1"
+              required
+          /></label>
+          <label
+            >Referință CP {{ i + 1 }} (unități)<input
+              type="number"
+              [name]="'cp-base-' + i"
+              [(ngModel)]="checkpoint.baselineUnits"
+              (ngModelChange)="changed()"
+              min="0"
+              max="8"
+              step="1"
+              required
+          /></label>
+          <label
+            >Variantă CP {{ i + 1 }} (unități)<input
+              type="number"
+              [name]="'cp-candidate-' + i"
+              [(ngModel)]="checkpoint.candidateUnits"
+              (ngModelChange)="changed()"
+              min="0"
+              max="8"
+              step="1"
+              required
+          /></label>
+          <label
+            >Minim CP {{ i + 1 }} (unități)<input
+              type="number"
+              [name]="'cp-min-' + i"
+              [(ngModel)]="checkpoint.minUnits"
+              (ngModelChange)="changed()"
+              min="0"
+              max="8"
+              step="1"
+              required
+          /></label>
+          <label
+            >Maxim CP {{ i + 1 }} (unități)<input
+              type="number"
+              [name]="'cp-max-' + i"
+              [(ngModel)]="checkpoint.maxUnits"
+              (ngModelChange)="changed()"
+              min="0"
+              max="8"
+              step="1"
+              required
+          /></label>
+        </div>
+        <button
+          type="button"
+          class="quiet"
+          (click)="removeCheckpoint(i)"
+          [disabled]="draft.checkpoints.length <= 1"
+        >
+          Elimină checkpoint {{ i + 1 }}
+        </button>
+      </div>
+    }
+    <button
+      type="button"
+      class="quiet"
+      (click)="addCheckpoint()"
+      [disabled]="draft.checkpoints.length >= 6"
+    >
+      + Checkpoint (maximum 6)
+    </button>
+  </fieldset>
+  <fieldset>
+    <legend>Lumini și resurse sintetice</legend>
+
+    @for (load of draft.loads; track $index; let i = $index) {
+      <div class="editor">
+        <div class="fields">
+          <label
+            >Identificator consumator {{ i + 1
+            }}<input
+              [name]="'load-id-' + i"
+              [(ngModel)]="load.id"
+              (ngModelChange)="changed()"
+              maxlength="40"
+              pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,39}"
+              required
+          /></label>
+          <label
+            >Tip consumator {{ i + 1
+            }}<select [name]="'load-kind-' + i" [(ngModel)]="load.kind" (ngModelChange)="changed()">
+              <option value="lighting">Lumini sintetice</option>
+              <option value="resource">Resursă sintetică</option>
+            </select></label
+          >
+          <label
+            >Unități consumator {{ i + 1
+            }}<input
+              type="number"
+              [name]="'load-units-' + i"
+              [(ngModel)]="load.units"
+              (ngModelChange)="changed()"
+              min="0"
+              max="1000"
+              step="1"
+              required
+          /></label>
+          <label
+            >Putere consumator {{ i + 1 }} (kW/unitate)<input
+              type="number"
+              [name]="'load-power-' + i"
+              [(ngModel)]="load.powerKw"
+              (ngModelChange)="changed()"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="Gol: ipoteză implicită"
+            /><small>{{
+              load.powerKw === null
+                ? 'Lipsă → ipoteză implicită ' +
+                  (load.kind === 'lighting' ? '0.05' : '0.4') +
+                  ' kW/unitate'
+                : 'Ipoteză configurată · nu este măsurătoare'
+            }}</small></label
+          >
+          <label
+            >Referință consumator {{ i + 1 }} (minute active)<input
+              type="number"
+              [name]="'load-base-' + i"
+              [(ngModel)]="load.baselineActiveMinutes"
+              (ngModelChange)="changed()"
+              min="0"
+              [max]="draft.durationMinutes"
+              step="1"
+              required
+          /></label>
+          <label
+            >Variantă consumator {{ i + 1 }} (minute active)<input
+              type="number"
+              [name]="'load-candidate-' + i"
+              [(ngModel)]="load.candidateActiveMinutes"
+              (ngModelChange)="changed()"
+              min="0"
+              [max]="draft.durationMinutes"
+              step="1"
+              required
+          /></label>
+        </div>
+        <button type="button" class="quiet" (click)="removeLoad(i)">
+          Elimină consumator {{ i + 1 }}
+        </button>
+      </div>
+    }
+    <button type="button" class="quiet" (click)="addLoad()" [disabled]="draft.loads.length >= 16">
+      + Consumator (maximum 16)
+    </button>
+  </fieldset>
+  <div class="actions">
+    <button type="button" data-testid="energy-compare" (click)="compare()" [disabled]="comparing()">
+      {{ comparing() ? 'Se simulează…' : 'Compară energie + trafic' }}
+    </button>
+    <button
+      type="button"
+      class="quiet"
+      data-testid="energy-optimize"
+      (click)="optimize()"
+      [disabled]="optimizing() || gridCount() > 128 || gridCount() < 1"
+    >
+      {{ optimizing() ? 'Se evaluează grila…' : 'Optimizează în buget' }}
+    </button>
+    @if (comparing() || optimizing()) {
+      <button type="button" class="quiet" (click)="cancel()">Anulează cererile</button>
+    }
+  </div>
+  <p class="help">
+    Grilă: {{ gridCount() | number: '1.0-0' }} combinații; maximum 128 pentru enumerare. Volumul
+    total de simulare este verificat separat înainte de evaluare; grilele prea costisitoare sunt
+    respinse explicit.
+    @if (gridCount() > 128) {
+      <strong>Restrânge intervalele pentru optimizare. Comparația rămâne disponibilă.</strong>
+    }
+  </p>
+</form>
+@if (notice()) {
+  <p class="scope" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="error" role="alert">Comparație: {{ error() }}</p>
+}
+@if (optimizerError()) {
+  <p class="error" role="alert">Optimizare: {{ optimizerError() }}</p>
+}
+@if (!comparison() && !optimization() && !comparing() && !optimizing()) {
+  <p class="empty">Nicio simulare.</p>
+}
+
+@if (comparison(); as result) {
+  <section class="panel" data-testid="energy-results" aria-label="Comparație energie și trafic">
+    <div class="heading">
+      <h2>Comparație · energie + trafic</h2>
+      <span class="badge">ESTIMĂRI SINTETICE</span>
+    </div>
+    <p class="help">
+      Aceeași populație: {{ result.candidate.populationFingerprint }} · {{ result.engine }}. Timpii
+      de așteptare descriu pasagerii procesați; pasagerii neprocesați rămân vizibili separat.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <caption>
+          KPI simultani pe orizontul de
+          {{
+            result.request.durationMinutes
+          }}
+          minute
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Indicator</th>
+            <th scope="col">Referință</th>
+            <th scope="col">Variantă</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Alocare (unități)</th>
+            <td>{{ assignmentLabel(result.baseline) }}</td>
+            <td>{{ assignmentLabel(result.candidate) }}</td>
+          </tr>
+          <tr class="emphasis">
+            <th scope="row">Energie estimată (kWh)</th>
+            <td>{{ result.baseline.energy.totalKwh | number: '1.3-3' }}</td>
+            <td>{{ result.candidate.energy.totalKwh | number: '1.3-3' }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Cost estimat (RON)</th>
+            <td>
+              {{
+                result.baseline.energy.costRon === null
+                  ? 'Indisponibil · tarif lipsă'
+                  : (result.baseline.energy.costRon | number: '1.2-2')
+              }}
+            </td>
+            <td>
+              {{
+                result.candidate.energy.costRon === null
+                  ? 'Indisponibil · tarif lipsă'
+                  : (result.candidate.energy.costRon | number: '1.2-2')
+              }}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Buget simulat (kWh)</th>
+            <td>{{ budgetLabel(result.baseline) }}</td>
+            <td>{{ budgetLabel(result.candidate) }}</td>
+          </tr>
+          <tr class="emphasis">
+            <th scope="row">Procesați (pasageri)</th>
+            <td>{{ result.baseline.traffic.processedCount }}</td>
+            <td>{{ result.candidate.traffic.processedCount }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Throughput (pasageri/min)</th>
+            <td>{{ result.baseline.traffic.throughputPerMinute | number: '1.2-2' }}</td>
+            <td>{{ result.candidate.traffic.throughputPerMinute | number: '1.2-2' }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Așteptare medie, procesați (min)</th>
+            <td>
+              {{
+                result.baseline.traffic.meanWaitMinutes === null
+                  ? 'N/A · niciun procesat'
+                  : (result.baseline.traffic.meanWaitMinutes | number: '1.2-2')
+              }}
+            </td>
+            <td>
+              {{
+                result.candidate.traffic.meanWaitMinutes === null
+                  ? 'N/A · niciun procesat'
+                  : (result.candidate.traffic.meanWaitMinutes | number: '1.2-2')
+              }}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Așteptare P95, procesați (min)</th>
+            <td>
+              {{
+                result.baseline.traffic.p95WaitMinutes === null
+                  ? 'N/A · niciun procesat'
+                  : (result.baseline.traffic.p95WaitMinutes | number: '1.2-2')
+              }}
+            </td>
+            <td>
+              {{
+                result.candidate.traffic.p95WaitMinutes === null
+                  ? 'N/A · niciun procesat'
+                  : (result.candidate.traffic.p95WaitMinutes | number: '1.2-2')
+              }}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Sosiți / nesosiți (pasageri)</th>
+            <td>
+              {{ result.baseline.traffic.arrivedCount }} /
+              {{ result.baseline.traffic.notArrivedCount }}
+            </td>
+            <td>
+              {{ result.candidate.traffic.arrivedCount }} /
+              {{ result.candidate.traffic.notArrivedCount }}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Neprocesați / în coadă / în serviciu</th>
+            <td>
+              {{ result.baseline.traffic.unprocessedCount }} /
+              {{ result.baseline.traffic.queuedCount }} /
+              {{ result.baseline.traffic.processingCount }}
+            </td>
+            <td>
+              {{ result.candidate.traffic.unprocessedCount }} /
+              {{ result.candidate.traffic.queuedCount }} /
+              {{ result.candidate.traffic.processingCount }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="help">
+      Δ variantă − referință:
+      {{ result.candidate.energy.totalKwh - result.baseline.energy.totalKwh | number: '1.3-3' }}
+      kWh;
+      {{ result.candidate.traffic.processedCount - result.baseline.traffic.processedCount }}
+      pasageri procesați.
+    </p>
+  </section>
+  <section class="panel" aria-label="Formule, coeficienți și ipoteze">
+    <div class="heading">
+      <h2>Formule și proveniență</h2>
+      <span class="badge">IPOTEZE · fără măsurători</span>
+    </div>
+    <div class="body">
+      <p class="help">
+        Formule furnizate de motor: {{ result.formulas.energy }} · {{ result.formulas.cost }} ·
+        {{ result.formulas.sensitivity }}
+      </p>
+      <ul>
+        @for (assumption of result.assumptions; track $index) {
+          <li>{{ assumption }}</li>
+        }
+      </ul>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <caption>
+          Coeficienți efectivi și sursa lor
+        </caption>
+        <thead>
+          <tr>
+            <th>Coeficient</th>
+            <th>Putere (kW/unitate)</th>
+            <th>Proveniență</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (coefficient of result.effectiveCoefficients; track coefficient.id) {
+            <tr>
+              <th>{{ coefficient.id }}</th>
+              <td>{{ coefficient.powerKw | number: '1.2-4' }}</td>
+              <td>
+                <span class="badge">{{ sourceLabels[coefficient.source] }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @for (scenario of [result.baseline, result.candidate]; track scenario.variant) {
+      <div class="table-scroll">
+        <table>
+          <caption>
+            {{
+              scenarioName(scenario.variant)
+            }}
+            · calcul pe consumator
+          </caption>
+          <thead>
+            <tr>
+              <th>Consumator</th>
+              <th>Calcul (unități × kW/unitate × min / 60)</th>
+              <th>kWh estimate</th>
+              <th>Sursă</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of scenario.energy.items; track item.id) {
+              <tr>
+                <th>
+                  {{ item.kind === 'checkpoint' ? checkpointName(item.id) : item.id }}
+                  <small>{{ kindLabels[item.kind] }}</small>
+                </th>
+                <td>
+                  {{ item.units }} × {{ item.powerKw | number: '1.2-4' }} ×
+                  {{ item.activeMinutes | number: '1.0-2' }} / 60
+                </td>
+                <td>{{ item.kwh | number: '1.3-5' }}</td>
+                <td>{{ sourceLabels[item.source] }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+  <section class="panel" aria-label="Sensibilitatea parametrilor">
+    <div class="heading">
+      <h2>Sensibilitate OAT · ±{{ result.request.sensitivityPercent }}%</h2>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <caption>
+          Scăzut / bază / crescut
+        </caption>
+        <thead>
+          <tr>
+            <th>Parametru</th>
+            <th>Valori (unitatea parametrului)</th>
+            <th>Energie estimată (kWh)</th>
+            <th>Cost estimat (RON)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of result.sensitivity; track row.coefficientId) {
+            <tr>
+              <th>
+                {{ row.coefficientId
+                }}<small>{{ row.parameter === 'powerKw' ? 'kW/unitate' : 'RON/kWh' }}</small>
+              </th>
+              <td>
+                {{ row.lowerValue | number: '1.2-4' }} / {{ row.baseValue | number: '1.2-4' }} /
+                {{ row.upperValue | number: '1.2-4' }}
+              </td>
+              <td>
+                {{ row.lowerTotalKwh | number: '1.3-3' }} /
+                {{ row.baseTotalKwh | number: '1.3-3' }} / {{ row.upperTotalKwh | number: '1.3-3' }}
+              </td>
+              <td>
+                @if (row.baseCostRon === null) {
+                  Indisponibil · tarif lipsă
+                } @else {
+                  {{ row.lowerCostRon | number: '1.2-2' }} /
+                  {{ row.baseCostRon | number: '1.2-2' }} / {{ row.upperCostRon | number: '1.2-2' }}
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}
+
+@if (optimization(); as result) {
+  <section
+    class="panel"
+    data-testid="energy-optimization"
+    aria-label="Optimizare sub buget energetic"
+  >
+    <div class="heading">
+      <h2>Optimizare în bugetul simulat</h2>
+      <span class="badge">{{
+        result.status === 'optimal' ? 'OPTIM ÎN GRILA DEFINITĂ' : 'NEFEZABIL ÎN GRILĂ'
+      }}</span>
+    </div>
+    <p class="help">
+      {{ result.evaluatedCount }} configurații evaluate din {{ result.configurationCount }};
+      {{ result.feasibleCount }} fezabile. {{ result.method }}. Buget:
+      {{
+        result.request.energyBudgetKwh === null
+          ? 'fără limită'
+          : (result.request.energyBudgetKwh | number: '1.3-3') + ' kWh'
+      }}.
+    </p>
+
+    @if (result.best; as best) {
+      <div class="scope">
+        <strong>{{ assignmentLabel(best) }}</strong> ·
+        {{ best.energy.totalKwh | number: '1.3-3' }} kWh estimate ·
+        {{ best.traffic.processedCount }} procesați ·
+        {{ best.traffic.unprocessedCount }} neprocesați · așteptare medie
+        {{
+          best.traffic.meanWaitMinutes === null
+            ? 'N/A · niciun procesat'
+            : (best.traffic.meanWaitMinutes | number: '1.2-2') + ' min'
+        }}
+        · cost
+        {{
+          best.energy.costRon === null
+            ? 'indisponibil · tarif lipsă'
+            : (best.energy.costRon | number: '1.2-2') + ' RON'
+        }}
+      </div>
+    } @else {
+      <p class="scope">Nicio configurație nu respectă bugetul energetic.</p>
+    }
+    <div class="body">
+      <ul>
+        @for (message of result.diagnostics; track $index) {
+          <li>{{ message }}</li>
+        }
+      </ul>
+    </div>
+    @if (!comparison()) {
+      <div class="body">
+        <h3>Formule și proveniență · ipoteze sintetice</h3>
+        <p>
+          <code>{{ result.formulas.energy }}</code>
+        </p>
+        <p>
+          <code>{{ result.formulas.cost }}</code>
+        </p>
+        <p>
+          <code>{{ result.formulas.sensitivity }}</code>
+        </p>
+        <ul>
+          @for (assumption of result.assumptions; track $index) {
+            <li>{{ assumption }}</li>
+          }
+        </ul>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <caption>
+            Coeficienți efectivi · disponibili inclusiv fără configurație fezabilă
+          </caption>
+          <thead>
+            <tr>
+              <th>Coeficient</th>
+              <th>Putere (kW/unitate)</th>
+              <th>Proveniență</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (coefficient of result.effectiveCoefficients; track coefficient.id) {
+              <tr>
+                <th>{{ coefficient.id }}</th>
+                <td>{{ coefficient.powerKw | number: '1.2-4' }}</td>
+                <td>
+                  <span class="badge">{{ sourceLabels[coefficient.source] }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (result.candidates.length) {
+      <div class="table-scroll">
+        <table>
+          <caption>
+            Compromisuri între energie și trafic · configurații evaluate
+          </caption>
+          <thead>
+            <tr>
+              <th>Alocare</th>
+              <th>Energie (kWh)</th>
+              <th>Cost (RON)</th>
+              <th>Procesați</th>
+              <th>Neprocesați</th>
+              <th>Așteptare medie (min)</th>
+              <th>Buget</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (candidate of result.candidates; track $index) {
+              <tr>
+                <th>{{ assignmentLabel(candidate) }}</th>
+                <td>{{ candidate.energy.totalKwh | number: '1.3-3' }}</td>
+                <td>
+                  {{
+                    candidate.energy.costRon === null
+                      ? 'N/A · tarif lipsă'
+                      : (candidate.energy.costRon | number: '1.2-2')
+                  }}
+                </td>
+                <td>{{ candidate.traffic.processedCount }}</td>
+                <td>{{ candidate.traffic.unprocessedCount }}</td>
+                <td>
+                  {{
+                    candidate.traffic.meanWaitMinutes === null
+                      ? 'N/A · niciun procesat'
+                      : (candidate.traffic.meanWaitMinutes | number: '1.2-2')
+                  }}
+                </td>
+                <td>{{ budgetLabel(candidate) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

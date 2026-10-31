@@ -1,5 +1,17 @@
 import { Routes } from '@angular/router';
+import { runtimeConfig } from './core/http/runtime-config';
+import { workspaceGuard } from './core/auth/auth-guard';
 export const routes: Routes = [
+  {
+    path: 'login',
+    title: 'Autentificare | AeroSynapse',
+    loadComponent: () => import('./features/identity/login').then((m) => m.Login),
+  },
+  {
+    path: 'access-denied',
+    title: 'Acces restricționat | AeroSynapse',
+    loadComponent: () => import('./features/identity/access-denied').then((m) => m.AccessDenied),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'control-tower' },
   {
     path: 'control-tower',
@@ -16,6 +28,23 @@ export const routes: Routes = [
     path: 'operations',
     title: 'Scenarii și rulări | AeroSynapse',
     loadComponent: () => import('./features/operations/operations').then((m) => m.Operations),
+  },
+  {
+    path: 'airside',
+    canActivate: [workspaceGuard],
+    data: { write: true },
+    title: 'Airside handling | AeroSynapse',
+    canMatch: [() => runtimeConfig().airsideTwinEnabled === true],
+    loadComponent: () => import('./features/airside/airside-twin').then((m) => m.AirsideTwin),
+  },
+  {
+    path: 'energy',
+    canActivate: [workspaceGuard],
+    data: { write: true },
+    title: 'Energie și eficiență | AeroSynapse',
+    canMatch: [() => runtimeConfig().energyAnalyticsEnabled === true],
+    loadComponent: () =>
+      import('./features/energy/energy-analytics').then((m) => m.EnergyAnalytics),
   },
   {
     path: '**',

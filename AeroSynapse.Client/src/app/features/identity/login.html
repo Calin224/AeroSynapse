@@ -1,0 +1,106 @@
+<section class="welcome" aria-label="Descoperă AeroSynapse">
+  <h2>AeroSynapse</h2>
+
+  <div class="terminal-illustration">
+    <svg viewBox="0 0 560 300" role="img" aria-label="Terminal aeroportuar">
+      <defs>
+        <pattern id="terminal-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <path d="M24 0H0V24" fill="none" stroke="#b7cfba" stroke-opacity=".13" />
+        </pattern>
+      </defs>
+      <rect width="560" height="300" fill="url(#terminal-grid)" />
+      <g class="building" transform="translate(58 20)">
+        <path d="M50 138 245 40 426 130 230 230Z" fill="#254c40" stroke="#88a992" />
+        <path d="M50 138v25l180 91v-24Z" fill="#193d33" stroke="#6b917a" />
+        <path d="m230 230 196-100v25L230 254Z" fill="#102f26" stroke="#6b917a" />
+        <path d="m82 137 164-82 147 74-164 83Z" fill="#153b30" stroke="#527d63" />
+        <path
+          d="m164 96 149 75M123 116l148 75M205 75l149 75M130 161l166-82M180 187l165-82"
+          fill="none"
+          stroke="#709c7c"
+          stroke-opacity=".55"
+        />
+        <g fill="#53795f" stroke="#a2bd96">
+          <path d="m102 112-30-16 18-9 30 16Z" />
+          <path d="m163 81-30-16 18-9 30 16Z" />
+          <path d="m224 50-30-16 18-9 30 16Z" />
+        </g>
+        <g fill="#bdcf8f">
+          <circle cx="122" cy="146" r="4" />
+          <circle cx="172" cy="171" r="4" />
+          <circle cx="224" cy="195" r="4" />
+        </g>
+        <path
+          class="flow-path"
+          d="m224 195-52-24 80-41-91-45"
+          fill="none"
+          stroke="#daeea0"
+          stroke-width="2.5"
+          stroke-dasharray="5 6"
+        />
+        <circle class="focus-ring" cx="252" cy="130" r="14" fill="#d6eba520" stroke="#d6eba5" />
+      </g>
+    </svg>
+  </div>
+</section>
+<section class="login-card" aria-labelledby="login-heading">
+  <span class="login-symbol"><i class="pi pi-arrow-up-right" aria-hidden="true"></i></span>
+  <h1 id="login-heading">Autentificare</h1>
+  @if (expired) {
+    <p class="notice" role="status">
+      Sesiunea a expirat sau accesul a fost revocat. Autentifică-te din nou.
+    </p>
+  }
+  <form (ngSubmit)="submit()" [attr.aria-busy]="busy()">
+    <label for="username">Utilizator</label>
+    <input
+      #usernameField
+      id="username"
+      name="username"
+      autocomplete="username"
+      required
+      maxlength="256"
+      [(ngModel)]="username"
+      [disabled]="busy()"
+    />
+    <label for="password">Parolă</label>
+    <div class="password-field">
+      <input
+        #passwordField
+        id="password"
+        name="password"
+        [type]="passwordVisible() ? 'text' : 'password'"
+        autocomplete="current-password"
+        required
+        maxlength="1024"
+        [(ngModel)]="password"
+        [disabled]="busy()"
+        (keydown)="checkCapsLock($event)"
+        (keyup)="checkCapsLock($event)"
+        (blur)="capsLock.set(false)"
+      />
+      <button
+        type="button"
+        class="password-toggle"
+        [attr.aria-label]="passwordVisible() ? 'Ascunde parola' : 'Arată parola'"
+        [attr.aria-pressed]="passwordVisible()"
+        [disabled]="busy()"
+        (click)="passwordVisible.set(!passwordVisible())"
+      >
+        <i [class]="passwordVisible() ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+      </button>
+    </div>
+    @if (capsLock()) {
+      <p class="caps-hint" role="status">Caps Lock este activ.</p>
+    }
+    @if (error()) {
+      <p class="notice" role="alert">{{ error() }}</p>
+    }
+    <!-- Enabled whenever idle: a disabled default button makes the browser ignore Enter, which
+         happens right after a paste or an autofill, before the view re-renders. -->
+    <button class="login-submit" type="submit" [disabled]="busy()">
+      <span>{{ busy() ? 'Se verifică…' : 'Intră în panou' }}</span
+      ><i [class]="busy() ? 'pi pi-spin pi-spinner' : 'pi pi-arrow-right'" aria-hidden="true"></i>
+    </button>
+  </form>
+</section>

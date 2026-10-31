@@ -1,0 +1,662 @@
+<header class="heading">
+  <div>
+    <h1>Airside Digital Twin</h1>
+  </div>
+</header>
+
+<form class="panel config" (ngSubmit)="run()" #editor="ngForm">
+  <fieldset>
+    <legend>Scenariu airside</legend>
+    <div class="fields">
+      <label
+        >Seed sintetic<input
+          name="seed"
+          type="number"
+          min="0"
+          max="2147483647"
+          step="1"
+          [(ngModel)]="draft.seed"
+          (ngModelChange)="changed()"
+          required
+      /></label>
+      <label
+        >Orizont (min)<input
+          name="horizon"
+          type="number"
+          min="1"
+          max="240"
+          step="1"
+          [(ngModel)]="draft.durationMinutes"
+          (ngModelChange)="changed()"
+          required
+      /></label>
+      <label
+        >Variație serviciu (0–0,5)<input
+          name="variation"
+          type="number"
+          min="0"
+          max="0.5"
+          step="0.05"
+          [(ngModel)]="draft.serviceVariation"
+          (ngModelChange)="changed()"
+          required
+      /></label>
+      <label
+        >Buget optimizer (sec)<input
+          name="time-limit"
+          type="number"
+          min="1"
+          max="10"
+          step="1"
+          [(ngModel)]="draft.timeLimitSeconds"
+          (ngModelChange)="changed()"
+          required
+      /></label>
+    </div>
+  </fieldset>
+
+  <details open>
+    <summary>Standuri și turnaround-uri</summary>
+    <div class="cards">
+      @for (stand of draft.stands; track stand.id) {
+        <fieldset class="card">
+          <legend>{{ stand.id }}</legend>
+          <div class="fields two">
+            <label
+              >Disponibil de la (min)<input
+                [name]="stand.id + '-start'"
+                type="number"
+                min="0"
+                max="239"
+                step="1"
+                [(ngModel)]="stand.available[0].startMinute"
+                (ngModelChange)="changed()"
+                required
+            /></label>
+            <label
+              >Până la (min)<input
+                [name]="stand.id + '-end'"
+                type="number"
+                min="1"
+                max="240"
+                step="1"
+                [(ngModel)]="stand.available[0].endMinute"
+                (ngModelChange)="changed()"
+                required
+            /></label>
+          </div>
+          <button
+            type="button"
+            (click)="removeStand(stand.id)"
+            [disabled]="draft.stands.length <= 1 || standInUse(stand.id)"
+          >
+            Elimină {{ stand.id }}</button
+          ><small>Mută turnaround-urile înainte de eliminare.</small>
+        </fieldset>
+      }
+    </div>
+    <button type="button" (click)="addStand()" [disabled]="draft.stands.length >= 12">
+      + Stand sintetic
+    </button>
+    <div class="table-scroll">
+      <table class="edit-table">
+        <caption>
+          Flux sintetic: sosire → stand → handling → readiness → pushback → plecare
+        </caption>
+        <thead>
+          <tr>
+            <th>ID sintetic</th>
+            <th>Stand</th>
+            <th>Sosire (min)</th>
+            <th>Deadline readiness (min)</th>
+            <th>Handling (min)</th>
+            <th>Pushback (min)</th>
+            <th>Acțiune</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (turn of draft.turnarounds; track turn.id) {
+            <tr>
+              <th>{{ turn.id }}</th>
+              <td>
+                <select
+                  [name]="turn.id + '-stand'"
+                  [attr.aria-label]="turn.id + ' stand'"
+                  [(ngModel)]="turn.standId"
+                  (ngModelChange)="changed()"
+                >
+                  @for (stand of draft.stands; track stand.id) {
+                    <option [value]="stand.id">{{ stand.id }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                <input
+                  [name]="turn.id + '-arrival'"
+                  [attr.aria-label]="turn.id + ' sosire'"
+                  type="number"
+                  min="0"
+                  [max]="draft.durationMinutes - 1"
+                  step="1"
+                  [(ngModel)]="turn.arrivalMinute"
+                  (ngModelChange)="changed()"
+                  required
+                />
+              </td>
+              <td>
+                <input
+                  [name]="turn.id + '-deadline'"
+                  [attr.aria-label]="turn.id + ' deadline readiness'"
+                  type="number"
+                  [min]="turn.arrivalMinute"
+                  max="240"
+                  step="1"
+                  [(ngModel)]="turn.scheduledPushbackMinute"
+                  (ngModelChange)="changed()"
+                  required
+                />
+              </td>
+              <td>
+                <input
+                  [name]="turn.id + '-handling'"
+                  [attr.aria-label]="turn.id + ' handling'"
+                  type="number"
+                  min="1"
+                  max="120"
+                  step="1"
+                  [(ngModel)]="turn.handlingMinutes"
+                  (ngModelChange)="changed()"
+                  required
+                />
+              </td>
+              <td>
+                <input
+                  [name]="turn.id + '-pushback'"
+                  [attr.aria-label]="turn.id + ' pushback'"
+                  type="number"
+                  min="1"
+                  max="60"
+                  step="1"
+                  [(ngModel)]="turn.pushbackMinutes"
+                  (ngModelChange)="changed()"
+                  required
+                />
+              </td>
+              <td>
+                <button
+                  type="button"
+                  (click)="remove('turnarounds', turn.id)"
+                  [disabled]="draft.turnarounds.length <= 1"
+                  [attr.aria-label]="'Elimină ' + turn.id"
+                >
+                  Elimină
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <button type="button" (click)="addTurnaround()" [disabled]="draft.turnarounds.length >= 30">
+      + Turnaround sintetic
+    </button>
+  </details>
+
+  <details>
+    <summary>Echipe și membri · disponibilitate editabilă</summary>
+
+    <button type="button" (click)="addMember()" [disabled]="members().length >= 40">
+      + Membru sintetic
+    </button>
+    <div class="cards">
+      @for (team of draft.teams; track team.id) {
+        <fieldset class="card">
+          <legend>{{ team.id }}</legend>
+          <div class="fields two">
+            <label
+              >Disponibil de la (min)<input
+                [name]="team.id + '-start'"
+                [attr.data-testid]="team.id + '-start'"
+                type="number"
+                min="0"
+                max="239"
+                step="1"
+                [(ngModel)]="team.available[0].startMinute"
+                (ngModelChange)="changed()"
+                required /></label
+            ><label
+              >Până la (min)<input
+                [name]="team.id + '-end'"
+                [attr.data-testid]="team.id + '-end'"
+                type="number"
+                min="1"
+                max="240"
+                step="1"
+                [(ngModel)]="team.available[0].endMinute"
+                (ngModelChange)="changed()"
+                required
+            /></label>
+          </div>
+          <p>Competențe</p>
+          <div class="choices">
+            <label
+              ><input
+                type="checkbox"
+                [checked]="team.skills.includes('handling')"
+                (change)="toggleSkill(team.skills, 'handling', $any($event.target).checked)"
+              />Handling</label
+            ><label
+              ><input
+                type="checkbox"
+                [checked]="team.skills.includes('pushback')"
+                (change)="toggleSkill(team.skills, 'pushback', $any($event.target).checked)"
+              />Pushback</label
+            >
+          </div>
+          <p>Standuri compatibile</p>
+          <div class="choices">
+            @for (stand of draft.stands; track stand.id) {
+              <label
+                ><input
+                  type="checkbox"
+                  [checked]="team.standIds.includes(stand.id)"
+                  (change)="toggle(team.standIds, stand.id, $any($event.target).checked)"
+                />{{ stand.id }}</label
+              >
+            }
+          </div>
+          <p>Membri sintetici</p>
+          <div class="choices">
+            @for (member of members(); track member) {
+              <label
+                ><input
+                  type="checkbox"
+                  [checked]="team.memberIds.includes(member)"
+                  (change)="toggle(team.memberIds, member, $any($event.target).checked)"
+                />{{ member }}</label
+              >
+            }
+          </div>
+          <button
+            type="button"
+            (click)="remove('teams', team.id)"
+            [disabled]="draft.teams.length <= 1"
+          >
+            Elimină {{ team.id }}
+          </button>
+        </fieldset>
+      }
+    </div>
+    <button type="button" (click)="addTeam()" [disabled]="draft.teams.length >= 20">
+      + Echipă sintetică
+    </button>
+  </details>
+  <details>
+    <summary>Vehicule · service și tug</summary>
+    <div class="cards">
+      @for (vehicle of draft.vehicles; track vehicle.id) {
+        <fieldset class="card">
+          <legend>{{ vehicle.id }}</legend>
+          <label
+            >Tip vehicul<select
+              [name]="vehicle.id + '-kind'"
+              [(ngModel)]="vehicle.kind"
+              (ngModelChange)="changed()"
+            >
+              <option value="service">Service / handling</option>
+              <option value="tug">Tug / pushback</option>
+            </select></label
+          >
+          <div class="fields two">
+            <label
+              >Disponibil de la (min)<input
+                [name]="vehicle.id + '-start'"
+                type="number"
+                min="0"
+                max="239"
+                step="1"
+                [(ngModel)]="vehicle.available[0].startMinute"
+                (ngModelChange)="changed()"
+                required /></label
+            ><label
+              >Până la (min)<input
+                [name]="vehicle.id + '-end'"
+                type="number"
+                min="1"
+                max="240"
+                step="1"
+                [(ngModel)]="vehicle.available[0].endMinute"
+                (ngModelChange)="changed()"
+                required
+            /></label>
+          </div>
+          <p>Standuri compatibile</p>
+          <div class="choices">
+            @for (stand of draft.stands; track stand.id) {
+              <label
+                ><input
+                  type="checkbox"
+                  [checked]="vehicle.standIds.includes(stand.id)"
+                  (change)="toggle(vehicle.standIds, stand.id, $any($event.target).checked)"
+                />{{ stand.id }}</label
+              >
+            }
+          </div>
+          <button
+            type="button"
+            (click)="remove('vehicles', vehicle.id)"
+            [disabled]="draft.vehicles.length <= 1"
+          >
+            Elimină {{ vehicle.id }}
+          </button>
+        </fieldset>
+      }
+    </div>
+    <button type="button" (click)="addVehicle()" [disabled]="draft.vehicles.length >= 30">
+      + Vehicul sintetic
+    </button>
+  </details>
+  <div class="actions">
+    <button
+      class="primary"
+      data-testid="airside-run"
+      type="submit"
+      [disabled]="busy() || editor.invalid"
+    >
+      {{ busy() ? 'Se simulează…' : 'Simulează și compară cu optimizer' }}
+    </button>
+    @if (busy()) {
+      <button type="button" (click)="cancel()">Anulează cererile</button>
+    }
+    <span>FIFO SimPy și plan CP-SAT · aceeași populație și aceleași durate sintetice</span>
+  </div>
+</form>
+@if (notice()) {
+  <p role="status" class="scope">{{ notice() }}</p>
+}
+@if (error()) {
+  <p role="alert" class="error">{{ error() }}</p>
+}
+@if (optimizerError()) {
+  <p role="alert" class="error">Optimizer: {{ optimizerError() }}</p>
+}
+@if (busy()) {
+  <p role="status">Se calculează scenariul airside și alternativa de alocare…</p>
+}
+@if (optimization(); as optimization) {
+  <p class="scope" role="status">
+    Optimizer CP-SAT: <strong>{{ optimization.status }}</strong
+    >.
+    @if (!optimization.result) {
+      Nu există un plan disponibil; rezultatul baseline rămâne vizibil.
+    }
+    @for (diagnostic of optimization.diagnostics; track $index) {
+      <span> {{ diagnostic }}</span>
+    }
+  </p>
+}
+@if (baseline() || optimization()?.result) {
+  <section class="panel" data-testid="airside-results" aria-labelledby="airside-kpis">
+    <div class="heading">
+      <h2 id="airside-kpis">KPI AIRSIDE</h2>
+    </div>
+    <div class="table-scroll">
+      <table class="kpis">
+        <thead>
+          <tr>
+            <th>Indicator</th>
+            <th>Baseline · SimPy</th>
+            <th>Alocare · CP-SAT</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (metric of metrics; track metric.key) {
+            <tr>
+              <th>{{ metric.label }}</th>
+              <td>
+                @if (baseline(); as result) {
+                  {{ result.kpis[metric.key] | number: '1.0-2' }} {{ metric.unit }}
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (optimization()?.result; as result) {
+                  {{ result.kpis[metric.key] | number: '1.0-2' }} {{ metric.unit }}
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}
+@if (selected(); as result) {
+  <section class="panel" aria-labelledby="airside-occupancy">
+    <div class="heading">
+      <h2 id="airside-occupancy">Ocupare demonstrativă airside</h2>
+      <div class="choices">
+        <button
+          data-testid="airside-variant-baseline"
+          type="button"
+          [disabled]="!baseline()"
+          [attr.aria-pressed]="variant() === 'baseline'"
+          (click)="variant.set('baseline')"
+        >
+          Baseline</button
+        ><button
+          data-testid="airside-variant-optimized"
+          type="button"
+          [disabled]="!optimization()?.result"
+          [attr.aria-pressed]="variant() === 'optimized'"
+          (click)="variant.set('optimized')"
+        >
+          Optimizat
+        </button>
+      </div>
+    </div>
+    <label class="scrub" for="airside-minute"
+      >Minut {{ minute() }} / {{ result.request.durationMinutes
+      }}<input
+        id="airside-minute"
+        data-testid="airside-minute"
+        type="range"
+        min="0"
+        [max]="result.request.durationMinutes"
+        [value]="minute()"
+        (input)="minute.set(+$any($event.target).value)"
+    /></label>
+    @if (frame(); as frame) {
+      <p class="help">
+        La minutul selectat: {{ frame.departedCount }} plecate · {{ frame.readyCount }} handling
+        finalizat, așteaptă pushback · backlog {{ frame.backlogCount }}.
+      </p>
+    }
+    <svg
+      class="stand-map"
+      data-testid="airside-map"
+      role="img"
+      aria-labelledby="airside-map-title airside-map-description"
+      [attr.viewBox]="
+        '0 0 ' +
+        Math.min(4, result.request.stands.length) * 190 +
+        ' ' +
+        Math.ceil(result.request.stands.length / 4) * 100
+      "
+    >
+      <title id="airside-map-title">Standuri sintetice · schemă demonstrativă</title>
+      <desc id="airside-map-description">
+        Poziții illustrative fără coordonate reale sau traiectorii de navigație. Culoarea arată
+        ocuparea modelată la minutul selectat.
+      </desc>
+      @for (stand of result.request.stands; track stand.id; let i = $index) {
+        <g
+          [attr.transform]="
+            'translate(' + ((i % 4) * 190 + 8) + ',' + (Math.floor(i / 4) * 100 + 8) + ')'
+          "
+        >
+          <rect
+            width="174"
+            height="82"
+            rx="8"
+            [attr.fill]="occupying(stand.id) === 'Liber' ? '#edf3e9' : '#fcf3e5'"
+            stroke="currentColor"
+          />
+          <text x="12" y="28">{{ stand.id }}</text>
+          <text x="12" y="57">{{ occupying(stand.id) }}</text>
+        </g>
+      }
+    </svg>
+  </section>
+  <section class="panel">
+    <h2>Alocări exclusive · Gantt airside</h2>
+
+    <div class="table-scroll">
+      <div class="gantt" role="list">
+        @for (lane of lanes(); track lane.key) {
+          <div class="lane" role="listitem">
+            <span>{{ lane.key }}</span>
+            <div class="track">
+              @for (allocation of lane.rows; track $index) {
+                <div
+                  class="bar"
+                  [class.handling]="allocation.stage === 'handling'"
+                  [class.pushback]="allocation.stage === 'pushback'"
+                  [style.left.%]="left(allocation)"
+                  [style.width.%]="width(allocation)"
+                  [attr.title]="
+                    allocation.turnaroundId +
+                    ' · ' +
+                    allocation.stage +
+                    ' · ' +
+                    allocation.startMinute +
+                    '–' +
+                    allocation.endMinute +
+                    ' min'
+                  "
+                >
+                  {{ allocation.turnaroundId }}
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <p class="help">
+      Scară: 0–{{ result.request.durationMinutes }} min · verde: stand · albastru: handling · ocru:
+      pushback.
+    </p>
+    <details>
+      <summary>Intervalele rezervărilor (minute exacte)</summary>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Resursă</th>
+              <th>Turnaround</th>
+              <th>Etapă</th>
+              <th>Început</th>
+              <th>Sfârșit</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (allocation of result.allocations; track $index) {
+              <tr>
+                <td>{{ allocation.resourceType }}:{{ allocation.resourceId }}</td>
+                <td>{{ allocation.turnaroundId }}</td>
+                <td>{{ allocation.stage }}</td>
+                <td>{{ allocation.startMinute }}</td>
+                <td>{{ allocation.endMinute }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+  <section class="panel">
+    <h2>
+      Timpi de serviciu și readiness · {{ variant() === 'baseline' ? 'baseline' : 'optimizat' }}
+    </h2>
+    <div class="table-scroll">
+      <table class="turnaround-results">
+        <caption>
+          „—” înseamnă că etapa nu a fost atinsă în orizontul simulării.
+        </caption>
+        <thead>
+          <tr>
+            <th>Turnaround / stand</th>
+            <th>Stare</th>
+            <th>Handling început / final</th>
+            <th>Readiness / țintă</th>
+            <th>Plecare</th>
+            <th>Serviciu handling / pushback</th>
+            <th>Așteptare / întârziere</th>
+            <th>Echipă handling / vehicul</th>
+            <th>Echipă pushback / tug</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (turn of result.turnarounds; track turn.id) {
+            <tr>
+              <th>{{ turn.id }} / {{ turn.standId }}</th>
+              <td>{{ statuses[turn.status] }}</td>
+              <td>
+                {{ turn.handlingStartedMinute ?? '—' }} / {{ turn.handlingCompletedMinute ?? '—' }}
+              </td>
+              <td>{{ turn.pushbackReadyMinute ?? '—' }} / {{ turn.scheduledPushbackMinute }}</td>
+              <td>{{ turn.departedMinute ?? '—' }}</td>
+              <td>{{ turn.handlingMinutes }} / {{ turn.pushbackMinutes }} min</td>
+              <td>
+                {{ turn.waitingMinutes | number: '1.0-2' }} /
+                {{ turn.readinessDelayMinutes | number: '1.0-2' }} min
+              </td>
+              <td>{{ turn.handlingTeamId ?? '—' }} / {{ turn.handlingVehicleId ?? '—' }}</td>
+              <td>{{ turn.pushbackTeamId ?? '—' }} / {{ turn.tugId ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Conflicte și blocaje estimate</h2>
+    @if (result.conflicts.length) {
+      <div class="table-scroll">
+        <table class="conflict-results">
+          <thead>
+            <tr>
+              <th>Turnaround</th>
+              <th>Etapă / minut</th>
+              <th>Motiv estimat</th>
+              <th>Resurse implicate</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (conflict of result.conflicts; track $index) {
+              <tr>
+                <th>{{ conflict.turnaroundId }}</th>
+                <td>{{ conflict.stage }} / {{ conflict.minute }}</td>
+                <td>{{ conflictReasons[conflict.reason] }}</td>
+                <td>{{ conflict.resourceIds.join(', ') || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="help">Niciun conflict.</p>
+    }
+  </section>
+  <p class="help">
+    {{ result.engine }} · Seed {{ result.request.seed }} · Populație
+    {{ result.populationFingerprint }} · Exclusiv date sintetice
+  </p>
+} @else if (!busy() && !baseline() && !optimization()?.result) {
+  <p class="empty">Nicio simulare.</p>
+}
