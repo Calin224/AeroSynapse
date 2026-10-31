@@ -67,6 +67,39 @@ def gate_options(request, event_id):
     return None
 
 
+def boarding_state(request, minute):
+    """Each flight boarding at a minute: its queue, the lanes serving it and the gates still free for it to open."""
+    response = simulate(request)
+    if response.journey_result is None:
+        return None
+    result = response.journey_result
+    plan = {f['flightId']: f for f in [r for r in result['plans'] if r['minute'] <= minute][-1]['flights']}
+    stage = {}
+    for p in result['passengers']:
+        last = [h for h in p['history'] if h['minute'] <= minute][-1]
+        stage[p['id']] = (p['flightId'], last['stage'], last['gateId'])
+    opened = {}
+    for o in request.journey.get('gateOpenings', []):
+        if o['minute'] <= minute: opened.setdefault(o['flightId'], []).append(o['gateId'])
+    flights = []
+    for f in request.journey['flights']:
+        current = plan[f['flightId']]
+        if current['isCancelled'] or not current['boardingOpenMinute'] <= minute < current['boardingCloseMinute']:
+            continue
+        rows = [s for s in stage.values() if s[0] == f['flightId']]
+        free = [g for g in f['eligibleGateIds'] if g != current['gateId'] and g not in opened.get(f['flightId'], [])
+                and not any(o['flightId'] != f['flightId'] and not o['isCancelled'] and o['gateId'] == g
+                            and o['arrivalMinute'] < current['departureMinute'] and o['departureMinute'] > minute for o in plan.values())]
+        flights.append({'flightId': f['flightId'], 'gateId': current['gateId'], 'openGateIds': opened.get(f['flightId'], []),
+                        'freeGateIds': free, 'boardingCloseMinute': current['boardingCloseMinute'],
+                        'queued': sum(s[1] in ('gate_queue', 'walking') and s[2] is not None for s in rows),
+                        'boarding': sum(s[1] == 'boarding' for s in rows), 'boarded': sum(s[1] == 'boarded' for s in rows),
+                        'notArrived': sum(s[1] not in ('gate_queue', 'boarding', 'boarded', 'missed') and s[2] is None for s in rows),
+                        'boardingStaffPerGate': request.journey['boardingStaffPerGate'],
+                        'boardingServiceMinutes': request.journey['boardingServiceMinutes']})
+    return flights
+
+
 def simulate(request, on_progress=None):
     envelope = {'contractVersion':'1.0','runId':str(request.run_id),'status':'failed','simulatedMinutes':0,
                 'metrics':[],'snapshots':[],'failure':None}
@@ -131,6 +164,37 @@ def run(request, on_progress):
         trigger._ok, trigger._value = True, None
         trigger.callbacks.append(lambda _,event=event: apply(event))
         env.schedule(trigger, URGENT, event['minute'])
+
+    lanes = {}
+
+    def lane_free(gate,flight_id):
+        # An opened gate serves a flight only while no other flight is planned there before this one departs.
+        own = plan[flight_id]
+        return not any(o!=flight_id and not f['isCancelled'] and f['gateId']==gate and f['arrivalMinute']<own['departureMinute']
+                       and f['departureMinute']>env.now for o,f in plan.items())
+
+    def open_lane(opening):
+        if lane_free(opening['gateId'],opening['flightId']) and not plan[opening['flightId']]['isCancelled']:
+            lanes.setdefault(opening['flightId'],[]).append(opening['gateId'])
+            notify()
+
+    for opening in sorted(j.get('gateOpenings',[]),key=lambda o:(o['minute'],o['gateId'])):
+        trigger = simpy.Event(env)
+        trigger._ok, trigger._value = True, None
+        trigger.callbacks.append(lambda _,opening=opening: open_lane(opening))
+        env.schedule(trigger, URGENT, opening['minute'])
+
+    def wait_estimate(gate):
+        resource=gates[gate]
+        return (len(resource.queue)+resource.count)*j['boardingServiceMinutes']/resource.capacity
+
+    def pick_lane(flight_id,primary,current):
+        usable=[primary]+[g for g in lanes.get(flight_id,[]) if g!=primary and lane_free(g,flight_id)]
+        if current not in usable: current=primary
+        best=min(usable,key=lambda g:(wait_estimate(g),g!=current))
+        # Walking to another lane must pay for itself.
+        if best!=current and wait_estimate(current)-wait_estimate(best)>j['gateChangeWalkingMinutes']: return best
+        return current
 
     def passenger(identifier,flight,connection=None,inbound=None):
         p = {'id':identifier,'flightId':flight,'connectionId':connection,'inboundFlightId':inbound,
@@ -220,10 +284,18 @@ def run(request, on_progress):
                 if env.now<f['boardingOpenMinute']:
                     yield env.timeout(f['boardingOpenMinute']-env.now) | changed
                     continue
-                resource=gates[gate]
-                if resource is None:
+                if gates[gate] is None:
                     yield env.timeout(f['boardingCloseMinute']-env.now) | changed
                     continue
+                lane=pick_lane(p['flightId'],gate,p['gateId'])
+                if lane!=p['gateId']:
+                    set_stage(p,'walking')
+                    yield env.timeout(j['gateChangeWalkingMinutes'])
+                    if plan[p['flightId']]['gateId']!=gate: break
+                    p['gateId']=lane
+                    set_stage(p,'gate_queue')
+                    continue
+                resource=gates[lane]
                 signal=changed
                 with resource.request() as slot:
                     yield slot | signal | env.timeout(f['boardingCloseMinute']-env.now)
@@ -236,7 +308,7 @@ def run(request, on_progress):
                         yield env.timeout(max(0,f['boardingCloseMinute']-env.now)) | changed
                         continue
                     set_stage(p,'boarding')
-                    v=visit(p,'boarding',gate,p['gateArrivalMinute'])
+                    v=visit(p,'boarding',lane,p['gateArrivalMinute'])
                     v['startedMinute']=env.now
                     yield env.timeout(j['boardingServiceMinutes'])
                     v['finishedMinute']=p['boardedMinute']=env.now

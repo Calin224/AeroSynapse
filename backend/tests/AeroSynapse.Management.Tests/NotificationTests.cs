@@ -17,7 +17,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class NotificationTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static async Task<T> Read<T>(HttpResponseMessage response)
     {
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(Token));

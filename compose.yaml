@@ -128,7 +128,6 @@ services:
       context: ./AeroSynapse.Client
     environment:
       API_UPSTREAM: api:8080
-      INTELLIGENCE_UPSTREAM: intelligence:8000
       FRONTEND_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api}
       FRONTEND_INTELLIGENCE_BASE_URL: ${FRONTEND_INTELLIGENCE_BASE_URL:-/intelligence}
       BAGGAGE_TWIN_ENABLED: ${BAGGAGE_TWIN_ENABLED:-false}

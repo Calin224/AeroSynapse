@@ -28,13 +28,18 @@ public sealed class AgentLoop(TwinDbContext db, IAgentEngine engine, IAgentModel
     public static IReadOnlyList<(int Minute, Guid? EventId)> Points(ScenarioAgent agent, SimulationRequest request)
     {
         var points = new List<(int Minute, Guid? EventId)>();
-        if (agent.StaffMoves || agent.CheckInDesks || agent.Reserve > 0)
+        var gatesOpen = agent.GateChoices && request.Journey is not null;
+        if (agent.StaffMoves || agent.CheckInDesks || agent.Reserve > 0 || gatesOpen)
             for (var minute = agent.DecisionIntervalMinutes; minute + 1 + agent.TransferMinutes < request.DurationMinutes; minute += agent.DecisionIntervalMinutes)
                 points.Add((minute, null));
-        if (agent.GateChoices && request.Journey is not null)
-            points.AddRange((request.Events ?? []).Where(e => e.Type == "flight_change" && e.Minute > 0 && e.Minute < request.DurationMinutes)
-                .Select(e => (e.Minute, (Guid?)e.EventId)));
-        return points.OrderBy(point => point.Minute).ThenBy(point => point.EventId is null ? 0 : 1).ThenBy(point => point.EventId).ToArray();
+        if (gatesOpen)
+        {
+            var delays = (request.Events ?? []).Where(e => e.Type == "flight_change" && e.Minute > 0 && e.Minute < request.DurationMinutes).ToArray();
+            points.AddRange(delays.Select(e => (e.Minute, (Guid?)e.EventId)));
+            // A delay also changes what is queueing: look at the boarding queues right then, not only at the next interval.
+            points.AddRange(delays.Where(e => e.Minute + 1 + agent.TransferMinutes < request.DurationMinutes).Select(e => (e.Minute, (Guid?)null)));
+        }
+        return points.Distinct().OrderBy(point => point.Minute).ThenBy(point => point.EventId is null ? 0 : 1).ThenBy(point => point.EventId).ToArray();
     }
 
     public async Task<SimulationRequest> PrepareAsync(SimulationRun run, RunInputSnapshot captured, SimulationRequest request, CancellationToken token)
@@ -49,6 +54,11 @@ public sealed class AgentLoop(TwinDbContext db, IAgentEngine engine, IAgentModel
         var deskCount = inputs.CheckIn is { } checkIn ? layout.CheckInAreas?.SingleOrDefault(area => area.Id == checkIn.AreaId)?.DeskCount : null;
         var frozen = (request.Events ?? []).Where(e => e.CheckpointId is not null).Select(e => e.CheckpointId!.Value).ToHashSet();
         var flights = inputs.Flights.ToDictionary(f => f.Id, f => f.Code);
+        var gateTerminals = layout.Gates.ToDictionary(g => g.Id, g => g.TerminalId);
+        var gateNames = layout.Gates.ToDictionary(g => g.Id, g => string.IsNullOrWhiteSpace(g.Code) ? g.Name : g.Code);
+        var reserved = inputs.StaffAllocations.Select(item => item.StaffMemberId)
+            .Concat(inputs.StaffShifts?.Shifts.Select(item => item.StaffMemberId) ?? [])
+            .Concat(inputs.IntegratedResources?.Workers.Select(item => item.StaffMemberId) ?? []).ToHashSet();
         var recorded = await db.AgentDecisions.Where(d => d.RunId == run.Id).OrderBy(d => d.Sequence).ToListAsync(token);
         var chosen = recorded.Select(d => (d.Minute, Option: JsonSerializer.Deserialize<AgentOption>(d.ActionJson, Json)!)).ToList();
         var calls = recorded.Count(d => d.ModelStatus != "single_option");
@@ -57,12 +67,29 @@ public sealed class AgentLoop(TwinDbContext db, IAgentEngine engine, IAgentModel
             var point = eventId?.ToString() ?? "periodic";
             if (recorded.Any(d => d.Minute == minute && d.Point == point)) continue;
             var current = AgentDecisionInputs.Apply(request, chosen, agent.TransferMinutes);
-            var observation = await engine.ObserveAsync(current, minute, eventId, token);
+            var reserveLeft = agent.Reserve - chosen.Where(item => item.Option.Kind is "staff_call" or "plan" or "checkpoint_open").Sum(item => item.Option.Count ?? 0);
+            var limits = new AgentLimits(agent.CheckInDesks ? deskCount : null, Math.Max(0, reserveLeft), agent.TransferMinutes, frozen.ToArray());
+            var observation = await engine.ObserveAsync(current, minute, eventId, limits, token);
             await progress.RecordAsync(run.Id, new EngineProgress(minute, observation.Checkpoints
                 .Select(c => new ProgressZone(c.CheckpointId, c.Queued, c.Processed, c.NotArrived)).ToArray()), token);
-            var reserveLeft = agent.Reserve - chosen.Where(item => item.Option.Kind == "staff_call").Sum(item => item.Option.Count ?? 0);
             var offered = eventId is null ? AgentCandidates.Periodic(observation, agent, frozen, names, deskCount, reserveLeft)
                 : observation.Gate is { } gate ? AgentCandidates.Gate(gate) : [];
+            if (eventId is null && agent.GateChoices && observation.Boarding is not null)
+            {
+                var used = chosen.Where(item => item.Option.Kind == "gate_open").Select(item => item.Option.StaffMemberId!.Value).ToHashSet();
+                var pool = layout.Staff.Where(s => !reserved.Contains(s.Id) && !used.Contains(s.Id))
+                    .Select(s => new AgentGateStaff(s.Id, s.TerminalId, string.IsNullOrWhiteSpace(s.DisplayName) ? s.Code : s.DisplayName)).ToArray();
+                offered = [.. offered, .. AgentCandidates.GateOpenings(observation, pool, gateTerminals, gateNames, flights)];
+                // Without staff, desks or reserve to offer, a point with nothing to open is not a decision.
+                if (offered.Count == 1 && !agent.StaffMoves && !agent.CheckInDesks && agent.Reserve == 0) continue;
+            }
+            // Queue transfers stay within one terminal; donor operators must belong to that terminal too.
+            var terminals = layout.Checkpoints.ToDictionary(c => c.Id, c => c.TerminalId);
+            offered = offered.Where(o => o.Kind is not ("checkpoint_open" or "queue_redistribution")
+                || o.FromCheckpointId is { } from && o.ToCheckpointId is { } to
+                    && terminals.GetValueOrDefault(from) == terminals.GetValueOrDefault(to)
+                    && (o.Staff ?? []).All(t => terminals.GetValueOrDefault(t.CheckpointId) == terminals.GetValueOrDefault(to))
+                    && minute + 1 + agent.TransferMinutes + Math.Max(1, agent.TransferMinutes) < request.DurationMinutes).ToArray();
             if (offered.Count == 0) continue;
             var started = clock.GetTimestamp();
             var choice = offered.Count == 1 ? new AgentChoice("single_option", offered[0].Id, "", model.Status.Model)
@@ -108,6 +135,12 @@ public sealed class AgentLoop(TwinDbContext db, IAgentEngine engine, IAgentModel
         }
         var state = new
         {
+            boarding = observation.Boarding?.Select(f => new
+            {
+                flight = flights.GetValueOrDefault(f.FlightId, "zbor"), queued = f.Queued, boarding = f.Boarding, boarded = f.Boarded,
+                notArrivedYet = f.NotArrived, lanesOpen = 1 + f.OpenGateIds.Count, boardingClosesInMinutes = f.BoardingCloseMinute - observation.Minute,
+                minutesToClearQueue = Math.Round(AgentCandidates.Wait(f), 1), inactiveGatesAvailable = f.FreeGateIds.Count
+            }),
             controls = observation.Checkpoints.Select(c => new
             {
                 name = names.GetValueOrDefault(c.CheckpointId, "control"), operatorsOnDuty = c.StaffOnDuty, closed = !c.Available,

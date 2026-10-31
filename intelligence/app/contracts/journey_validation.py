@@ -69,6 +69,15 @@ def validate_request(value, path, errors, error):
     if any(e['delayMinutes'] <= 0 or flights.get(e['flightId'],{}).get('isCancelled',True) for e in changes): invalid('/flights')
     choices = [c['eventId'] for c in j.get('gateChoices', [])]
     if len(choices) != len(set(choices)) or not set(choices) <= {e['eventId'] for e in changes}: invalid('/gateChoices')
+    openings = j.get('gateOpenings', [])
+    def occupied(o):
+        flight = flights[o['flightId']]
+        return any(f['flightId'] != flight['flightId'] and f['gateId'] == o['gateId'] and not f['isCancelled']
+                   and f['arrivalMinute'] < flight['departureMinute'] and f['departureMinute'] > o['minute'] for f in j['flights'])
+    if (len({o['gateId'] for o in openings}) != len(openings) or len({o['staffMemberId'] for o in openings}) != len(openings)
+            or any(o['flightId'] not in flights or flights[o['flightId']]['isCancelled'] or o['gateId'] not in flights[o['flightId']]['eligibleGateIds']
+                   or o['gateId'] == flights[o['flightId']]['gateId'] or occupied(o) or o['minute'] >= value['durationMinutes'] for o in openings)):
+        invalid('/gateOpenings')
 
 
 def validate_result(value, path, errors, error):

@@ -11,7 +11,8 @@ public sealed record ScheduledEvent(Guid EventId, string Type, int Minute,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? PassengerCount = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? WindowMinutes = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? StaffCount = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DelayMinutes = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DelayMinutes = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? TargetCheckpointId = null);
 public sealed record AppliedEvent(Guid EventId, string Type, int Minute, int Sequence);
 
 // The state an event timeline is checked against: nominal staff, boarding closes and navigation zones.
@@ -24,11 +25,12 @@ public static class EventContractValidation
 {
     // Infrastructure first, then capacity, then demand: a surge at T already sees T's closures.
     public static readonly IReadOnlyList<string> Types =
-        ["flight_change", "corridor_closure", "checkpoint_unavailable", "staff_reduction", "resume", "passenger_surge"];
+        ["flight_change", "corridor_closure", "checkpoint_unavailable", "staff_reduction", "resume", "passenger_surge", "queue_redistribution"];
     private static readonly string[] OptionalFields =
-        ["checkpointId", "flightId", "zoneId", "passengerCount", "windowMinutes", "staffCount", "delayMinutes"];
+        ["checkpointId", "flightId", "zoneId", "passengerCount", "windowMinutes", "staffCount", "delayMinutes", "targetCheckpointId"];
     private static readonly Dictionary<string, (string[] Required, string[] Optional)> Fields = new()
     {
+        ["queue_redistribution"] = (["checkpointId", "targetCheckpointId", "passengerCount", "windowMinutes"], []),
         ["passenger_surge"] = (["checkpointId", "passengerCount", "windowMinutes"], ["flightId"]),
         ["checkpoint_unavailable"] = (["checkpointId"], []),
         ["staff_reduction"] = (["checkpointId", "staffCount"], []),
@@ -67,7 +69,8 @@ public static class EventContractValidation
             if (item.ZoneId is { } zone && !context.Zones.Contains(zone)) errors.Add((index, "zoneId", "invalid_value"));
             if (item.WindowMinutes is { } window && item.Minute + window > context.Horizon) errors.Add((index, "windowMinutes", "out_of_range"));
             if (item.Type == "flight_change" && item.DelayMinutes == 0) errors.Add((index, "delayMinutes", "out_of_range"));
-            surged += item.PassengerCount ?? 0;
+            if (item.TargetCheckpointId is { } target && (!context.Staff.ContainsKey(target) || target == item.CheckpointId)) errors.Add((index, "targetCheckpointId", "invalid_value"));
+            if (item.Type == "passenger_surge") surged += item.PassengerCount ?? 0;
             if (errors.Count == before) valid++;
         }
         if (passengerCount + surged > MaxPassengers) errors.Add((null, "", "out_of_range"));
@@ -141,6 +144,7 @@ public static class EventContractValidation
         if (item.WindowMinutes.HasValue) present.Add("windowMinutes");
         if (item.StaffCount.HasValue) present.Add("staffCount");
         if (item.DelayMinutes.HasValue) present.Add("delayMinutes");
+        if (item.TargetCheckpointId.HasValue) present.Add("targetCheckpointId");
         return present;
     }
 
@@ -198,7 +202,7 @@ public sealed class EventTimeline
         foreach (var (item, _) in ordered)
         {
             if (item.Type == "passenger_surge") surges[$"demo-surge-{item.EventId:N}-"] = (item, item.PassengerCount!.Value);
-            if (item.CheckpointId is not { } checkpoint || item.Type == "passenger_surge") continue;
+            if (item.CheckpointId is not { } checkpoint || item.Type is "passenger_surge" or "queue_redistribution") continue;
             if (item.Type == "checkpoint_unavailable") available[checkpoint] = false;
             else if (item.Type == "staff_reduction") staff[checkpoint] = item.StaffCount!.Value;
             else { available[checkpoint] = true; staff[checkpoint] = request.Checkpoints.Single(cp => cp.CheckpointId == checkpoint).StaffCount; }

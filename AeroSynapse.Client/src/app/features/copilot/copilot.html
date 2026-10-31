@@ -95,6 +95,18 @@
                   <small>{{ modelLabel(answer.modelStatus) }}</small>
                 </p>
                 <p class="text" data-answer>{{ plain(answer.answer) }}</p>
+                @if (answer.queueAdvice; as advice) {
+                  <section aria-label="Recomandări pentru puncte de control și cozi">
+                    <h3>Variante de evaluat</h3>
+                    <ul>@for (option of advice.options; track option.id) { <li>{{ option.text }}</li> }</ul>
+                    <p class="notice">{{ advice.limitation }}</p>
+                    <details><summary>Datele folosite pentru recomandări</summary>
+                      <dl class="figures">@for (fact of advice.facts; track fact.id) {
+                        <div><dt>{{ fact.label }}</dt><dd>{{ fact.value | number:'1.0-2' }} <small>{{ fact.unit }}</small></dd></div>
+                      }</dl>
+                    </details>
+                  </section>
+                }
                 @if (answer.citations.length) {
                   <dl class="figures">
                     @for (citation of answer.citations; track citation.id) {
@@ -231,6 +243,8 @@
 
   <form class="composer" (ngSubmit)="ask()">
     <div class="suggestions" role="group" aria-label="Sugestii">
+      <button type="button" class="btn-sm chip" [disabled]="!context() || busy()"
+        (click)="ask('Ce puncte de control recomanzi să deschid și cum distribui coada?')">Puncte de control și cozi</button>
       <button
         type="button"
         class="btn-sm chip"

@@ -578,6 +578,11 @@
           "minimum": 0,
           "maximum": 10000,
           "description": "Staff on duty at this minute, 0 while the control is unavailable. capacity and utilization stay nominal."
+        },
+        "transferredOutPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
         }
       },
       "required": [
@@ -1036,7 +1041,7 @@
         },
         "deskSteps": {
           "type": "array",
-          "description": "Desks open over time, a nondecreasing step function from minute 0 whose last staffCount is staffCount. Desks only open during a run; a desk never closes on a passenger.",
+          "description": "Desks open over time, a step function from minute 0 whose highest staffCount is staffCount. Desks may open and close; a desk that closes still finishes the passenger it is serving.",
           "items": {
             "$ref": "#/$defs/StaffStep"
           },

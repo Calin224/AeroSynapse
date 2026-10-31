@@ -12,27 +12,40 @@
   @if (settings(); as settings) {
     @if (!settings.passengerProfilesActive) { <p class="notice">Profiluri de pasageri neconfigurate.</p> }
     @if (config; as config) {
-      <p class="route-status"><strong>{{ settings.config ? 'Trasee activate' : 'Trasee neactivate' }}</strong> · {{ settings.config ? 'Harta salvată este folosită în simulările următoare.' : 'Este pregătită o hartă demonstrativă. Activeaz-o pentru a calcula trasee.' }}</p>
-      <h3>1. Alege ce zone sunt închise</h3>
+      <p class="route-status"><strong>{{ settings.config ? 'Trasee activate' : 'Trasee neactivate' }}</strong> · {{ settings.config ? 'Harta salvată este folosită în simulările următoare.' : 'Hartă demonstrativă pregătită pentru analiză. Salveaz-o pentru a o folosi în simulări.' }}</p>
+      @if (result(); as result) {
+    @if (!showingRun()) {
+      <h3>Impactul închiderilor</h3>
+      <div class="route-impact" role="status" aria-label="Impactul traseelor">
+        <p><strong>{{ result.routedCount }}</strong><span>pasageri cu traseu disponibil</span></p>
+        <p><strong>{{ result.errorCount }}</strong><span>pasageri fără acces la poartă</span></p>
+        <p><strong>{{ walkingMinutes() === null ? '—' : (walkingMinutes() | number:'1.1-2') }}</strong><span>minute de mers de bază, în medie</span></p>
+      </div>
+      @if (result.errorCount) { <p class="notice">Există pasageri care nu pot ajunge la poartă. Redeschide o zonă sau verifică asocierile și regulile de acces.</p> }
+      <p class="hint">Așteptarea la cozi și riscul de întârziere se calculează la simulare, după salvarea configurației.</p>
+    }
+      }
+      <h3>Disponibilitatea zonelor</h3>
+      <p class="hint">Închiderile recalculează imediat traseele spre porți. Salvează configurația pentru a o folosi în simulările următoare.</p>
 
-      <div class="zone-list">
+      <div class="zone-list" aria-label="Zone și disponibilitate">
         @for (node of config.graph.nodes; track node.id) {
           <label class="zone-option">
-            <input type="checkbox" [ngModel]="config.closedZoneIds.includes(node.id)" (ngModelChange)="closeZone(node.id, $event)" [disabled]="blocked()" />
-            <span><strong>Închide {{ node.name }}</strong> <small>{{ nodeType(node.kind) }}{{ node.isActive ? '' : ' · inactivă în hartă' }}</small>
-              <small>{{ connections(node.id) }}</small></span>
+            <input type="checkbox" [ngModel]="config.closedZoneIds.includes(node.id)" (ngModelChange)="closeZone(node.id, $event)" [disabled]="blocked() || !node.isActive" [attr.aria-label]="'Închide ' + node.name" />
+            <span><strong>{{ node.name }}</strong> <small>{{ nodeType(node.kind) }}</small></span>
+            <span class="zone-state">{{ !node.isActive ? 'Inactivă în hartă' : config.closedZoneIds.includes(node.id) ? 'Închisă' : 'Deschisă' }}</span>
           </label>
         } @empty { <p>Harta nu conține zone disponibile.</p> }
       </div>
-      <h3>2. Salvează și verifică traseele</h3>
+      <h3>Verifică impactul și salvează</h3>
 
       <div class="toolbar">
         <button class="btn-primary" type="button" [disabled]="blocked() || !settings.passengerProfilesActive" (click)="save()">{{ settings.config ? 'Salvează modificările' : 'Activează traseele' }}</button>
-        <button type="button" [disabled]="blocked() || dirty() || !settings.config" (click)="preview()">Verifică traseele posibile</button>
+        <button type="button" [disabled]="blocked() || !settings.passengerProfilesActive" (click)="preview()">Calculează impactul traseelor</button>
         <button type="button" [disabled]="blocked() || !run()?.resultsValid" (click)="inspectRun()">Vezi traseele unei simulări selectate</button>
       </div>
-      @if (!settings.config) { <p class="hint">Pentru verificare, activează mai întâi traseele.</p> }
-      @if (dirty()) { <p class="notice">Ai modificări nesalvate. Salvează-le înainte de a verifica traseele.</p> }
+      @if (!settings.config) { <p class="hint">Poți calcula traseele demonstrative înainte de activare.</p> }
+      @if (dirty()) { <p class="notice">Impactul afișat folosește modificările din editor. Salvează-le pentru următoarea simulare.</p> }
       @if (!run()?.resultsValid) { <p class="hint">Nicio rulare validă selectată.</p> }
       <details class="disclosure advanced">
         <summary>Setări avansate ale hărții</summary>
@@ -68,10 +81,11 @@
     }
   }
   @if (result(); as result) {
-    <h3>{{ showingRun() ? 'Rezultat capturat al rulării' : 'Plan de trasee' }}</h3>
+    <h3>{{ showingRun() ? 'Rezultat capturat al rulării' : 'Detalii trasee' }}</h3>
+
     <p>{{ result.routedCount }} pasageri cu traseu valid · {{ result.errorCount }} cu eroare explicită · {{ result.modeledCount }} modelați</p>
 
-    <p class="fingerprint">Graf SHA-256: {{ result.graphFingerprint }} · Populație: {{ result.populationFingerprint }}</p>
+    <details class="disclosure"><summary>Identificarea datelor analizate</summary><p class="fingerprint">Graf SHA-256: {{ result.graphFingerprint }} · Populație: {{ result.populationFingerprint }}</p></details>
     <div class="table-wrap"><table><caption>Evaluarea până la poarta asociată, în minute simulate</caption><thead><tr><th>Zbor</th><th>Poartă</th><th>Mers mediu</th><th>Coada medie</th><th>La timp</th><th>După închidere</th><th>Etape neterminate</th><th>Fără traseu</th></tr></thead><tbody>
       @for (flight of result.flights; track flight.flightId) { <tr><td>{{ flightName(flight.flightId) }}</td><td>{{ gateName(flight.gateId) }}</td><td>{{ flight.meanWalkingMinutes === null ? '—' : (flight.meanWalkingMinutes | number:'1.1-2') }}</td><td>{{ flight.meanQueueWaitMinutes === null ? '—' : (flight.meanQueueWaitMinutes | number:'1.3-3') }}</td><td>{{ result.assessed ? flight.safeCount : '—' }}</td><td>{{ result.assessed ? flight.lateCount : '—' }}</td><td>{{ result.assessed ? flight.unservedCount : '—' }}</td><td>{{ flight.errorCount }}</td></tr> }
     </tbody></table></div>

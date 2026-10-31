@@ -21,23 +21,10 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ManagementTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly Guid SceneId = SyntheticScenarioSeeder.SceneId;
 
-    private static async Task<ScenarioWriteRequest> Request(ManagementHost host)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SceneId}/layout-versions", null, Token);
-        Assert.Equal(HttpStatusCode.Created, published.StatusCode);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        return request with { LayoutVersionId = layout.Version.Id };
-    }
-    private static async Task<ScenarioDetails> Create(ManagementHost host, ScenarioWriteRequest request)
-    {
-        using var result = await host.Client.PostAsJsonAsync("/scenarios", request, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, result.StatusCode);
-        return (await result.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
+    private static async Task<ScenarioWriteRequest> Request(ManagementHost host) => (await host.DraftAsync()).Request;
+    private static Task<ScenarioDetails> Create(ManagementHost host, ScenarioWriteRequest request) => host.PostScenarioAsync(request);
     private static async Task<SimulationRun> Start(ManagementHost host, Guid id)
     {
         using var result = await host.Client.PostAsync($"/scenarios/{id}/runs", null, Token);

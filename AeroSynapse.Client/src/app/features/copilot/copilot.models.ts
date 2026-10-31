@@ -37,6 +37,11 @@ export interface CopilotAnswer {
   sourceHash: string | null;
   citations: CopilotCitation[];
   explanation?: CopilotExplanation;
+  queueAdvice?: {
+    options: { id: string; kind: 'checkpoint_open' | 'queue_redistribution'; text: string; fromCheckpointId: string; toCheckpointId: string; passengerCount: number }[];
+    facts: { id: string; label: string; value: number; unit: string; runId: string; zoneId: string; sourcePath: string }[];
+    limitation: string;
+  };
 }
 export const uuid = (value: string) => /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
 export function sameScope(a: CopilotScope, b: CopilotScope): boolean {
@@ -55,6 +60,14 @@ export function validAnswer(value: CopilotAnswer, expected: CopilotScope): boole
     ['answered', 'insufficient_data'].includes(value.status) &&
     typeof value.answer === 'string' &&
     validExplanation(value.explanation, [expected.runId]) &&
+    (!value.queueAdvice || (
+      Array.isArray(value.queueAdvice.options) && value.queueAdvice.options.every(o => !!o && typeof o.id === 'string'
+        && ['checkpoint_open', 'queue_redistribution'].includes(o.kind) && typeof o.text === 'string'
+        && o.fromCheckpointId === expected.zoneId && uuid(o.toCheckpointId) && o.toCheckpointId !== o.fromCheckpointId
+        && Number.isInteger(o.passengerCount) && o.passengerCount > 0 && o.passengerCount <= 10000)
+      && Array.isArray(value.queueAdvice.facts) && value.queueAdvice.facts.every(f => !!f && f.runId === expected.runId
+        && uuid(f.zoneId) && Number.isFinite(f.value) && typeof f.label === 'string' && typeof f.sourcePath === 'string')
+      && typeof value.queueAdvice.limitation === 'string')) &&
     Array.isArray(value.citations) &&
     (value.status !== 'answered' || value.citations.length > 0) &&
     (value.citations.length === 0 ||

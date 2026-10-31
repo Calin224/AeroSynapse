@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { DigitalTwin } from '../digital-twin/digital-twin';
 import { TwinScene } from '../digital-twin/twin-model';
@@ -28,6 +28,7 @@ export class NavigationPanel {
   readonly showingRun = signal<string | null>(null);
   readonly showRoutes = signal(false);
   readonly renderScene = computed<TwinScene>(() => ({ aircraft: [], navigationRoutes: this.result()?.routes ?? [] }));
+  private previewSubscription?: Subscription;
   config: NavigationConfig | null = null;
   graphJson = '';
   airportMapId = '';
@@ -35,6 +36,7 @@ export class NavigationPanel {
     effect(onCleanup => {
       const scenario = this.scenario();
       untracked(() => {
+        this.previewSubscription?.unsubscribe();
         this.settings.set(null); this.result.set(null); this.config = null; this.graphJson = ''; this.dirty.set(false); this.showingRun.set(null);
         if (!scenario.inputs.flights.length) return;
         this.loading.set(true);
@@ -64,7 +66,7 @@ export class NavigationPanel {
   closeZone(id: string, closed: boolean) {
     if (!this.config || this.blocked()) return;
     this.config.closedZoneIds = closed ? [...new Set([...this.config.closedZoneIds, id])] : this.config.closedZoneIds.filter(item => item !== id);
-    this.syncJson(); this.modified();
+    this.syncJson(); this.modified(); this.preview();
   }
   nodeType(kind: string) {
     return ({ Walkway: 'Coridor', Security: 'Punct de control', Gate: 'Poartă' } as Record<string, string>)[kind] ?? 'Zonă';
@@ -107,9 +109,11 @@ export class NavigationPanel {
   }
   preview(offset = 0) {
     const settings = this.settings();
-    if (!settings?.config || this.blocked() || this.dirty()) return;
+    if (!settings || !settings.passengerProfilesActive || this.blocked() || !this.parse()) return;
     this.start(); this.showingRun.set(null);
-    this.api.get<NavigationResult>(`scenarios/${settings.scenarioId}/navigation?revision=${settings.revision}&offset=${offset}&limit=100`)
+    this.previewSubscription?.unsubscribe();
+    this.previewSubscription = this.api.post<NavigationResult>(`scenarios/${settings.scenarioId}/navigation/preview${offset ? `?offset=${offset}&limit=100` : ''}`,
+      { revision: settings.revision, config: this.config })
       .pipe(finalize(() => this.stop()), takeUntilDestroyed(this.destroy))
       .subscribe({ next: result => this.result.set(result), error: error => { this.result.set(null); this.report(error); } });
   }
@@ -126,6 +130,11 @@ export class NavigationPanel {
       .subscribe({ next: result => this.result.set(result), error: error => { this.result.set(null); this.report(error); } });
   }
   next(offset: number) { const id = this.showingRun(); if (id) this.loadRun(id, offset); else this.preview(offset); }
+  walkingMinutes() {
+    const routes = this.result()?.routes ?? [];
+    const count = routes.reduce((sum, route) => sum + route.passengerCount, 0);
+    return count ? routes.reduce((sum, route) => sum + route.passengerCount * route.baseWalkingMinutes, 0) / count : null;
+  }
   toggleRoutes() { this.showRoutes.update(value => !value); }
   flightName(id: string) { return this.scenario().inputs.flights.find(item => item.id === id)?.code ?? id; }
   gateName(id: string) { return this.settings()?.gates.find(item => item.id === id)?.name ?? id; }

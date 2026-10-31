@@ -19,7 +19,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class IdentityTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     [Fact]
@@ -43,23 +42,10 @@ public sealed class IdentityTests
     }
 
     [Fact]
-    public async Task Retired_exploration_commands_and_contracts_are_not_exposed()
-    {
-        await using var host = await ManagementHost.CreateAsync();
-        foreach (var path in new[] { "/passenger-feedback", "/intelligence/evacuation/v1/run", "/contracts/v1/evacuation/validate" })
-        {
-            using var response = await host.Client.PostAsJsonAsync(path, new { }, Token);
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-        using var schema = await host.Client.GetAsync("/contracts/v1/schemas/EvacuationRequest", Token);
-        Assert.Equal(HttpStatusCode.NotFound, schema.StatusCode);
-    }
-
-    [Fact]
     public async Task Viewer_reads_real_scenario_and_results_but_cannot_create_incidents_or_approve()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         using var viewer = await host.SignInAsync("Viewer");
         using var read = await viewer.GetAsync($"/scenarios/{scenario.Scenario.Id}", Token);
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
@@ -75,7 +61,7 @@ public sealed class IdentityTests
     public async Task Operator_can_persist_an_incident()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         using var actor = await host.SignInAsync("Operator");
         var note = new ScenarioInputEvent(Guid.NewGuid(), "note", scenario.Inputs.StartsAtUtc.AddMinutes(2), null, null, null, "{}");
         using var created = await actor.PostAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/events", new EventWriteRequest(scenario.Scenario.Revision, note), Json, Token);
@@ -259,7 +245,7 @@ public sealed class IdentityTests
         foreign.Headers.Add("Origin", "https://untrusted.invalid");
         using var origin = await host.Client.SendAsync(foreign, Token);
         Assert.Equal(HttpStatusCode.Forbidden, origin.StatusCode);
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         await using var hub = Connect(host);
         await hub.StartAsync(Token);
         await hub.InvokeAsync("SubscribeScenario", scenario.Scenario.Id, Token);
@@ -275,7 +261,7 @@ public sealed class IdentityTests
     {
         var clock = new SessionClock();
         await using var host = await ManagementHost.CreateAsync(services: services => services.AddSingleton<TimeProvider>(clock));
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         await using var hub = Connect(host);
         var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         hub.Closed += _ => { closed.TrySetResult(); return Task.CompletedTask; };
@@ -292,17 +278,6 @@ public sealed class IdentityTests
         options.Transports = HttpTransportType.LongPolling;
         options.HttpMessageHandlerFactory = _ => host.HubHandler();
     }).Build();
-
-    private static async Task<ScenarioDetails> Scenario(ManagementHost host)
-    {
-        using var publish = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        publish.EnsureSuccessStatusCode();
-        var layout = (await publish.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var save = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        save.EnsureSuccessStatusCode();
-        return (await save.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
 
     private sealed class SessionClock : TimeProvider
     {

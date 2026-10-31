@@ -6,6 +6,12 @@ Toate modelele curente sunt demonstrative. Geometria 3D, orarul, capacitățile 
 
 ## Catalogul calculelor
 
+Programarea zborurilor, evenimentelor și fluxurilor folosește date și ore absolute: editorul afișează `HH:MM` în fusul orar declarat al scenariului, iar API-ul primește timestamp-uri UTC (`departureAtUtc`, `occurredAtUtc`, `startsAtUtc`, `endsAtUtc`). Data distinge programările de după miezul nopții. Ora plecării este reperul pentru îmbarcare și sosirile pasagerilor; câmpurile de programare nu cer minute scurse de la începutul simulării. Orele locale inexistente sau ambigue la schimbarea orei sunt respinse; un timestamp existent își păstrează instantul. Duratele, întârzierile și separarea dintre plecări rămân durate în minute. Contractele interne istorice pentru distribuțiile pasagerilor convertesc timestamp-urile în offseturi numai la limita cu motorul.
+
+Scenariile noi din Scenario Studio păstrează `minimumDepartureSpacingMinutes = 60`: între două plecări active, inclusiv întârzierile configurate, trebuie să existe cel puțin o oră, indiferent de poartă. Editorul distanțează zborurile adăugate, iar validarea din interfață și API respinge orarele prea apropiate. Presetările de cinci zboruri durează șase ore; presetul de opt ore are opt zboruri. Scenariile istorice fără această proprietate își păstrează regulile originale.
+
+Intervalul de o oră este o regulă solicitată pentru această aplicație, nu un standard aeroportuar universal. De exemplu, [declarația oficială de capacitate Schiphol S26](https://slotcoordination.nl/wp-content/uploads/2025/10/AMS-Capacity-Declaration-Summer-2026.pdf), pagina 3, permite până la 74 de plecări pe oră în configurația de vârf cu două piste de decolare. Modelul aplicației nu simulează separarea ATC pe piste sau restricțiile wake turbulence.
+
 | Subsistem / sursă | Metodă implementată | Output și limită principală |
 | --- | --- | --- |
 | [Generare pasageri](../../intelligence/app/passengers) | NumPy, seed local, populații pe zbor, distribuții declarate ale sosirii/serviciului/mersului, grupuri | Populație sintetică deterministă; distribuțiile sunt inputuri/ipoteze, nu profiluri reale estimate |

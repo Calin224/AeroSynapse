@@ -17,7 +17,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class CopilotToolTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private sealed class InjectedModel : ICopilotModel
     {
         public readonly List<CopilotModelInput> Inputs = [];
@@ -26,12 +25,9 @@ public sealed class CopilotToolTests
     }
     private static async Task<SimulationRun> Run(ManagementHost host, ScenarioDetails scenario, bool dispatch = true)
     {
-        using var response = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
+        var run = await host.StartRunAsync(scenario.Scenario.Id, dispatch);
         if (dispatch)
         {
-            Assert.True(await host.Dispatch(Token));
             var stored = await host.Client.GetFromJsonAsync<JsonElement>($"/runs/{run.Id}", Json, Token);
             Assert.True(stored.GetProperty("status").GetString() == "completed", stored.GetRawText());
         }

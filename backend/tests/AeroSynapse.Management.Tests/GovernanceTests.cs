@@ -18,7 +18,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class GovernanceTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly CopilotModelInput Input = new(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 10), "Queue summary", [new("queuedPassengers", "Queue", 7, "passengers")]);
     private sealed class Provider(string mode = "available") : HttpMessageHandler
@@ -139,9 +138,7 @@ public sealed class GovernanceTests
     {
         await using var host = await ManagementHost.CreateAsync();
         var scenario = await TenantIsolationTests.Scenario(host.Client);
-        using var startRun = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        var run = (await startRun.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         var path = $"/scenarios/{scenario.Scenario.Id}/runs/{run.Id}/copilot/workflows";
         using var start = await host.Client.PostAsJsonAsync(path, new StartCopilotWorkflow(Guid.NewGuid(), "queue-diagnosis", "1.0", scenario.Inputs.StaffAllocations[0].CheckpointId, 30), Json, Token);
         Assert.True(start.StatusCode == HttpStatusCode.Accepted, await start.Content.ReadAsStringAsync(Token));
@@ -181,8 +178,7 @@ public sealed class GovernanceTests
         });
         await Activate(host, await Policy(host, calls: 1));
         var scenario = await TenantIsolationTests.Scenario(host.Client);
-        using var started = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!; Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         var path = $"/scenarios/{scenario.Scenario.Id}/runs/{run.Id}/copilot";
         var question = new CopilotQuestion(scenario.Inputs.StaffAllocations[0].CheckpointId, "Câți pasageri sunt în coadă?");
         foreach (var status in new[] { "unavailable", "policy_or_budget_denied" })

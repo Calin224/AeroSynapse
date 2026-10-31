@@ -25,7 +25,8 @@
             "checkpoint_unavailable",
             "staff_reduction",
             "resume",
-            "passenger_surge"
+            "passenger_surge",
+            "queue_redistribution"
           ],
           "description": "Simultaneous events apply in this enum order, then by eventId."
         },
@@ -63,13 +64,13 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 10000,
-          "description": "passenger_surge: extra synthetic passengers."
+          "description": "passenger_surge: extra synthetic passengers. queue_redistribution: maximum waiting passengers to transfer."
         },
         "windowMinutes": {
           "type": "integer",
           "minimum": 1,
           "maximum": 10080,
-          "description": "passenger_surge: arrivals spread evenly over [minute, minute+windowMinutes)."
+          "description": "passenger_surge: arrivals spread evenly over [minute, minute+windowMinutes). queue_redistribution: walking minutes between controls."
         },
         "staffCount": {
           "type": "integer",
@@ -82,6 +83,14 @@
           "minimum": -1440,
           "maximum": 1440,
           "description": "flight_change: shift of the effective boarding close; nonzero."
+        },
+        "targetCheckpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
         }
       },
       "required": [
@@ -111,7 +120,8 @@
             "checkpoint_unavailable",
             "staff_reduction",
             "resume",
-            "passenger_surge"
+            "passenger_surge",
+            "queue_redistribution"
           ]
         },
         "minute": {

@@ -28,6 +28,47 @@ public sealed class FlightSchedulingTests
     }
 
     [Theory]
+    [InlineData(0, 0, false, false)]
+    [InlineData(59, 0, false, false)]
+    [InlineData(60, 0, false, true)]
+    [InlineData(61, 0, false, true)]
+    [InlineData(60, 1, false, false)]
+    [InlineData(1, 0, true, true)]
+    public void New_scenario_departure_spacing_applies_across_gates_including_delays(int gap, int firstDelay, bool cancelled, bool valid)
+    {
+        var first = Flight() with { DelayMinutes = firstDelay };
+        var second = Flight(1) with
+        {
+            DepartureAtUtc = first.DepartureAtUtc.AddMinutes(gap),
+            BoardingOpensAtUtc = first.BoardingOpensAtUtc!.Value.AddMinutes(gap),
+            BoardingClosesAtUtc = first.BoardingClosesAtUtc!.Value.AddMinutes(gap),
+            Status = cancelled ? "cancelled" : "scheduled"
+        };
+        var request = Request(second, first);
+        request = request with { Inputs = request.Inputs with { DurationMinutes = 240, MinimumDepartureSpacingMinutes = 60 } };
+        if (valid) ScenarioValidator.Validate(request, Layout);
+        else
+        {
+            var error = Assert.Throws<ScenarioValidationException>(() => ScenarioValidator.Validate(request, Layout));
+            Assert.Contains("inputs.flights[0].departureAtUtc", error.Errors.Keys);
+            Assert.Contains("inputs.flights[1].departureAtUtc", error.Errors.Keys);
+            Assert.Contains("60", error.Errors["inputs.flights[0].departureAtUtc"][0]);
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(10081)]
+    public void Invalid_departure_spacing_has_its_own_field_error(int minimum)
+    {
+        var request = Request(Flight());
+        var error = Assert.Throws<ScenarioValidationException>(() => ScenarioValidator.Validate(
+            request with { Inputs = request.Inputs with { MinimumDepartureSpacingMinutes = minimum } }, Layout));
+        Assert.Contains("inputs.minimumDepartureSpacingMinutes", error.Errors.Keys);
+    }
+
+    [Theory]
     [InlineData("close-at-departure", "boardingClosesAtUtc")]
     [InlineData("close-after-departure", "boardingClosesAtUtc")]
     [InlineData("open-at-close", "boardingClosesAtUtc")]

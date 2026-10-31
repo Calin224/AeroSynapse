@@ -25,7 +25,7 @@ def validate_snapshot(row,path,errors,error):
         or row['processedPassengers']!=row['walkingPassengers']+row['atGatePassengers']
         or row['waitSampleCount']!=row['processedPassengers'] or row['completedInWindow']>row['processedPassengers']
         or row['processingPassengers']>row['capacity'] or row['peakBusy']>row['capacity'] or row['processingPassengers']>row['peakBusy']
-        or row['maximumQueue']<row['queuedPassengers'] or row['maximumQueue']>row['arrivedPassengers']
+        or row['maximumQueue']<row['queuedPassengers'] or row['maximumQueue']>row['arrivedPassengers']+row.get('transferredOutPassengers',0)
         or (row['firstQueueMinute'] is None)!=(row['maximumQueue']==0)
         or row['firstQueueMinute'] is not None and row['firstQueueMinute']>minute
         or above(row['busyMinutesInWindow'],row['busyMinutes'])
@@ -92,10 +92,10 @@ def validate_check_in_request(value,path,errors,error):
         errors.append(error(path+'/checkIn/zoneId','duplicate_id'))
     steps=value['checkIn'].get('deskSteps')
     if steps is not None:
-        # Desks only open during a run: a nondecreasing step function from minute 0 ending at staffCount.
+        # Desks may open and close: a step function from minute 0 whose highest level is staffCount.
         minutes=[step['startMinute'] for step in steps]; counts=[step['staffCount'] for step in steps]
         if (minutes[0]!=0 or any(b<=a for a,b in zip(minutes,minutes[1:])) or minutes[-1]>=int(value['durationMinutes'])
-            or any(b<a for a,b in zip(counts,counts[1:])) or counts[-1]!=value['checkIn']['staffCount']):
+            or max(counts)!=value['checkIn']['staffCount']):
             errors.append(error(path+'/checkIn/deskSteps','invalid_value'))
 
 
@@ -137,10 +137,10 @@ def validate_check_in_result(value,path,errors,error):
     for index,row in enumerate(value['snapshots']):
         if (row['zoneId']!=value['zoneId'] or row['capacity']>value['capacity']
             or row['queuedPassengers']+row['processingPassengers']+row['processedPassengers']!=row['arrivedPassengers']
-            or row['walkingPassengers']>row['processedPassengers'] or row['processingPassengers']>row['capacity']
+            or row['walkingPassengers']>row['processedPassengers'] or row['processingPassengers']>value['capacity']
             or row['maximumQueue']<row['queuedPassengers'] or row['maximumQueue']>row['arrivedPassengers']
             or (row['utilization'] is None)!=(row['capacity']==0 or row['minute']==0)
-            or above(row['busyMinutes'],row['capacity']*row['minute'])
+            or above(row['busyMinutes'],value['capacity']*row['minute'])
             or any((row[key] is None)!=(row['processedPassengers']==0) for key in ('meanWaitMinutes','medianWaitMinutes','p95WaitMinutes'))
             or previous and (row['minute']<=previous['minute'] or row['processedPassengers']<previous['processedPassengers']
                              or row['maximumQueue']<previous['maximumQueue'])): invalid(f'/snapshots/{index}')

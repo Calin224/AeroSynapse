@@ -455,7 +455,7 @@ export class AgentPanel {
   }
   scope(agent: ScenarioAgent) {
     return [
-      agent.staffMoves ? 'mută operatori' : '',
+      agent.staffMoves ? 'mută operatori, deschide puncte de control și distribuie cozile' : '',
       reserveOf(agent) ? `cheamă până la ${reserveOf(agent)} operatori din rezervă` : '',
       agent.checkInDesks ? 'deschide ghișee' : '',
       agent.gateChoices ? 'alege porțile la întârzieri și deschide porți inactive' : '',

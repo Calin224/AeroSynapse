@@ -217,3 +217,51 @@ if __name__=='__main__':
     for name,value in [('day',a),('connection-delay',b),('check-in',c)]:
         (root/f'{name}-request.json').write_text(json.dumps(value,indent=2)+'\n')
         (root/f'{name}-response.json').write_text(json.dumps(run(value),indent=2)+'\n')
+
+
+def opening(flight,gate,minute,staff=40):
+    return {'flightId':identifier(flight),'gateId':identifier(gate),'staffMemberId':identifier(staff),'minute':minute}
+
+
+def crowded():
+    value=example()
+    value['journey']['boardingServiceMinutes']=8
+    value['journey']['gateChangeWalkingMinutes']=1
+    return value
+
+
+def last_boarded(result,flight):
+    return max(p['boardedMinute'] or 10**6 for p in result['passengers'] if p['flightId']==identifier(flight))
+
+
+def test_staff_opened_gate_adds_a_lane_without_moving_the_flight():
+    base=run(crowded())['journeyResult']
+    value=crowded(); value['journey']['gateOpenings']=[opening(1,11,70)]
+    r=run(value)['journeyResult']
+    assert last_boarded(r,1)<last_boarded(base,1)
+    assert r['plans']==base['plans']
+    boarded_at=[v['resourceId'] for p in r['passengers'] if p['flightId']==identifier(1) for v in p['visits'] if v['stage']=='boarding']
+    assert identifier(11) in boarded_at and identifier(10) in boarded_at
+    assert all(p['boardedMinute'] is not None for p in r['passengers'])
+
+
+def test_opening_must_use_a_free_gate_once_per_staff_member():
+    ok=crowded(); ok['journey']['gateOpenings']=[opening(1,11,70)]
+    assert not validate('KpiSimulationRequest',ok)
+    for openings in ([opening(1,10,70)],                                  # the flight's own gate
+                     [opening(1,11,70),opening(2,11,130,41)],             # one gate opened twice
+                     [opening(1,11,70),opening(2,10,130,40)],             # one staff member twice
+                     [opening(1,11,2000)]):                               # after the day
+        value=crowded(); value['journey']['gateOpenings']=openings
+        assert validate('KpiSimulationRequest',value)
+
+
+def test_boarding_state_lists_the_queue_and_the_gates_still_free():
+    from app.simulation.journeys import boarding_state
+    value=crowded()
+    state=boarding_state(SimulationRequest.model_validate(value),80)
+    flight=next(f for f in state if f['flightId']==identifier(1))
+    assert flight['queued']>0 and flight['freeGateIds']==[identifier(11)] and flight['openGateIds']==[]
+    value['journey']['gateOpenings']=[opening(1,11,70)]
+    flight=next(f for f in boarding_state(SimulationRequest.model_validate(value),80) if f['flightId']==identifier(1))
+    assert flight['openGateIds']==[identifier(11)] and flight['freeGateIds']==[]

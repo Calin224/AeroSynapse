@@ -12,7 +12,11 @@ public sealed record JourneyInput(string JourneyVersion, int PassportStaffCount,
     int BoardingStaffPerGate, double BoardingServiceMinutes, double GateChangeWalkingMinutes, double RiskBufferMinutes,
     IReadOnlyList<JourneyFlight> Flights, IReadOnlyList<JourneyConnection> Connections, IReadOnlyList<JourneyRoute> Routes,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<JourneyGateChoice>? GateChoices = null);
+    IReadOnlyList<JourneyGateChoice>? GateChoices = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<JourneyGateOpening>? GateOpenings = null);
+/// <summary>A staff member opens a gate no flight is planned at; it adds a boarding lane for the flight from the minute on.</summary>
+public sealed record JourneyGateOpening(Guid FlightId, Guid GateId, Guid StaffMemberId, int Minute);
 /// <summary>How a flight_change is absorbed: "optimal" (rolling optimum) or "keep_gates" (every flight at its gate, when possible).</summary>
 public sealed record JourneyGateChoice(Guid EventId, string Mode);
 public sealed record JourneyVisit(string Stage, Guid ResourceId, double ArrivalMinute, double? StartedMinute, double? FinishedMinute);
@@ -32,21 +36,6 @@ public sealed record JourneyResult(string JourneyVersion, int HorizonMinutes, in
 public sealed record JourneyReport(string JourneyVersion, int HorizonMinutes, int PopulationCount, int ConnectionPassengerCount,
     int BoardedCount, int MissedConnectionCount, IReadOnlyList<JourneyReplan> Plans, IReadOnlyList<JourneySnapshot> Snapshots,
     IReadOnlyList<JourneyPassenger> Passengers, int Offset, int ReturnedCount, bool HasMore);
-
-/// <summary>A delay an operator reports at a minute of the scenario's day, before it is scheduled.</summary>
-public sealed record ReportedDelay(int Minute, Guid FlightId, int DelayMinutes);
-public sealed record GateAdviceEvent(Guid EventId, Guid FlightId, int Minute, int DelayMinutes);
-public sealed record GateAdviceDelay(Guid FlightId, int DelayMinutes);
-public sealed record GateAdviceRequest(string AdviceVersion, int Minute, IReadOnlyList<JourneyFlight> Flights,
-    IReadOnlyList<GateAdviceEvent> Events, GateAdviceDelay Delay);
-/// <summary>The plan known before the delay, the optimal plan after it, and the best plan keeping every gate (null if none).</summary>
-public sealed record GateAdvice(string AdviceVersion, double Minute, string SolverStatus, IReadOnlyList<JourneyFlightPlan> Before,
-    IReadOnlyList<JourneyFlightPlan> Recommended, IReadOnlyList<JourneyFlightPlan>? WithoutMoves);
-public interface IGateAdvisor
-{
-    Task<GateAdvice> AdviseAsync(GateAdviceRequest request, CancellationToken token);
-}
-public sealed class GateAdvisorUnavailableException() : Exception("The gate advisor is unavailable or returned an invalid plan. Check Intelligence and retry.");
 
 public static class JourneyConventions
 {
@@ -135,5 +124,13 @@ public static class JourneyContractValidation
         if (changes.Any(e => e.DelayMinutes <= 0 || e.FlightId is not { } id || !flights.TryGetValue(id, out var f) || f.IsCancelled)) Invalid("/flights");
         var choices = input.GateChoices?.Select(c => c.EventId).ToArray() ?? [];
         if (choices.Distinct().Count() != choices.Length || !choices.ToHashSet().IsSubsetOf(changes.Select(e => e.EventId))) Invalid("/gateChoices");
+        var openings = input.GateOpenings ?? [];
+        var duration = (int)value.GetProperty("durationMinutes").GetDouble();
+        bool Occupied(JourneyGateOpening o) => flights.TryGetValue(o.FlightId, out var own) && input.Flights.Any(f => f.FlightId != o.FlightId
+            && f.GateId == o.GateId && !f.IsCancelled && f.ArrivalMinute < own.DepartureMinute && f.DepartureMinute > o.Minute);
+        if (openings.Select(o => o.GateId).Distinct().Count() != openings.Count || openings.Select(o => o.StaffMemberId).Distinct().Count() != openings.Count
+            || openings.Any(o => !flights.TryGetValue(o.FlightId, out var f) || f.IsCancelled || !f.EligibleGateIds.Contains(o.GateId) || f.GateId == o.GateId
+                || Occupied(o) || o.Minute >= duration))
+            Invalid("/gateOpenings");
     }
 }

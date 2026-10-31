@@ -22,7 +22,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class TenantIsolationTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     internal static async Task<ScenarioDetails> Scenario(HttpClient client)

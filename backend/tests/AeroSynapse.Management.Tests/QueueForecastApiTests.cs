@@ -17,7 +17,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class QueueForecastApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private sealed class LiveInspector : IIntelligenceClient
     {
@@ -97,10 +96,7 @@ public sealed class QueueForecastApiTests
             Assert.True(closed.IsSuccessStatusCode, await closed.Content.ReadAsStringAsync(Token));
         }
         var before = (await host.Client.GetFromJsonAsync<ScenarioDetails>($"/scenarios/{source.Scenario.Id}", Json, Token))!;
-        using var started = await host.Client.PostAsync($"/scenarios/{source.Scenario.Id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(source.Scenario.Id);
         var captured = (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
         Assert.True(captured.ResultsValid, captured.FailureReason);
         var kpis = (await host.Client.GetFromJsonAsync<KpiResult>($"/runs/{run.Id}/kpis?fromMinute=5&toMinute=5&limit=50000", Json, Token))!;
@@ -138,8 +134,7 @@ public sealed class QueueForecastApiTests
         Assert.Equal(HttpStatusCode.OK, cadence.StatusCode);
         using var missing = await host.Client.PostAsJsonAsync($"/runs/{Guid.NewGuid()}/queue-forecast", new QueueForecastOptions(0, 15, 0), Json, Token);
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
-        using var started = await host.Client.PostAsync($"/scenarios/{source.Scenario.Id}/runs", null, Token);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
+        var run = await host.StartRunAsync(source.Scenario.Id, dispatch: false);
         using var pending = await host.Client.PostAsJsonAsync($"/runs/{run.Id}/queue-forecast", new QueueForecastOptions(0, 15, 0), Json, Token);
         Assert.Equal(HttpStatusCode.Conflict, pending.StatusCode);
         Assert.True(await host.Dispatch(Token));

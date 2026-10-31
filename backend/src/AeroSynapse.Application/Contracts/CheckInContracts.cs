@@ -4,14 +4,27 @@ using System.Text.Json.Serialization;
 namespace AeroSynapse.Application.Contracts;
 
 // Check-in desks before security (KPI engine). Times after the horizon are null.
-// DeskSteps: desks open over time (agent openings), a nondecreasing step function from minute 0 ending at StaffCount.
+// DeskSteps: desks open and close over time (agent plan), a step function from minute 0 whose highest level is StaffCount.
 public sealed record CheckInInput(Guid ZoneId, int StaffCount, double ServiceRatePerMinute, double HoldBaggageShare, double WalkingMinutes,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<StaffStep>? DeskSteps = null)
 {
-    /// <summary>The minute each staffed desk opens; desks only open, so desk i is free from its opening on.</summary>
-    public int[] Openings() => Enumerable.Range(0, StaffCount)
-        .Select(desk => DeskSteps?.FirstOrDefault(step => step.StaffCount > desk)?.StartMinute ?? 0).ToArray();
-    public int OpenAt(double minute) => Openings().Count(opened => opened <= minute);
+    /// <summary>The desks open from each step minute on; without steps every desk is open from minute 0.</summary>
+    public (int Start, int Count)[] Levels() => DeskSteps is { Count: > 0 } steps
+        ? steps.Select(step => (step.StartMinute, step.StaffCount)).ToArray() : [(0, StaffCount)];
+    public int OpenAt(double minute) => Levels().LastOrDefault(step => step.Start <= minute).Count;
+    /// <summary>Desks open just before the minute; a desk opening at that minute is not counted.</summary>
+    public int OpenBefore(double minute) => Levels().LastOrDefault(step => step.Start < minute).Count;
+    /// <summary>Desk-minutes open up to the minute.</summary>
+    public double DeskMinutes(double minute)
+    {
+        var levels = Levels(); var total = 0.0;
+        for (var index = 0; index < levels.Length; index++)
+        {
+            var end = index + 1 < levels.Length ? Math.Min(minute, levels[index + 1].Start) : minute;
+            total += levels[index].Count * Math.Max(0, end - levels[index].Start);
+        }
+        return total;
+    }
 }
 public sealed record CheckInPassenger(string Id, Guid CheckpointId, double TerminalArrivalMinute, double ServiceMinutes,
     double? StartedMinute, double? FinishedMinute, double? SecurityArrivalMinute);
@@ -37,10 +50,10 @@ public static class CheckInContractValidation
             errors.Add(VersionedContract.Error(path + "/checkIn/zoneId", "duplicate_id"));
         if (checkIn.TryGetProperty("deskSteps", out var raw))
         {
-            // Desks only open during a run: a nondecreasing step function from minute 0 ending at staffCount.
+            // Desks may open and close: a step function from minute 0 whose highest level is staffCount.
             var steps = raw.EnumerateArray().Select(step => (Minute: step.GetProperty("startMinute").GetInt32(), Count: step.GetProperty("staffCount").GetInt32())).ToArray();
-            if (steps[0].Minute != 0 || steps.Zip(steps.Skip(1)).Any(pair => pair.Second.Minute <= pair.First.Minute || pair.Second.Count < pair.First.Count)
-                || steps[^1].Minute >= value.GetProperty("durationMinutes").GetInt32() || steps[^1].Count != checkIn.GetProperty("staffCount").GetInt32())
+            if (steps[0].Minute != 0 || steps.Zip(steps.Skip(1)).Any(pair => pair.Second.Minute <= pair.First.Minute)
+                || steps[^1].Minute >= value.GetProperty("durationMinutes").GetInt32() || steps.Max(step => step.Count) != checkIn.GetProperty("staffCount").GetInt32())
                 errors.Add(VersionedContract.Error(path + "/checkIn/deskSteps", "invalid_value"));
         }
     }
@@ -63,10 +76,10 @@ public static class CheckInContractValidation
         {
             if (row.ZoneId != result.ZoneId || row.Capacity > result.Capacity
                 || row.QueuedPassengers + row.ProcessingPassengers + row.ProcessedPassengers != row.ArrivedPassengers
-                || row.WalkingPassengers > row.ProcessedPassengers || row.ProcessingPassengers > row.Capacity
+                || row.WalkingPassengers > row.ProcessedPassengers || row.ProcessingPassengers > result.Capacity
                 || row.MaximumQueue < row.QueuedPassengers || row.MaximumQueue > row.ArrivedPassengers
                 || (row.Utilization is null) != (row.Capacity == 0 || row.Minute == 0)
-                || row.BusyMinutes > row.Capacity * (double)row.Minute && !KpiContractValidation.Near(row.BusyMinutes, row.Capacity * (double)row.Minute)
+                || row.BusyMinutes > result.Capacity * (double)row.Minute && !KpiContractValidation.Near(row.BusyMinutes, result.Capacity * (double)row.Minute)
                 || new[] { row.MeanWaitMinutes, row.MedianWaitMinutes, row.P95WaitMinutes }.Any(wait => (wait is null) != (row.ProcessedPassengers == 0))
                 || previous is not null && (row.Minute <= previous.Minute || row.ProcessedPassengers < previous.ProcessedPassengers
                     || row.MaximumQueue < previous.MaximumQueue)) Invalid($"/snapshots/{index}");

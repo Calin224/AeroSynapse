@@ -46,6 +46,11 @@ public static class ProcessCorrelation
             }
             if (cp.Capacity == 0 && members.Any(person => person.ProcessingStartedMinute is not null)) return false;
         }
+        foreach (var group in report.Passengers.Where(p => p.RedistributedAtMinute is not null)
+                     .GroupBy(p => (p.RedistributedAtMinute, p.AssignedCheckpointId, p.CheckpointId)))
+            if (group.Count() > timeline.Events.Where(e => e.Type == "queue_redistribution"
+                    && e.Minute == group.Key.RedistributedAtMinute && e.CheckpointId == group.Key.AssignedCheckpointId
+                    && e.TargetCheckpointId == group.Key.CheckpointId).Sum(e => e.PassengerCount ?? 0)) return false;
         var flights = request.PassengerGeneration?.Flights.ToDictionary(flight => flight.FlightId);
         var gates = request.Navigation?.FlightGates.ToDictionary(flight => flight.FlightId, flight => flight.GateId);
         var batches = request.PassengerGeneration?.Batches.ToDictionary(batch => batch.FlightId);
@@ -67,7 +72,15 @@ public static class ProcessCorrelation
             if (person.AssignedCheckpointId is { } original)
             {
                 // Only arrivals meeting an unavailable control are redirected, to a control that can serve.
-                if (!checkpoints.ContainsKey(original) || timeline.Available(original, person.ArrivalMinute)
+                if (person.RedistributedAtMinute is { } moved)
+                {
+                    if (!checkpoints.ContainsKey(original) || person.TransferMinutes is not { } walking
+                        || person.ArrivalMinute > moved || person.ProcessingStartedMinute < moved + walking
+                        || !timeline.Events.Any(e => e.Type == "queue_redistribution" && e.Minute == moved
+                            && e.CheckpointId == original && e.TargetCheckpointId == person.CheckpointId && e.WindowMinutes == walking)
+                        || timeline.Capacity(person.CheckpointId, moved) == 0) return false;
+                }
+                else if (!checkpoints.ContainsKey(original) || timeline.Available(original, person.ArrivalMinute)
                     || timeline.Capacity(person.CheckpointId, person.ArrivalMinute) == 0) return false;
             }
             if (timeline.Surge(person.Id) is { } surge)

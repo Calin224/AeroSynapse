@@ -14,7 +14,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class RecommendationReviewTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static string Path(Guid evaluationId) => $"/staffing-evaluations/{evaluationId}/recommendation";
     private static async Task<RecommendationOutcome> Prepare(ManagementHost host, Guid evaluationId)
     {

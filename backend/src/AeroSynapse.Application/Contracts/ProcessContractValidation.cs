@@ -43,6 +43,9 @@ public static class ProcessContractValidation
             else if (person.Stage == "walking" && clear!.Value + hold + person.WalkingMinutes <= report.HorizonMinutes) Invalid(prefix);
             if (person.RouteHoldMinutes.HasValue && clear is null) Invalid(prefix);
             if (person.AssignedCheckpointId == person.CheckpointId) Invalid(prefix);
+            if (person.RedistributedAtMinute.HasValue != person.TransferMinutes.HasValue) Invalid(prefix);
+            if (person.RedistributedAtMinute is { } moved && (person.AssignedCheckpointId is null
+                || moved < person.ArrivalMinute || moved > report.HorizonMinutes || start < moved + person.TransferMinutes)) Invalid(prefix);
             var missed = person.BoardingCloseMinute is { } close && (gate.HasValue ? gate.Value > close : report.HorizonMinutes >= close);
             var risk = person.Stage == "unreachable" ? "unreachable" : person.BoardingCloseMinute is null ? "not_applicable"
                 : gate.HasValue ? missed ? "late" : "safe" : missed ? "missed" : "pending";

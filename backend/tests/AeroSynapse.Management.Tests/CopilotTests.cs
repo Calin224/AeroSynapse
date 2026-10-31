@@ -16,7 +16,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class CopilotTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private sealed class Model(string status = "disabled", string? topic = null) : ICopilotModel
     {
         public readonly List<CopilotModelInput> Inputs = [];
@@ -27,22 +26,10 @@ public sealed class CopilotTests
     { services.RemoveAll<ICopilotModel>(); services.AddSingleton<ICopilotModel>(model); });
     private static async Task<ScenarioDetails> Scenario(ManagementHost host, int cadence = 1)
     {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        request = request with { Code = "copilot-" + Guid.NewGuid().ToString("N"), LayoutVersionId = layout.Version.Id,
-            Inputs = request.Inputs with { SnapshotIntervalMinutes = cadence } };
-        using var reply = await host.Client.PostAsJsonAsync("/scenarios", request, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, reply.StatusCode);
-        return (await reply.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        return await host.CreateScenarioAsync(request => request with { Code = "copilot-" + Guid.NewGuid().ToString("N"),
+            Inputs = request.Inputs with { SnapshotIntervalMinutes = cadence } });
     }
-    private static async Task<SimulationRun> Run(ManagementHost host, ScenarioDetails scenario, bool dispatch = true)
-    {
-        using var response = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        if (dispatch) Assert.True(await host.Dispatch(Token)); return run;
-    }
+    private static Task<SimulationRun> Run(ManagementHost host, ScenarioDetails scenario, bool dispatch = true) => host.StartRunAsync(scenario.Scenario.Id, dispatch);
     private static string Path(ScenarioDetails scenario, SimulationRun run) => $"/scenarios/{scenario.Scenario.Id}/runs/{run.Id}/copilot";
     private static CopilotQuestion Question(ScenarioDetails s, string question = "Câți pasageri sunt în coadă?", int? minute = null) =>
         new(s.Inputs.StaffAllocations[0].CheckpointId, question, minute);

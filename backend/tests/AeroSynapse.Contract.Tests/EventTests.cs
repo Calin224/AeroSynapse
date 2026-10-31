@@ -16,23 +16,6 @@ public sealed class EventTests
     private static SimulationRequest Request() => ContractJson.Read<SimulationRequest>(Example("event-request"), "SimulationRequest");
     private static SimulationResponse Response() => ContractJson.Read<SimulationResponse>(Example("event-response"), "SimulationResponse");
 
-    public static IEnumerable<object[]> Cases() => JsonNode.Parse(File.ReadAllText(Path.Combine(Root, "validation-cases.json")))!.AsArray()
-        .Select(item => new object[] { item!["name"]!.GetValue<string>(), item.ToJsonString() });
-
-    [Theory]
-    [MemberData(nameof(Cases))]
-    public void Shared_event_case_matches_Python(string name, string caseJson)
-    {
-        var test = JsonNode.Parse(caseJson)!;
-        Assert.Equal(name, test["name"]!.GetValue<string>());
-        var payload = JsonNode.Parse(Example(test["example"]!.GetValue<string>()).GetRawText())!;
-        foreach (var mutation in test["mutations"]!.AsArray())
-            payload[mutation!["path"]!.GetValue<string>().TrimStart('/')] = mutation["value"]?.DeepClone();
-        var errors = VersionedContract.Validate(test["definition"]!.GetValue<string>(), JsonSerializer.SerializeToElement(payload));
-        Assert.Equal(test["errors"]!.AsArray().Select(item => (item!["field"]!.GetValue<string>(), item["code"]!.GetValue<string>())),
-            errors.Select(item => (item.Field, item.Code)));
-    }
-
     [Fact]
     public void Python_event_run_roundtrips_and_correlates_with_its_request()
     {

@@ -57,7 +57,6 @@ public static class CheckInCorrelation
     // First come, first served on the first free desk, never more desks than open, and no open desk idle while someone waits.
     private static bool Fifo(IReadOnlyList<CheckInPassenger> people, CheckInInput input, double horizon)
     {
-        var openings = input.Openings();
         var ordered = people.OrderBy(person => person.TerminalArrivalMinute).ThenBy(person => person.Id, StringComparer.Ordinal).ToArray();
         var last = double.NegativeInfinity; var waiting = false;
         foreach (var person in ordered)
@@ -66,19 +65,19 @@ public static class CheckInCorrelation
             if (waiting || start < last) return false;
             last = start;
         }
-        if (openings.Length == 0) return ordered.All(person => person.StartedMinute is null);
+        if (input.StaffCount == 0) return ordered.All(person => person.StartedMinute is null);
         var busy = 0;
         foreach (var (time, change) in people.Where(person => person.StartedMinute is not null)
             .SelectMany(person => person.FinishedMinute is { } end ? new[] { (person.StartedMinute!.Value, 1), (end, -1) } : [(person.StartedMinute!.Value, 1)])
             .OrderBy(item => item.Item1).ThenBy(item => item.Item2))
-            if ((busy += change) > openings.Count(opened => opened <= time)) return false;
+            if ((busy += change) > input.StaffCount) return false;
         int Active(double time, bool includeStart) => people.Count(other => other.StartedMinute is { } start
             && (includeStart ? start <= time : start < time) && (other.FinishedMinute ?? double.PositiveInfinity) >= time && (!includeStart || other.FinishedMinute is not { } end || end > time));
         foreach (var person in ordered)
         {
-            // A later start means every desk open before it was busy until then; a desk opening at that minute frees one.
-            if (person.StartedMinute is { } start ? start > person.TerminalArrivalMinute && Active(start, false) != openings.Count(opened => opened < start)
-                : Active(horizon, true) != openings.Count(opened => opened <= horizon)) return false;
+            // A later start means every desk open before it was busy until then; a desk that closed still finishes its passenger.
+            if (person.StartedMinute is { } start ? start > person.TerminalArrivalMinute && Active(start, false) < input.OpenBefore(start)
+                : Active(horizon, true) < input.OpenAt(horizon)) return false;
         }
         return true;
     }
@@ -88,12 +87,12 @@ public static class CheckInCorrelation
         var grid = KpiConventions.Minutes(request.DurationMinutes, request.SnapshotIntervalMinutes ?? 1);
         if (!result.Snapshots.Select(row => row.Minute).SequenceEqual(grid)) return false;
         var people = result.Passengers;
-        var input = request.CheckIn!; var openings = input.Openings();
+        var input = request.CheckIn!;
         foreach (var row in result.Snapshots)
         {
             double time = row.Minute;
-            // Desk-minutes open so far: staffCount × minute when every desk opens at 0.
-            var offered = openings.Sum(opened => Math.Max(0, time - opened));
+            // Desk-minutes open so far: staffCount × minute when every desk is open from 0.
+            var offered = input.DeskMinutes(time);
             var started = people.Where(person => person.StartedMinute <= time).ToArray();
             var finished = people.Where(person => person.FinishedMinute <= time).ToArray();
             var waits = finished.Select(person => person.StartedMinute!.Value - person.TerminalArrivalMinute).Order().ToArray();

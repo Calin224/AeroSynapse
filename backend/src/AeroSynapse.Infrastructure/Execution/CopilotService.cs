@@ -65,6 +65,19 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         if (sample?.Kpi is not { } kpi) return Missing(scope, "sample_missing", "Nu există un snapshot KPI la minutul și zona selectate. Nu interpolez datele lipsă.");
         var facts = Facts(kpi);
         var normalized = Normalize(request.Question);
+        if (new[] { "distribu", "deschid", "recomand" }.Any(normalized.Contains)
+            && new[] { "coad", "cozi", "checkpoint", "punct", "control" }.Any(normalized.Contains))
+        {
+            var advice = QueueAdvice(captured, data, scope);
+            var fact = facts.Single(f => f.Id == "queuedPassengers");
+            var citation = new CopilotCitation(fact.Id, fact.Label, fact.Value, fact.Unit, scenarioId, runId, scope.ZoneId, scope.Minute, sample.RecordedAtUtc);
+            var observation = $"Pasageri în coadă: {fact.Value.ToString("0", CultureInfo.InvariantCulture)} pasageri [queuedPassengers]. ";
+            var message = advice.Options.Count > 0
+                ? "Propun evaluarea variantelor de mai jos pentru deschiderea punctelor disponibile și redistribuirea pasagerilor care încă așteaptă."
+                : "Nu există o variantă de deschidere sau redistribuire justificată de coada și capacitățile disponibile la acest minut.";
+            return new("1.0", scope, "answered", "queue_advice", observation + message,
+                "not_requested", envelope.ContentHash, [citation], QueueAdvice: advice);
+        }
         var localTopic = Topic(normalized);
         // One observation cannot establish a cause, forecast, intervention benefit or before/after change.
         if (localTopic == "causality")
@@ -102,6 +115,44 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
             scenarioId, runId, scope.ZoneId, scope.Minute, selection.Status, enough ? "observed_metrics" : "insufficient_cohort");
         return new("1.0", scope, enough ? "answered" : "insufficient_data", enough ? "observed_metrics" : "insufficient_cohort", answer,
             selection.Status, envelope.ContentHash, citations);
+    }
+
+    private static CopilotQueueAdvice QueueAdvice(RunInputSnapshot captured, ReplayData data, CopilotScope scope)
+    {
+        const string limitation = "Variante calculate din snapshot, fără aplicare automată. Numărul de pasageri este o limită propusă, nu un beneficiu garantat. Verifică accesul și evaluează varianta în simulator.";
+        var layout = captured.Layout.Layout;
+        var selected = layout.Checkpoints.Single(c => c.Id == scope.ZoneId);
+        var controls = layout.Checkpoints.Where(c => c.TerminalId == selected.TerminalId).ToArray();
+        var rows = data.Samples.Where(s => s.Minute == scope.Minute && s.Kpi is not null && controls.Any(c => c.Id == s.ZoneId))
+            .ToDictionary(s => s.ZoneId, s => s.Kpi!);
+        var request = CapturedSimulation.Request(scope.RunId, captured);
+        var timeline = new EventTimeline(request);
+        var frozen = (request.Events ?? []).Where(e => e.CheckpointId is not null && e.Type != "queue_redistribution")
+            .Select(e => e.CheckpointId!.Value).ToHashSet();
+        var reserved = captured.Scenario.Inputs.StaffAllocations.Select(a => a.StaffMemberId)
+            .Concat(captured.Scenario.Inputs.StaffShifts?.Shifts.Select(s => s.StaffMemberId) ?? [])
+            .Concat(captured.Scenario.Inputs.IntegratedResources?.Workers.Select(w => w.StaffMemberId) ?? []).ToHashSet();
+        var reserve = Math.Min(50, layout.Staff.Count(s => s.TerminalId == selected.TerminalId && !reserved.Contains(s.Id)));
+        var agent = captured.Scenario.Inputs.Agent ?? new ScenarioAgent(true, false, false, TransferMinutes: 5, ReserveOperators: reserve);
+        var alreadyAdded = Math.Max(0, rows.Values.Sum(k => k.EffectiveCapacity ?? k.Capacity)
+            - request.Checkpoints.Where(c => rows.ContainsKey(c.CheckpointId)).Sum(c => c.StaffCount));
+        reserve = Math.Max(0, Math.Min(reserve, agent.Reserve) - alreadyAdded);
+        var states = controls.Where(c => rows.ContainsKey(c.Id)).Select(c =>
+        {
+            var k = rows[c.Id]; var staff = k.EffectiveCapacity ?? k.Capacity;
+            return new AgentCheckpointState(c.Id, staff, staff, timeline.Available(c.Id, scope.Minute), c.CapacityPerMinute,
+                k.QueuedPassengers, k.ProcessingPassengers, k.ProcessedPassengers, 0, k.MeanWaitMinutes, 0, k.BoardingAtRiskCount, k.NotArrivedPassengers);
+        }).ToArray();
+        var names = controls.ToDictionary(c => c.Id, c => string.IsNullOrWhiteSpace(c.Code) ? c.Name : c.Code);
+        var options = AgentCandidates.Periodic(new("1.0", scope.Minute, states, null), agent with { StaffMoves = true }, frozen, names, null, reserve)
+            .Where(o => o.Kind is "checkpoint_open" or "queue_redistribution" && o.FromCheckpointId == scope.ZoneId
+                && scope.Minute + 1 + agent.TransferMinutes + Math.Max(1, agent.TransferMinutes) < request.DurationMinutes).ToArray();
+        var evidence = controls.Where(c => rows.ContainsKey(c.Id)).SelectMany(c => new[]
+        {
+            new CopilotEvidenceFact($"queue.{c.Id}", $"{names[c.Id]} · pasageri în coadă", rows[c.Id].QueuedPassengers, "pasageri", scope.RunId, c.Id, $"/runs/{scope.RunId}/kpis?zoneId={c.Id}&fromMinute={scope.Minute}&toMinute={scope.Minute}"),
+            new CopilotEvidenceFact($"staff.{c.Id}", $"{names[c.Id]} · operatori la acest minut", rows[c.Id].EffectiveCapacity ?? rows[c.Id].Capacity, "operatori", scope.RunId, c.Id, $"/runs/{scope.RunId}/kpis?zoneId={c.Id}&fromMinute={scope.Minute}&toMinute={scope.Minute}")
+        }).ToArray();
+        return new(options, evidence, limitation);
     }
 
     private async Task<SimulationRun> Require(Guid scenarioId, Guid runId, CancellationToken token)

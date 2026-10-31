@@ -52,11 +52,16 @@ def test_desks_opened_later_serve_from_their_minute_and_never_before():
     assert observed(opened, 25)['checkIn']['desksOpen'] == 3 and observed(opened, 15)['checkIn']['desksOpen'] == 1
 
 
-@pytest.mark.parametrize('steps', [[{'startMinute': 5, 'staffCount': 3}], [{'startMinute': 0, 'staffCount': 3}, {'startMinute': 20, 'staffCount': 1}],
-                                   [{'startMinute': 0, 'staffCount': 1}, {'startMinute': 20, 'staffCount': 2}]])
-def test_desk_steps_start_at_zero_only_open_and_end_at_the_staffing(steps):
+@pytest.mark.parametrize('steps', [[{'startMinute': 5, 'staffCount': 3}], [{'startMinute': 0, 'staffCount': 1}, {'startMinute': 20, 'staffCount': 2}],
+                                   [{'startMinute': 0, 'staffCount': 3}, {'startMinute': 20, 'staffCount': 3}, {'startMinute': 20, 'staffCount': 1}]])
+def test_desk_steps_start_at_zero_peak_at_the_staffing_and_increase_in_time(steps):
     with pytest.raises(ValueError):
         SimulationRequest.model_validate(test_check_in.base(check_in={'staffCount': 3, 'deskSteps': steps}))
+
+
+def test_desk_steps_may_close_desks():
+    steps = [{'startMinute': 0, 'staffCount': 3}, {'startMinute': 20, 'staffCount': 1}]
+    SimulationRequest.model_validate(test_check_in.base(check_in={'staffCount': 3, 'deskSteps': steps}))
 
 
 def test_keeping_gates_on_a_delay_moves_no_flight_when_a_plan_exists():

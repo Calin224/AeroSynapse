@@ -18,7 +18,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class QueuePredictionApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static string Example(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "contracts", "forecast", "v1", "examples", name + ".json"));
     private static QueueForecastRequest Request => JsonSerializer.Deserialize<QueueForecastRequest>(Example("forecast-request"), ContractJson.Options)!;
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
@@ -53,10 +52,7 @@ public sealed class QueuePredictionApiTests
     {
         var host = await ManagementHost.CreateAsync(realEngine: true, services: services);
         var source = await StaffingEvaluationTests.Create(host);
-        using var started = await host.Client.PostAsync($"/scenarios/{source.Scenario.Id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(source.Scenario.Id);
         return (host, run.Id);
     }
 

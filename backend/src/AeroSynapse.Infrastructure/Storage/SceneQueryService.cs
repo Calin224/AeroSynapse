@@ -43,15 +43,3 @@ public sealed class SceneQueryService(TwinDbContext database) : ISceneQueryServi
         if (limit is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be between 1 and 100.");
     }
 }
-
-public sealed class SimulationRunRepository(TwinDbContext database) : ISimulationRunRepository
-{
-    public Task<SimulationRun?> FindAsync(Guid sceneId, Guid runId, CancellationToken cancellationToken = default) =>
-        database.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.Id == runId && x.SceneId == sceneId, cancellationToken);
-
-    public async Task AddAsync(SimulationRun run, CancellationToken cancellationToken = default)
-    {
-        database.Runs.Add(run);
-        await database.SaveChangesAsync(cancellationToken);
-    }
-}

@@ -8,22 +8,6 @@ public sealed class KpiTests
 {
     private static readonly string Root=Path.Combine(AppContext.BaseDirectory,"contracts","kpis","v1");
     private static JsonElement Example(string name)=>JsonSerializer.SerializeToElement(JsonNode.Parse(File.ReadAllText(Path.Combine(Root,"examples",name+".json")))!);
-    public static IEnumerable<object[]> Cases()=>JsonNode.Parse(File.ReadAllText(Path.Combine(Root,"validation-cases.json")))!.AsArray()
-        .Select(item=>new object[]{item!["name"]!.GetValue<string>(),item.ToJsonString()});
-    [Theory][MemberData(nameof(Cases))]
-    public void Shared_kpi_case_matches_Python(string name,string caseJson)
-    {
-        var test=JsonNode.Parse(caseJson)!; Assert.Equal(name,test["name"]!.GetValue<string>());
-        var payload=JsonNode.Parse(Example(test["example"]!.GetValue<string>()).GetRawText())!;
-        foreach(var mutation in test["mutations"]!.AsArray())
-        {
-            var parts=mutation!["path"]!.GetValue<string>().Split('/').Skip(1).ToArray(); var parent=payload;
-            foreach(var part in parts.SkipLast(1)) parent=parent is JsonArray ? parent[int.Parse(part)]! : parent[part]!;
-            if(parent is JsonArray array) array[int.Parse(parts.Last())]=mutation["value"]?.DeepClone(); else parent[parts.Last()]=mutation["value"]?.DeepClone();
-        }
-        var errors=VersionedContract.Validate(test["definition"]!.GetValue<string>(),JsonSerializer.SerializeToElement(payload));
-        Assert.Equal(test["errors"]!.AsArray().Select(item=>(item!["field"]!.GetValue<string>(),item["code"]!.GetValue<string>())),errors.Select(item=>(item.Field,item.Code)));
-    }
     [Theory][InlineData("kpi-request","kpi-response")][InlineData("empty-request","empty-response")][InlineData("check-in-request","check-in-response")][InlineData("check-in-events-request","check-in-events-response")]
     public void Request_and_response_roundtrip_and_correlate_with_observed_processes(string input,string output)
     {

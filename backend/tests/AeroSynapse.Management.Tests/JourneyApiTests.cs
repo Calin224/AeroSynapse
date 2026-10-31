@@ -13,17 +13,13 @@ namespace AeroSynapse.Management.Tests;
 public sealed class JourneyApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
     public async Task Complete_journeys_execute_persist_paginate_and_survive_later_scenario_edits()
     {
         Assert.SkipWhen(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SIMULATION_TEST_URL")), "Set SIMULATION_TEST_URL to the real Python engine.");
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        Assert.Equal(HttpStatusCode.Created, published.StatusCode);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var template = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
+        var (template, layout) = await host.DraftAsync();
         var start = template.Inputs.StartsAtUtc;
         var arrivals = new[] { 60, 180, 300, 480 };
         var flights = arrivals.Select((arrival, i) => new ScenarioFlight(Guid.NewGuid(), $"DAY-{i + 1}", layout.Layout.Gates[0].Id,
@@ -43,10 +39,7 @@ public sealed class JourneyApiTests
         using var created = await host.Client.PostAsJsonAsync("/scenarios", write, Json, Token);
         Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Token));
         var scenario = (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-        using var started = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        Assert.True(started.StatusCode == HttpStatusCode.Accepted, await started.Content.ReadAsStringAsync(Token));
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         var completed = (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
         Assert.True(completed.Status == "completed", completed.FailureReason);
         var report = (await host.Client.GetFromJsonAsync<JourneyReport>($"/runs/{run.Id}/journey?limit=100", Json, Token))!;

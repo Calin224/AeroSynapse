@@ -15,7 +15,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class AnomalyApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     // Deliberately sensitive, so the scheduled surge raises at least one alert to review.
     private static readonly AnomalySettings Sensitive = new(0.5, 1, 1, 0);
     private static readonly AnomalySettings Defaults = new(0.95, 10, 6, 10);
@@ -44,10 +43,7 @@ public sealed class AnomalyApiTests
 
     private static async Task<Guid> Run(ManagementHost host, ScenarioDetails scenario)
     {
-        using var started = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         return run.Id;
     }
 

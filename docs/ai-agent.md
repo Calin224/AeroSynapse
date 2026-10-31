@@ -13,10 +13,25 @@ input al rulării respective și acționează abia după minutul în care a fost
   rămas, din cel mult `reserveOperators` pe rulare. Un agent care mută operatori și nu are rezerva setată primește
   implicit 10, inclusiv scenariile salvate înainte de această opțiune; `reserveOperators: 0` o dezactivează. Și ei
   servesc după `transferMinutes`. Rezerva nu e disponibilă pe un plan de ture.
-- **Deschide ghișee de check-in**, câte cel mult două la un pas, până la numărul de ghișee din zonă. În prima
-  versiune ghișeele doar se deschid; nu se închid în timpul rulării.
+- **Deschide ghișee de check-in**, câte cel mult două la un pas, până la numărul de ghișee din zonă.
+- **Aplică planul optim (`plan`).** La fiecare punct periodic motorul Python rezolvă un model CP-SAT al cozii (fluid, pe
+  blocuri de 5 minute, următoarea oră) din sosirile estimate ale rulării. Rezultă câte ghișee de check-in să fie
+  deschise pe minut (se pot și închide; un ghișeu închis își termină pasagerul servit) și câți operatori să aibă fiecare
+  control. Obiectivul minimizează coada maximă și coada rămasă, la cost minim de personal (ghișee/operatori deschiși și
+  schimbări). Operatorii se repartizează dintr-un total fix (cei de acum plus rezerva rămasă), fiecare control păstrează
+  cel puțin unul, iar cei adăugați servesc după `transferMinutes`. Planul se oferă întreg sau pe părți
+  (`plan`, `plan-staff`, `plan-desks`) și se recalculează la fiecare punct: primul punct acționează ca plan inițial.
+  Ghișeele se planifică doar cu `checkInDesks`, operatorii doar cu `staffMoves`.
 - **Alege porțile la o întârziere programată.** Variantele sunt replanificarea optimă sau păstrarea fiecărui zbor
   la poarta lui, când un astfel de plan există.
+- **Deschide o poartă inactivă cu un membru al personalului.** Când coada de îmbarcare a unui zbor nu se golește
+  în timp util (minute necesare = coadă × `boardingServiceMinutes` ÷ benzi), algoritmul oferă poarta eligibilă la
+  care niciun zbor nu e planificat până la plecarea lui și un `StaffMember` liber din același terminal (nealocat la
+  securitate, ture sau echipe). Zborul își păstrează poarta: poarta deschisă adaugă o bandă de îmbarcare, iar
+  pasagerii merg acolo doar dacă așteptarea câștigată depășește mersul (`gateChangeWalkingMinutes`). Agentul nu
+  mută și nu schimbă niciodată porțile între zboruri. Se decide periodic și imediat după fiecare întârziere
+  programată, cu `gateChoices` activ; deschiderea acționează după minutul deciziei și se salvează în
+  `journey.gateOpenings`.
 
 Controalele care au evenimente programate (închidere, reducere de personal) rămân în afara mutărilor și a rezervei.
 Testele repetate și evaluările de personal rulează fără agent, ca variantele să rămână comparabile.
@@ -27,17 +42,17 @@ Testele repetate și evaluările de personal rulează fără agent, ca variantel
    schimba din panou; 15 în API dacă lipsește) și la fiecare întârziere programată,
    .NET cere motorului Python să ruleze ziua până la acel minut (`POST /simulation/v1/observe`).
 2. Progresul se înregistrează, deci Control Tower avansează live.
-3. Algoritmul oferă câteva variante plus „nicio schimbare”.
+3. Algoritmul oferă câteva variante plus „nicio schimbare”, între ele planul optim când există.
 4. Gemini alege una după id, sub o schemă JSON cu enum. Motivul pe care îl scrie este afișat operatorului. Modelul
    nu poate adăuga acțiuni sau cifre.
 5. Decizia se salvează în `twin.agent_decisions`, iar UI o citește din `GET /runs/{id}/agent-decisions`.
-6. La final, rularea completă se execută cu toate deciziile ca inputuri: programe de personal (mutări și rezervă), ghișee deschise și
-   alegeri de porți. Validarea, corelarea, hash-urile și stocarea rămân cele existente.
+6. La final, rularea completă se execută cu toate deciziile ca inputuri: programe de personal (mutări și rezervă), ghișee deschise,
+   alegeri de porți și porți deschise de personal (`journey.gateOpenings`). Validarea, corelarea, hash-urile și stocarea rămân cele existente.
 7. O rulare reconciliată sau reluată refolosește deciziile salvate, fără să întrebe din nou modelul.
 
 Dacă nu există cheie, dacă modelul nu răspunde la timp, dacă răspunsul e invalid sau dacă s-a terminat creditul,
-decide o regulă de rezervă deterministă: mută operatori sau deschide ghișee doar unde coada plus sosirile din următoarele
-30 de minute depășesc capacitatea, altfel „nicio schimbare” (la întârzieri, replanificarea optimă). Motivul începe cu
+decide o regulă de rezervă deterministă: aplică planul optim când există, altfel mută operatori sau deschide ghișee doar unde coada plus sosirile din următoarele
+30 de minute depășesc capacitatea, sau deschide o poartă doar dacă coada de îmbarcare nu s-ar goli până la închidere, altfel „nicio schimbare” (la întârzieri, replanificarea optimă). Motivul începe cu
 „Regulă de rezervă”, iar starea modelului rămâne înregistrată. Fiecare apel este
 înregistrat în `ai_agent_events` (`agent_model_call`), cu limită zilnică și limită per rulare.
 

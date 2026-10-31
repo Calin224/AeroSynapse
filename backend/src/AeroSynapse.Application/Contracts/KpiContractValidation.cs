@@ -22,7 +22,7 @@ public static class KpiContractValidation
             || row.ProcessedPassengers != row.WalkingPassengers + row.AtGatePassengers
             || row.WaitSampleCount != row.ProcessedPassengers || row.CompletedInWindow > row.ProcessedPassengers
             || row.ProcessingPassengers > row.Capacity || row.PeakBusy > row.Capacity || row.ProcessingPassengers > row.PeakBusy
-            || row.MaximumQueue < row.QueuedPassengers || row.MaximumQueue > row.ArrivedPassengers
+            || row.MaximumQueue < row.QueuedPassengers || row.MaximumQueue > row.ArrivedPassengers + (row.TransferredOutPassengers ?? 0)
             || (row.FirstQueueMinute is null) != (row.MaximumQueue == 0) || row.FirstQueueMinute > row.Minute
             || Above(row.BusyMinutesInWindow, row.BusyMinutes) || Above(row.BusyMinutes, row.Capacity * (double)row.Minute)
             || Above(row.BusyMinutesInWindow, row.Capacity * (double)width)

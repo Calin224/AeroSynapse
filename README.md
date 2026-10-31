@@ -83,7 +83,7 @@ node scripts/validate-demo.mjs
 
 Rezultatele sunt scrise în `artifacts/`, ignorat de Git. Pentru verificarea dispozitivului de prezentare și recuperare, folosește [ghidul readiness](scripts/readiness/README.md).
 
-Pipeline-urile [Azure](azure-pipelines.yml) și [GitHub](.github/workflows) conțin build/test/release gates; activarea lor în platforma de hosting depinde de configurarea proiectului. Pentru un release nou, dintr-un checkout curat:
+Pipeline-ul [Azure](azure-pipelines.yml) conține build/test/release gates. Pentru un release nou, dintr-un checkout curat:
 
 ```sh
 node scripts/prepare-release.mjs --out artifacts/release

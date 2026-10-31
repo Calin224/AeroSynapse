@@ -99,6 +99,8 @@ class ScheduledEvent(WireModel):
     staff_count: int | None = Field(default=None, exclude_if=lambda value: value is None)
     delay_minutes: int | None = Field(default=None, exclude_if=lambda value: value is None)
 
+    target_checkpoint_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
+
     def wire(self):
         return self.model_dump(mode='json', by_alias=True)
 

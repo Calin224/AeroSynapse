@@ -33,7 +33,7 @@ public static class NavigationCorrelation
         var routes = result.Routes.ToDictionary(item => item.RouteKey);
         foreach (var route in result.Routes)
         {
-            if (!flights.TryGetValue(route.FlightId,out var flight) || route.GateId != destinations[route.FlightId] || !flight.Allows(route.CheckpointId)
+            if (!flights.TryGetValue(route.FlightId,out var flight) || route.GateId != destinations[route.FlightId] || !(flight.Allows(route.CheckpointId) || timeline?.Events.Any(e => e.Type == "queue_redistribution" && e.TargetCheckpointId == route.CheckpointId) == true)
                 || !profiles.TryGetValue(route.GroupKind,out var profile) || !batches[route.FlightId].Groups.Any(group => group.Kind == route.GroupKind)
                 || route.EdgeIds.Count+1 != route.ZoneIds.Count || route.Waypoints.Count != route.ZoneIds.Count
                 || !checkpoints.TryGetValue(route.CheckpointId,out var source) || !gates.TryGetValue(route.GateId,out var target)
@@ -58,7 +58,7 @@ public static class NavigationCorrelation
         foreach (var person in result.Journeys)
         {
             if (!flights.TryGetValue(person.FlightId,out var flight) || person.GateId != destinations[person.FlightId]
-                || !flight.Allows(person.CheckpointId) || person.BoardingCloseMinute != (timeline?.Close[person.FlightId] ?? flight.BoardingCloseMinute)
+                || !(flight.Allows(person.CheckpointId) || actual?.GetValueOrDefault(person.Id) is { RedistributedAtMinute: not null } moved && moved.CheckpointId == person.CheckpointId) || person.BoardingCloseMinute != (timeline?.Close[person.FlightId] ?? flight.BoardingCloseMinute)
                 || !person.Id.StartsWith($"demo-pax-{person.FlightId:N}-",StringComparison.Ordinal)
                 || !int.TryParse(person.Id.AsSpan(person.Id.Length-6),out var number) || number<1 || number>batches[person.FlightId].ModeledCount) return false;
             if (person.Error is not null)
@@ -71,7 +71,7 @@ public static class NavigationCorrelation
                 || route.GateId != person.GateId || route.CheckpointId != person.CheckpointId || person.WalkingMinutes is null) return false;
             if (actual is not null && assessed)
             {
-                if (!actual.TryGetValue(person.Id,out var process)) return false;
+                if (!actual.TryGetValue(person.Id,out var process) || person.CheckpointId != process.CheckpointId && process.RedistributedAtMinute is not null) return false;
                 if (process.GateArrivalMinute is { } reached
                         ? person.GateArrivalMinute != reached || person.QueueWaitMinutes != process.QueueWaitMinutes
                           || person.BoardingRisk != (reached <= person.BoardingCloseMinute ? "safe" : "late")

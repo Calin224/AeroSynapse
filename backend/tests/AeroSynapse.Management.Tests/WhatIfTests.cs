@@ -16,13 +16,10 @@ namespace AeroSynapse.Management.Tests;
 public sealed class WhatIfTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static async Task<ScenarioDetails> Create(ManagementHost host, bool profiles = false, int passengers = 120)
     {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        request = request with { LayoutVersionId = layout.Version.Id, Inputs = request.Inputs with {
+        var (request, layout) = await host.DraftAsync();
+        request = request with { Inputs = request.Inputs with {
             Flights = [request.Inputs.Flights[0] with { PassengerCapacity = passengers + 10 }],
             Populations = [request.Inputs.Populations[0] with { Count = passengers }], Flows = [request.Inputs.Flows[0] with { PassengerCount = passengers }] } };
         if (profiles)
@@ -33,9 +30,7 @@ public sealed class WhatIfTests
                     generation.Batches[0].CheckpointId, request.Inputs.Flights[0].GateId, request.Inputs.Flights[0].Id,
                     "{\"contractVersion\":\"1.0\",\"durationMinutes\":5,\"share\":0.75,\"isSynthetic\":true}")] } };
         }
-        using var response = await host.Client.PostAsJsonAsync("/scenarios", request, Json, Token);
-        Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Token));
-        return (await response.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        return await host.PostScenarioAsync(request);
     }
     private static CreateWhatIfRequest Request(ScenarioDetails scenario) => new(Guid.NewGuid(), scenario.Scenario.Revision, "Personal alternativ DEMO", scenario.Inputs.StaffAllocations[0].CheckpointId, 1);
     private static async Task<BatchDetails> Pair(ManagementHost host, Guid scenarioId, CreateWhatIfRequest request)

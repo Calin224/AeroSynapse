@@ -18,19 +18,11 @@ namespace AeroSynapse.Management.Tests;
 public sealed class BatchTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static async Task<(ScenarioDetails Baseline, ScenarioDetails Candidate)> Scenarios(ManagementHost host)
     {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var template = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        async Task<ScenarioDetails> Create(string code)
-        {
-            using var response = await host.Client.PostAsJsonAsync("/scenarios", template with { Code = code, Name = code, LayoutVersionId = layout.Version.Id }, Json, Token);
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-            return (await response.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-        }
-        return (await Create("batch-baseline"), await Create("batch-candidate"));
+        var template = (await host.DraftAsync()).Request;
+        return (await host.PostScenarioAsync(template with { Code = "batch-baseline", Name = "batch-baseline" }),
+            await host.PostScenarioAsync(template with { Code = "batch-candidate", Name = "batch-candidate" }));
     }
     private static CreateBatchRequest Request((ScenarioDetails Baseline, ScenarioDetails Candidate) scenarios, int limit = 60) =>
         new(Guid.NewGuid(), "Monte Carlo DEMO", new(scenarios.Baseline.Scenario.Id, 1), [new(scenarios.Candidate.Scenario.Id, 1)], [42, 7, 99], limit);

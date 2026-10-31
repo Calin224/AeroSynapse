@@ -13,7 +13,7 @@ public sealed record NavigationSettings(Guid ScenarioId,int Revision,bool Passen
 public sealed record NavigationWriteRequest(int Revision,NavigationConfig? Config);
 public sealed record GetNavigationSettingsQuery(Guid ScenarioId) : IRequest<NavigationSettings>;
 public sealed record WriteNavigationCommand(Guid ScenarioId,NavigationWriteRequest Value) : IRequest<ScenarioDetails>;
-public sealed record PreviewNavigationQuery(Guid ScenarioId,int Revision,int Offset=0,int Limit=100) : IRequest<NavigationResult>;
+public sealed record PreviewNavigationQuery(Guid ScenarioId,int Revision,int Offset=0,int Limit=100, NavigationConfig? Config=null) : IRequest<NavigationResult>;
 public sealed record GetRunNavigationQuery(Guid RunId,int Offset=0,int Limit=100) : IRequest<NavigationResult>;
 public sealed record ImportNavigationMapQuery(Guid AirportId) : IRequest<NavigationConfig>;
 
@@ -42,7 +42,9 @@ public sealed class NavigationOperations(IScenarioService scenarios,IRunStorageS
     {
         Pagination(query.Offset,query.Limit);
         var scenario = await Require(query.ScenarioId,token); Revision(scenario,query.Revision); var layout = await Layout(scenario,token);
-        return await planner.PreviewAsync(new(PassengerScenarios.Request(scenario.Inputs,layout.Layout),NavigationScenarios.Input(scenario.Inputs,layout.Layout)),query.Offset,query.Limit,token);
+        var inputs = query.Config is { } draft ? scenario.Inputs with { Navigation = draft } : scenario.Inputs;
+        NavigationScenarios.Validate(inputs, layout.Layout);
+        return await planner.PreviewAsync(new(PassengerScenarios.Request(inputs,layout.Layout),NavigationScenarios.Input(inputs,layout.Layout)),query.Offset,query.Limit,token);
     }
     public async Task<NavigationResult> Handle(GetRunNavigationQuery query,CancellationToken token)
     {

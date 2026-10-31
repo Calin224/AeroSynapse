@@ -31,7 +31,6 @@ internal sealed class ScriptedAgentModel(string status = "chosen") : IAgentModel
 public sealed class AgentLoopTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static async Task<(ManagementHost Host, ScenarioDetails Scenario)> Start(ScriptedAgentModel model, ScenarioAgent? agent = null)
     {
@@ -49,10 +48,7 @@ public sealed class AgentLoopTests
 
     private static async Task<RunDetails> Run(ManagementHost host, ScenarioDetails scenario)
     {
-        using var started = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        Assert.True(started.StatusCode == HttpStatusCode.Accepted, await started.Content.ReadAsStringAsync(Token));
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         return (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
     }
 

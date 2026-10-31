@@ -19,23 +19,10 @@ namespace AeroSynapse.Management.Tests;
 public sealed class RunProvenanceTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<ScenarioDetails> Create(ManagementHost host)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        return (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
     private static async Task<RunDetails> Run(ManagementHost host, Guid scenarioId)
     {
-        using var response = await host.Client.PostAsync($"/scenarios/{scenarioId}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
+        var run = await host.StartRunAsync(scenarioId);
         Assert.Matches("^[0-9a-f]{64}$", run.InputHash!);
-        Assert.True(await host.Dispatch(Token));
         return (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
     }
     private static Task<RunComparison?> Compare(ManagementHost host, Guid a, Guid b) =>
@@ -45,7 +32,7 @@ public sealed class RunProvenanceTests
     public async Task Identical_runs_and_changed_inputs_have_persisted_comparable_provenance()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         var first = await Run(host, scenario.Scenario.Id);
         var second = await Run(host, scenario.Scenario.Id);
         var same = (await Compare(host, first.Id, second.Id))!;
@@ -84,7 +71,7 @@ public sealed class RunProvenanceTests
     public async Task Unexpected_managed_failure_is_terminal_diagnostic_and_has_no_valid_results()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         var completed = await Run(host, scenario.Scenario.Id);
         host.Engine.Behavior = (_, _) => throw new InvalidOperationException("private execution detail");
         var failed = await Run(host, scenario.Scenario.Id);
@@ -103,7 +90,7 @@ public sealed class RunProvenanceTests
     public async Task Unexpected_idempotent_worker_failure_keeps_the_original_correlation_and_failed_status()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         using var scope = host.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TwinDbContext>();
         var command = await new SimulationService(db).StartAsync(scenario.Scenario.Id, Guid.NewGuid(), 1, "us025-diagnostic", Token);
@@ -120,7 +107,7 @@ public sealed class RunProvenanceTests
     {
         Assert.SkipWhen(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SIMULATION_TEST_URL")), "Set SIMULATION_TEST_URL to include actual FastAPI execution.");
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         var first = await Run(host, scenario.Scenario.Id);
         var second = await Run(host, scenario.Scenario.Id);
         Assert.Equal("completed", first.Status); Assert.Equal("completed", second.Status);
@@ -147,9 +134,8 @@ public sealed class RunProvenanceTests
     public async Task Pending_fingerprints_are_immutable_and_legacy_comparisons_report_unknown()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
-        using var response = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
+        var scenario = await host.CreateScenarioAsync();
+        var run = await host.StartRunAsync(scenario.Scenario.Id, dispatch: false);
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TwinDbContext>();
         await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
@@ -168,7 +154,7 @@ public sealed class RunProvenanceTests
     public async Task Known_engine_failure_keeps_diagnostics_and_retry_preserves_the_input_fingerprint()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         host.Engine.Behavior = (request, _) => Task.FromResult(new AeroSynapse.Application.Contracts.SimulationResponse(
             "1.0", request.RunId, "failed", 0, [], [], new("simulation_limit_exceeded", "Synthetic work limit exceeded.")));
         var failed = await Run(host, scenario.Scenario.Id);
@@ -188,7 +174,7 @@ public sealed class RunProvenanceTests
     public async Task A_forged_engine_fingerprint_fails_without_persisting_valid_results()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TwinDbContext>();
         var command = await new SimulationService(db).StartAsync(scenario.Scenario.Id, Guid.NewGuid(), 1, "us025-forged", Token);

@@ -7,7 +7,9 @@ public sealed record ProcessPassenger(string Id, Guid CheckpointId, Guid? Flight
     double? GateArrivalMinute, double? QueueWaitMinutes, string BoardingRisk, bool DeadlineMissed, string? ErrorCode,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? AssignedCheckpointId = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? RouteHoldMinutes = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? AwaitingRoute = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? AwaitingRoute = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? RedistributedAtMinute = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransferMinutes = null);
 public sealed record ProcessCheckpoint(Guid CheckpointId, int Capacity, int PeakBusy, int PeakQueue,
     int ArrivedCount, int QueuedCount, int ProcessingCount, int ProcessedCount, double MeanWaitMinutes);
 public sealed record ProcessResult(string ProcessVersion, string Engine, string Mode, double HorizonMinutes,

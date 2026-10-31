@@ -403,6 +403,16 @@
           "type": "boolean",
           "const": true,
           "description": "Still waiting for a navigable route at the horizon; walkingMinutes is then 0."
+        },
+        "redistributedAtMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "transferMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
         }
       },
       "required": [

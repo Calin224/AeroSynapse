@@ -39,7 +39,7 @@ describe('Scenario navigation controls', () => {
   }
   it('persists corridor closures with revision control and keeps edits after a rejected save', () => {
     const view = component().componentInstance; const changed = vi.fn(); view.changed.subscribe(changed);
-    view.closeZone('hall-1', true); view.save();
+    view.closeZone('hall-1', true); http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(result); view.save();
     const request = http.expectOne('/api/scenarios/scenario-1/navigation/settings');
     expect(request.request.method).toBe('PUT'); expect(request.request.body).toMatchObject({ revision: 7, config: { closedZoneIds: ['hall-1'] } });
     request.flush({}, { status: 409, statusText: 'Conflict' }); expect(view.dirty()).toBe(true); expect(view.busy()).toBe(false);
@@ -76,7 +76,7 @@ describe('Scenario navigation controls', () => {
   });
   it('shows planned routes separately from assessed boarding results and uses captured run endpoints', () => {
     const fixture = component(); const view = fixture.componentInstance; view.preview();
-    http.expectOne('/api/scenarios/scenario-1/navigation?revision=7&offset=0&limit=100').flush(result); fixture.detectChanges();
+    http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(result); fixture.detectChanges();
      expect(view.renderScene().navigationRoutes).toEqual(result.routes);
     const run: RunDetails = { id: 'run-1', status: 'completed', revision: 3, seed: 42, scenarioRevision: 7, retryOfRunId: null, resultsValid: true, failureReason: null, error: null, metrics: [], snapshots: [] };
     fixture.componentRef.setInput('run', run); fixture.detectChanges(); view.inspectRun();
@@ -87,7 +87,19 @@ describe('Scenario navigation controls', () => {
     expect(view.result()!.flights[0].lateCount).toBe(1);
     fixture.componentRef.setInput('run', { ...run, id: 'run-2' }); fixture.detectChanges(); view.next(1);
     http.expectOne('/api/runs/run-1/navigation?offset=1&limit=100').flush({ ...result, assessed: true, offset: 1, returnedCount: 1, journeys: result.journeys.slice(1) });
-    view.closeZone('hall-1', true); view.preview(); http.expectNone('/api/scenarios/scenario-1/navigation?revision=7&offset=0&limit=100');
+    view.closeZone('hall-1', true); http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(result);
+  });
+  it('calculates the impact of an unsaved closure without changing the scenario', () => {
+    const fixture = component(); const view = fixture.componentInstance;
+    view.closeZone('hall-1', true);
+    const request = http.expectOne('/api/scenarios/scenario-1/navigation/preview');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toMatchObject({ revision: 7, config: { closedZoneIds: ['hall-1'] } });
+    request.flush({ ...result, routedCount: 0, errorCount: 2, routes: [] }); fixture.detectChanges();
+    expect(view.dirty()).toBe(true);
+    expect(view.result()!.errorCount).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('Impactul închiderilor');
+    http.expectNone(request => request.method === 'PUT');
   });
   it('cancels obsolete settings reads when the selected scenario changes', () => {
     const fixture = component();

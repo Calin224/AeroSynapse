@@ -13,14 +13,7 @@ namespace AeroSynapse.Management.Tests;
 public sealed class IncidentTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<(ScenarioWriteRequest Request, PublishedLayout Layout)> Draft(ManagementHost host)
-    {
-        using var reply = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await reply.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        return (request with { LayoutVersionId = layout.Version.Id }, layout);
-    }
+    private static Task<(ScenarioWriteRequest Request, PublishedLayout Layout)> Draft(ManagementHost host) => host.DraftAsync();
     private static ScenarioInputEvent Surge(ScenarioWriteRequest draft, PublishedLayout layout, double share = 1) =>
         new(Guid.NewGuid(), IncidentScenarios.PassengerSurge, draft.Inputs.StartsAtUtc.AddMinutes(5),
             layout.Layout.Routes.Single(r => r.Id == draft.Inputs.Flows[0].RouteId).FromCheckpointId,
@@ -28,12 +21,7 @@ public sealed class IncidentTests
             JsonSerializer.Serialize(new PassengerSurgePayload("1.0", 1, share, true), Json));
     private static ScenarioWriteRequest With(ScenarioWriteRequest draft, params ScenarioInputEvent[] incidents) =>
         draft with { Inputs = draft.Inputs with { Events = [.. draft.Inputs.Events, .. incidents] } };
-    private static async Task<ScenarioDetails> Save(ManagementHost host, ScenarioWriteRequest request)
-    {
-        using var response = await host.Client.PostAsJsonAsync("/scenarios", request, Json, Token);
-        Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Token));
-        return (await response.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
+    private static Task<ScenarioDetails> Save(ManagementHost host, ScenarioWriteRequest request) => host.PostScenarioAsync(request);
     private static async Task Error(HttpResponseMessage response, string field)
     {
         using (response)
@@ -61,10 +49,7 @@ public sealed class IncidentTests
         Assert.Equal(120, preview.ModeledCount); Assert.True(preview.HasSubset);
         Assert.Equal(120, preview.Batches.Single().SurgePassengerCount);
         Assert.All(preview.Passengers, p => { Assert.True(p.IsSynthetic); Assert.True(p.InSurge); Assert.True(p.ArrivalMinute >= 5 && p.ArrivalMinute < 6); });
-        using var start = await host.Client.PostAsync($"/scenarios/{id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
-        var run = (await start.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(id);
         var completed = (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
         Assert.Equal("completed", completed.Status); Assert.True(completed.ResultsValid);
         var captured = JsonSerializer.Deserialize<RunInputSnapshot>(completed.InputSnapshotJson!, Json)!;

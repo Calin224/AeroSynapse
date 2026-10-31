@@ -16,19 +16,14 @@ namespace AeroSynapse.Management.Tests;
 public sealed class StaffingEvaluationTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     internal static async Task<ScenarioDetails> Create(ManagementHost host, bool scheduledSurge = false, bool multipleCheckpoints = false)
     {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var scenario = (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        var (request, layout) = await host.DraftAsync();
+        var scenario = await host.PostScenarioAsync(request);
         if (multipleCheckpoints)
         {
             using var updated = await host.Client.PutAsJsonAsync($"/scenarios/{scenario.Scenario.Id}", request with {
-                LayoutVersionId = layout.Version.Id, Revision = scenario.Scenario.Revision,
+                Revision = scenario.Scenario.Revision,
                 Inputs = scenario.Inputs with {
                     Flights = [.. scenario.Inputs.Flights, scenario.Inputs.Flights[0] with {
                         Id = Guid.NewGuid(), Code = "AS-202", GateId = SyntheticScenarioSeeder.Id(202), PassengerCapacity = 4 }],

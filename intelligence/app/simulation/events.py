@@ -6,10 +6,11 @@ Mirrored by EventContractValidation.cs.
 """
 
 # Infrastructure first, then capacity, then demand: a surge at T already sees T's closures.
-TYPES = ('flight_change', 'corridor_closure', 'checkpoint_unavailable', 'staff_reduction', 'resume', 'passenger_surge')
+TYPES = ('flight_change', 'corridor_closure', 'checkpoint_unavailable', 'staff_reduction', 'resume', 'passenger_surge', 'queue_redistribution')
 PRIORITY = {kind: index for index, kind in enumerate(TYPES)}
-OPTIONAL = ('checkpointId', 'flightId', 'zoneId', 'passengerCount', 'windowMinutes', 'staffCount', 'delayMinutes')
+OPTIONAL = ('checkpointId', 'flightId', 'zoneId', 'passengerCount', 'windowMinutes', 'staffCount', 'delayMinutes', 'targetCheckpointId')
 FIELDS = {
+    'queue_redistribution': ({'checkpointId', 'targetCheckpointId', 'passengerCount', 'windowMinutes'}, set()),
     'passenger_surge': ({'checkpointId', 'passengerCount', 'windowMinutes'}, {'flightId'}),
     'checkpoint_unavailable': ({'checkpointId'}, set()),
     'staff_reduction': ({'checkpointId', 'staffCount'}, set()),
@@ -81,7 +82,9 @@ def validate_events(value, path, errors, error):
             errors.append(error(f'{field}/windowMinutes', 'out_of_range'))
         if event['type'] == 'flight_change' and event.get('delayMinutes') == 0:
             errors.append(error(f'{field}/delayMinutes', 'out_of_range'))
-        surge_total += event.get('passengerCount', 0)
+        if 'targetCheckpointId' in event and (event['targetCheckpointId'] not in checkpoints or event['targetCheckpointId'] == event.get('checkpointId')):
+            errors.append(error(f'{field}/targetCheckpointId', 'invalid_value'))
+        if event['type'] == 'passenger_surge': surge_total += event.get('passengerCount', 0)
         if len(errors) == before:
             valid.append((index, event))
     if value['passengerCount'] + surge_total > MAX_PASSENGERS:

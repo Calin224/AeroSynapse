@@ -13,7 +13,6 @@ public sealed class ResourcePlannerClientTests
     private static ResourceSolveRequest Request => JsonSerializer.Deserialize<ResourceSolveRequest>(Example("resource-request"), ContractJson.Options)!;
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
     { protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage message, CancellationToken token) => send(message, token); }
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
     public async Task Sends_the_captured_request_to_the_versioned_solver_and_returns_only_a_correlated_valid_result()

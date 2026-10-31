@@ -14,7 +14,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ParetoEvaluationTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static ParetoOptions Options(ObjectiveWeights weights) => new(weights, new(10, 1000, .1), 1000000, 1, 10080, 10080, 1);
     private static async Task<StaffingEvaluationDetails> Read(ManagementHost host, Guid id) =>
         (await host.Client.GetFromJsonAsync<StaffingEvaluationDetails>($"/staffing-evaluations/{id}", Json, Token))!;

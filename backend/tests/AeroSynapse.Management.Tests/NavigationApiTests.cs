@@ -15,7 +15,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class NavigationApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static NavigationConfig Config()
     {
         using var json=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"navigation","preview-request.json")));
@@ -24,16 +23,13 @@ public sealed class NavigationApiTests
     }
     private static async Task<ScenarioDetails> Create(ManagementHost host,bool passengerProfiles=true)
     {
-        using var published=await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions",null,Token);
-        var layout=(await published.Content.ReadFromJsonAsync<PublishedLayout>(Json,Token))!;
-        var request=JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"scenario-request.json")),Json)!;
+        var request=(await host.DraftAsync()).Request;
         var start=request.Inputs.StartsAtUtc;
         var flight=request.Inputs.Flights[0] with { PassengerCapacity=2,DepartureAtUtc=start.AddMinutes(10),BoardingOpensAtUtc=start.AddMinutes(1),BoardingClosesAtUtc=start.AddMinutes(3) };
-        request=request with { LayoutVersionId=layout.Version.Id,Inputs=request.Inputs with { DurationMinutes=10,Flights=[flight],
+        request=request with { Inputs=request.Inputs with { DurationMinutes=10,Flights=[flight],
             Populations=[request.Inputs.Populations[0] with { Count=2 }],Flows=[request.Inputs.Flows[0] with { PassengerCount=2,EndsAtUtc=start.AddMinutes(3) }],
             StaffAllocations=request.Inputs.StaffAllocations.Take(1).ToArray(),Events=[] } };
-        using var created=await host.Client.PostAsJsonAsync("/scenarios",request,Json,Token); Assert.Equal(HttpStatusCode.Created,created.StatusCode);
-        var scenario=(await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json,Token))!;
+        var scenario=await host.PostScenarioAsync(request);
         if (!passengerProfiles) return scenario;
         var settings=(await host.Client.GetFromJsonAsync<PassengerSettings>($"/scenarios/{scenario.Scenario.Id}/passengers/settings",Json,Token))!;
         var batch=settings.Defaults.Batches[0] with { Arrival=new("constant",0,0,0,0,0),Service=new("constant",7,7,7,0,7),
@@ -58,6 +54,24 @@ public sealed class NavigationApiTests
         using var response=await host.Client.GetAsync($"/runs/{run.Id}/navigation?limit=100000",Token); Assert.Equal(HttpStatusCode.OK,response.StatusCode);
         return (run.Id,(await response.Content.ReadFromJsonAsync<NavigationResult>(Json,Token))!);
     }
+    [Fact]
+    public async Task Draft_closures_preview_without_saving_and_reject_stale_revisions()
+    {
+        await using var host = await ManagementHost.CreateAsync(realEngine: true);
+        var scenario = await Create(host); var config = Config();
+        var corridors = config.Graph.Nodes.Where(n => n.Kind is "Walkway" or "Stairs").Select(n => n.Id).ToArray();
+        using var response = await host.Client.PostAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/navigation/preview",
+            new NavigationWriteRequest(scenario.Scenario.Revision, config with { ClosedZoneIds = corridors }), Json, Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<NavigationResult>(Json, Token))!;
+        Assert.Equal(2, result.ErrorCount); Assert.Equal(0, result.RoutedCount);
+        var unchanged = (await host.Client.GetFromJsonAsync<ScenarioDetails>($"/scenarios/{scenario.Scenario.Id}", Json, Token))!;
+        Assert.Equal(scenario.Scenario.Revision, unchanged.Scenario.Revision); Assert.Null(unchanged.Inputs.Navigation);
+        using var stale = await host.Client.PostAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/navigation/preview",
+            new NavigationWriteRequest(scenario.Scenario.Revision + 1, config), Json, Token);
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+    }
+
     [Fact]
     public async Task Real_graph_and_queue_engine_replans_closed_corridors_and_preserves_historical_boarding_assessments()
     {

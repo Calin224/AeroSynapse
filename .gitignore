@@ -34,3 +34,4 @@ identity.db*
 /assets/blender/*.png
 /assets/blender/*.jpg
 /assets/blender/*.jpeg
+/output/

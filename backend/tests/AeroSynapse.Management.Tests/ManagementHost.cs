@@ -18,6 +18,11 @@ using System.Security.Cryptography;
 using System.Net.Http.Json;
 using AeroSynapse.API.Identity;
 using AeroSynapse.Infrastructure.Governance;
+using AeroSynapse.Application.Storage;
+using AeroSynapse.Domain.DigitalTwin;
+using System.Net;
+using System.Text.Json;
+using Xunit;
 
 namespace AeroSynapse.Management.Tests;
 
@@ -57,6 +62,7 @@ internal sealed class RecordingEngine : ISimulationEngine
 
 internal sealed class ManagementHost : IAsyncDisposable
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly PostgresSettings settings = PostgresSettings.FromEnvironment();
     private readonly string name = "aerosynapse_management_test_" + Guid.NewGuid().ToString("N");
     private readonly string sqlite = Path.Combine(Path.GetTempPath(), "aerosynapse-management-" + Guid.NewGuid().ToString("N") + ".db");
@@ -119,6 +125,34 @@ internal sealed class ManagementHost : IAsyncDisposable
             request.Headers.TryAddWithoutValidation("Cookie", cookie);
             return base.SendAsync(request, token);
         }
+    }
+    /// <summary>The example scenario request, bound to a newly published layout of the synthetic scene.</summary>
+    public async Task<(ScenarioWriteRequest Request, PublishedLayout Layout)> DraftAsync()
+    {
+        using var published = await Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
+        Assert.Equal(HttpStatusCode.Created, published.StatusCode);
+        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
+        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
+        return (request with { LayoutVersionId = layout.Version.Id }, layout);
+    }
+    public async Task<ScenarioDetails> PostScenarioAsync(ScenarioWriteRequest request)
+    {
+        using var created = await Client.PostAsJsonAsync("/scenarios", request, Json, Token);
+        Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Token));
+        return (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+    }
+    public async Task<ScenarioDetails> CreateScenarioAsync(Func<ScenarioWriteRequest, ScenarioWriteRequest>? edit = null)
+    {
+        var request = (await DraftAsync()).Request;
+        return await PostScenarioAsync(edit is null ? request : edit(request));
+    }
+    public async Task<SimulationRun> StartRunAsync(Guid scenarioId, bool dispatch = true)
+    {
+        using var started = await Client.PostAsync($"/scenarios/{scenarioId}/runs", null, Token);
+        Assert.True(started.StatusCode == HttpStatusCode.Accepted, await started.Content.ReadAsStringAsync(Token));
+        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
+        if (dispatch) Assert.True(await Dispatch(Token));
+        return run;
     }
     public async Task<bool> Dispatch(CancellationToken token = default)
     {

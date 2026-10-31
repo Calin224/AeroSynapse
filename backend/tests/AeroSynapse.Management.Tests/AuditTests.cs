@@ -20,7 +20,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class AuditTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     [Fact]
@@ -28,13 +27,11 @@ public sealed class AuditTests
     {
         await using var host = await ManagementHost.CreateAsync();
         host.Client.DefaultRequestHeaders.Add("X-Correlation-ID", "audit-incident-launch");
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         var incident = new ScenarioInputEvent(Guid.NewGuid(), "note", scenario.Inputs.StartsAtUtc.AddMinutes(9), null, null, null, "{\"note\":\"private-free-text\"}");
         using var changed = await host.Client.PostAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/events", new EventWriteRequest(1, incident), Json, Token);
         Assert.Equal(HttpStatusCode.Created, changed.StatusCode);
-        using var start = await host.Client.PostAsync($"/scenarios/{scenario.Scenario.Id}/runs", null, Token);
-        var run = (await start.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(scenario.Scenario.Id);
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TwinDbContext>();
         var events = await db.AuditEvents.AsNoTracking().Where(row => row.ScenarioId == scenario.Scenario.Id).OrderBy(row => row.Sequence).ToArrayAsync(Token);
@@ -57,7 +54,7 @@ public sealed class AuditTests
     public async Task Rolled_back_mutations_leave_no_false_evidence_and_database_updates_deletes_and_truncate_are_refused()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TwinDbContext>();
         var before = await db.AuditEvents.CountAsync(Token);
@@ -81,7 +78,7 @@ public sealed class AuditTests
     public async Task Unreferenced_scenario_purge_keeps_evidence_and_retention_can_only_expire_old_rows()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Scenario(host);
+        var scenario = await host.CreateScenarioAsync();
         await using var scope = host.Services.CreateAsyncScope();
         var run = await scope.ServiceProvider.GetRequiredService<IScenarioService>().CreateRunAsync(scenario.Scenario.Id, Token);
         var storage = scope.ServiceProvider.GetRequiredService<IRunStorageService>();
@@ -175,16 +172,6 @@ public sealed class AuditTests
         var output = string.Join("\n", capture.Entries);
         foreach (var value in new[] { "scope-secret", "field-secret", "raw-exception-secret", "private-authorization" }) Assert.DoesNotContain(value, output);
         Assert.Contains("REDACTED", output);
-    }
-
-    private static async Task<ScenarioDetails> Scenario(ManagementHost host)
-    {
-        using var publish = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        publish.EnsureSuccessStatusCode();
-        var layout = (await publish.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var save = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        save.EnsureSuccessStatusCode(); return (await save.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
     }
     private sealed class CaptureProvider : ILoggerProvider
     {

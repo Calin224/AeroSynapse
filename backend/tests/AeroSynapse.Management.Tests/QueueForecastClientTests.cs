@@ -14,7 +14,6 @@ public sealed class QueueForecastClientTests
     private static QueueForecastRequest Request => JsonSerializer.Deserialize<QueueForecastRequest>(Example("forecast-request"), ContractJson.Options)!;
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
     { protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage message, CancellationToken token) => send(message, token); }
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
     public async Task Only_a_correlated_mathematically_valid_forecast_is_returned()

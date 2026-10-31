@@ -12,14 +12,7 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ScenarioStudioTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<ScenarioWriteRequest> Request(ManagementHost host)
-    {
-        using var reply = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await reply.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        return JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!
-            with { LayoutVersionId = layout.Version.Id };
-    }
+    private static async Task<ScenarioWriteRequest> Request(ManagementHost host) => (await host.DraftAsync()).Request;
     [Fact]
     public async Task Validation_checks_the_published_layout_without_creating_or_modifying_scenarios()
     {
@@ -67,7 +60,7 @@ public sealed class ScenarioStudioTests
         var generation = passengerSettings.GetProperty("defaults").Deserialize<PassengerGenerationConfig>(Json)!;
         // The fixture models 120 of the flight's 130 seats, so retain its explicit subset.
         generation = generation with { Batches = generation.Batches.Select(batch => batch with { CountMode = "subset", ModeledCount = 120 }).ToArray() };
-        var inputs = request.Inputs with { TimeZone = "Europe/Bucharest", Seed = 987, SnapshotIntervalMinutes = 3, Events = events,
+        var inputs = request.Inputs with { TimeZone = "Europe/Bucharest", Seed = 987, SnapshotIntervalMinutes = 3, MinimumDepartureSpacingMinutes = 60, Events = events,
             PassengerGeneration = generation,
             Navigation = navigationSettings.GetProperty("defaults").Deserialize<NavigationConfig>(Json) };
         using var edited = await host.Client.PutAsJsonAsync($"/scenarios/{id}", request with { Revision = 1, Name = "Studio edit", Inputs = inputs }, Json, Token);

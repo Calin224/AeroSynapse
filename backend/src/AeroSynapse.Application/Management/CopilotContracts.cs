@@ -10,9 +10,11 @@ public sealed record CopilotScope(Guid ScenarioId, Guid RunId, Guid ZoneId, int 
 public sealed record CopilotFact(string Id, string Label, double Value, string Unit);
 public sealed record CopilotCitation(string Id, string Label, double Value, string Unit,
     Guid ScenarioId, Guid RunId, Guid ZoneId, int Minute, DateTime RecordedAtUtc);
+public sealed record CopilotQueueAdvice(IReadOnlyList<AgentOption> Options, IReadOnlyList<CopilotEvidenceFact> Facts, string Limitation);
 public sealed record CopilotAnswer(string ContractVersion, CopilotScope Scope, string Status, string ReasonCode,
     string Answer, string ModelStatus, string? SourceHash, IReadOnlyList<CopilotCitation> Citations,
-    CopilotExplanation? Explanation = null, string? Receipt = null);
+    CopilotExplanation? Explanation = null, string? Receipt = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] CopilotQueueAdvice? QueueAdvice = null);
 public sealed record CopilotModelInput(CopilotScope Scope, string Question, IReadOnlyList<CopilotFact> Facts);
 public sealed record CopilotModelResult(string Status, string? Topic = null, long? InputTokens = null, long? OutputTokens = null);
 public interface ICopilotModel

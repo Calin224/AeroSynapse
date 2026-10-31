@@ -18,31 +18,14 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ReplayTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<ScenarioDetails> Scenario(ManagementHost host)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var reply = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, reply.StatusCode);
-        return (await reply.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
-    private static async Task<SimulationRun> Run(ManagementHost host, Guid scenarioId, bool dispatch = true)
-    {
-        using var response = await host.Client.PostAsync($"/scenarios/{scenarioId}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        if (dispatch) Assert.True(await host.Dispatch(Token));
-        return run;
-    }
+    private static Task<SimulationRun> Run(ManagementHost host, Guid scenarioId, bool dispatch = true) => host.StartRunAsync(scenarioId, dispatch);
     private static Task<ReplayEnvelope?> Read(ManagementHost host, Guid id) => host.Client.GetFromJsonAsync<ReplayEnvelope>($"/runs/{id}/replay", Json, Token);
     private static BookmarkWriteRequest Bookmark(ScenarioDetails scenario) => new(5.25, "Coadă observată", scenario.Inputs.StaffAllocations[0].CheckpointId, "Notă operațională DEMO");
 
     [Fact]
     public async Task Real_engine_replay_is_a_stable_complete_DB_snapshot_after_scenario_edits_and_archival()
     {
-        await using var host = await ManagementHost.CreateAsync(realEngine: true); var scenario = await Scenario(host);
+        await using var host = await ManagementHost.CreateAsync(realEngine: true); var scenario = await host.CreateScenarioAsync();
         var run = await Run(host, scenario.Scenario.Id);
         var first = (await Read(host, run.Id))!; var repeated = (await Read(host, run.Id))!;
         Assert.Equal("1.0", first.ContractVersion); Assert.Equal(run.Id, first.RunId);
@@ -71,7 +54,7 @@ public sealed class ReplayTests
     [Fact]
     public async Task Bookmarks_are_revisioned_idempotent_run_scoped_annotations_and_do_not_change_the_replay_hash()
     {
-        await using var host = await ManagementHost.CreateAsync(); var scenario = await Scenario(host); var run = await Run(host, scenario.Scenario.Id);
+        await using var host = await ManagementHost.CreateAsync(); var scenario = await host.CreateScenarioAsync(); var run = await Run(host, scenario.Scenario.Id);
         host.Engine.Behavior = (_, _) => throw new InvalidOperationException("Replay must never execute the engine.");
         var before = (await Read(host, run.Id))!; var id = Guid.NewGuid(); var path = $"/runs/{run.Id}/bookmarks/{id}"; var request = Bookmark(scenario);
         async Task<ReplayBookmark> Save(BookmarkWriteRequest value)
@@ -100,7 +83,7 @@ public sealed class ReplayTests
     {
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
         var desks = SyntheticScenarioSeeder.CheckInAreaId;
-        var plain = await Scenario(host);
+        var plain = await host.CreateScenarioAsync();
         using var created = await host.Client.PostAsJsonAsync("/scenarios", new ScenarioWriteRequest("CHECK-IN-REPLAY", "Cu ghișee", "", plain.Scenario.SceneId,
             plain.Scenario.LayoutVersionId, plain.Inputs with { CheckIn = new(desks, 4, .5m) }), Json, Token);
         Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Token));
@@ -123,7 +106,7 @@ public sealed class ReplayTests
     [InlineData("note")][InlineData("zone")][InlineData("revision")][InlineData("id")]
     public async Task Invalid_bookmarks_are_explicit_and_never_written(string kind)
     {
-        await using var host = await ManagementHost.CreateAsync(); var scenario = await Scenario(host); var run = await Run(host, scenario.Scenario.Id);
+        await using var host = await ManagementHost.CreateAsync(); var scenario = await host.CreateScenarioAsync(); var run = await Run(host, scenario.Scenario.Id);
         var request = Bookmark(scenario);
         request = kind switch { "negative" => request with { Minute = -1 }, "horizon" => request with { Minute = 61 },
             "label" => request with { Label = "" }, "long-label" => request with { Label = new string('a',121) }, "nul" => request with { Note = "bad\0note" },
@@ -136,7 +119,7 @@ public sealed class ReplayTests
     [Fact]
     public async Task Pending_failed_missing_and_historical_runs_never_offer_valid_replay_data()
     {
-        await using var host = await ManagementHost.CreateAsync(); var scenario = await Scenario(host); var run = await Run(host, scenario.Scenario.Id, false);
+        await using var host = await ManagementHost.CreateAsync(); var scenario = await host.CreateScenarioAsync(); var run = await Run(host, scenario.Scenario.Id, false);
         using var pending = await host.Client.GetAsync($"/runs/{run.Id}/replay", Token); Assert.Equal(HttpStatusCode.Conflict, pending.StatusCode);
         host.Engine.Behavior = (_, _) => throw new InvalidOperationException("Deliberate demo failure"); Assert.True(await host.Dispatch(Token));
         using var failed = await host.Client.GetAsync($"/runs/{run.Id}/replay", Token); Assert.Equal(HttpStatusCode.Conflict, failed.StatusCode);
@@ -150,7 +133,7 @@ public sealed class ReplayTests
     [Fact]
     public async Task Switching_runs_does_not_expose_or_overwrite_foreign_bookmarks_and_purge_removes_annotations()
     {
-        await using var host = await ManagementHost.CreateAsync(); var scenario = await Scenario(host);
+        await using var host = await ManagementHost.CreateAsync(); var scenario = await host.CreateScenarioAsync();
         var a = await Run(host,scenario.Scenario.Id); var b = await Run(host,scenario.Scenario.Id); var id = Guid.NewGuid();
         using var saved = await host.Client.PutAsJsonAsync($"/runs/{a.Id}/bookmarks/{id}", Bookmark(scenario), Json, Token); Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Empty((await Read(host,b.Id))!.Bookmarks);

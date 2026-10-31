@@ -13,16 +13,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ResourceApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<ScenarioDetails> Create(ManagementHost host)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var response = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
     private static IntegratedResourceConfig Config(ResourceSettings settings)
     {
         var gate = settings.Gates.Single(item => item.Id == settings.Flights[0].GateId);
@@ -37,7 +27,7 @@ public sealed class ResourceApiTests
     public async Task Save_solve_read_duplicate_and_disable_preserve_security_allocations_and_never_apply_a_proposal()
     {
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        var original = await Create(host); var id = original.Scenario.Id;
+        var original = await host.CreateScenarioAsync(); var id = original.Scenario.Id;
         var path = $"/scenarios/{id}/resources";
         var settings = (await host.Client.GetFromJsonAsync<ResourceSettings>(path + "/settings", Json, Token))!;
         Assert.Null(settings.Resources); Assert.True(settings.Compatible);
@@ -72,7 +62,7 @@ public sealed class ResourceApiTests
     public async Task Impossible_rules_and_timeout_are_returned_without_assignments(bool timeout)
     {
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        var original = await Create(host); var path = $"/scenarios/{original.Scenario.Id}/resources";
+        var original = await host.CreateScenarioAsync(); var path = $"/scenarios/{original.Scenario.Id}/resources";
         var settings = (await host.Client.GetFromJsonAsync<ResourceSettings>(path + "/settings", Json, Token))!;
         var config = Config(settings);
         if (!timeout) config = config with { Gates = config.Gates.Select(item => item with { Availability = [] }).ToArray() };
@@ -90,7 +80,7 @@ public sealed class ResourceApiTests
     public async Task Opt_in_unknown_resources_security_reuse_and_stale_revisions_fail_before_solving()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var created = await Create(host);
+        var created = await host.CreateScenarioAsync();
         var scenario = (await host.Client.GetFromJsonAsync<ScenarioDetails>($"/scenarios/{created.Scenario.Id}", Json, Token))!;
         var path = $"/scenarios/{scenario.Scenario.Id}/resources";
         using var noConfig = await host.Client.PostAsJsonAsync(path + "/proposals", new ResourceProposalRequest(scenario.Scenario.Revision, 5), Json, Token);

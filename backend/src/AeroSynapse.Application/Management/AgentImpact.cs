@@ -41,8 +41,21 @@ public static class AgentImpactSummary
             changes.Add($"{Operators(move.Sum(o => o.Count ?? 0))} mutați de la {Name(move.Key.FromCheckpointId)} la {Name(move.Key.ToCheckpointId)}");
         if (actions.Where(o => o.Kind == "desk_open").Sum(o => o.Count ?? 0) is > 0 and var desks)
             changes.Add(desks == 1 ? "un ghișeu de check-in deschis" : $"{desks} ghișee de check-in deschise");
+        foreach (var plan in actions.Where(o => o.Kind == "plan"))
+        {
+            if (plan.Staff is { Count: > 0 } staff)
+                changes.Add("plan optim de operatori: " + string.Join(", ", staff.Select(t => $"{Name(t.CheckpointId)} {t.Target - t.Current:+0;-0}")));
+            if (plan.Desks is { Count: > 0 } deskPlan)
+                changes.Add($"plan optim de ghișee check-in (între {deskPlan.Min(s => s.StaffCount)} și {deskPlan.Max(s => s.StaffCount)} deschise)");
+        }
+        foreach (var controlOpening in actions.Where(o => o.Kind == "checkpoint_open"))
+            changes.Add($"{Name(controlOpening.ToCheckpointId)} deschis cu un operator și redistribuire de pasageri");
+        foreach (var moved in actions.Where(o => o.Kind == "queue_redistribution"))
+            changes.Add($"redistribuire din coada de la {Name(moved.FromCheckpointId)} către {Name(moved.ToCheckpointId)}");
         if (actions.Count(o => o.Kind == "gate_choice") is > 0 and var gates)
             changes.Add(gates == 1 ? "o întârziere absorbită prin alegerea porților" : $"{gates} întârzieri absorbite prin alegerea porților");
+        if (actions.Count(o => o.Kind == "gate_open") is > 0 and var opened)
+            changes.Add(opened == 1 ? "o poartă deschisă de un membru al personalului" : $"{opened} porți deschise de personal");
         return changes;
     }
 

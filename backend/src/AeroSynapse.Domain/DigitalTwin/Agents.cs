@@ -28,7 +28,7 @@ public sealed class AgentDecision
     public int Minute { get; set; }
     /// <summary>"periodic", or the flight_change event id for a gate decision.</summary>
     public string Point { get; set; } = "periodic";
-    /// <summary>none, staff_move, staff_call, desk_open or gate_choice.</summary>
+    /// <summary>none, staff_move, staff_call, desk_open, plan, gate_choice or gate_open.</summary>
     public string Kind { get; set; } = "none";
     public string OptionId { get; set; } = "none";
     public string ActionJson { get; set; } = "{}";

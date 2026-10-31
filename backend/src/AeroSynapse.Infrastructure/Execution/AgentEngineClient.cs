@@ -9,11 +9,11 @@ namespace AeroSynapse.Infrastructure.Execution;
 /// <summary>Runs the request up to a minute in the Python engine and reads the state the agent decides on.</summary>
 public sealed class AgentEngineClient(HttpClient http) : IAgentEngine
 {
-    public async Task<AgentObservation> ObserveAsync(SimulationRequest request, int minute, Guid? gateEventId, CancellationToken token)
+    public async Task<AgentObservation> ObserveAsync(SimulationRequest request, int minute, Guid? gateEventId, AgentLimits? limits, CancellationToken token)
     {
         try
         {
-            using var response = await http.PostAsJsonAsync("simulation/v1/observe", new { request, minute, gateEventId }, ContractJson.Options, token);
+            using var response = await http.PostAsJsonAsync("simulation/v1/observe", new { request, minute, gateEventId, limits }, ContractJson.Options, token);
             response.EnsureSuccessStatusCode();
             var observation = await response.Content.ReadFromJsonAsync<AgentObservation>(ContractJson.Options, token)
                 ?? throw new JsonException("Empty observation.");

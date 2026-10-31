@@ -36,6 +36,8 @@ public static class ScenarioValidator
         Utc(inputs.StartsAtUtc, "inputs.startsAtUtc");
         if (inputs.DurationMinutes is < 1 or > 10080) Error("inputs.durationMinutes", "Must be between 1 and 10080 minutes.");
         if (inputs.SnapshotIntervalMinutes is < 1 or > 5) Error("inputs.snapshotIntervalMinutes", "Use an interval of 1 to 5 virtual minutes.");
+        if (inputs.MinimumDepartureSpacingMinutes is < 1 or > 10080)
+            Error("inputs.minimumDepartureSpacingMinutes", "Use a minimum departure spacing of 1 to 10080 minutes.");
         if (inputs.Seed < 0) Error("inputs.seed", "Must be nonnegative.");
         if (inputs.TimeZone is null || (inputs.TimeZone != "UTC" && (!inputs.TimeZone.Contains('/') || !TimeZoneInfo.TryFindSystemTimeZoneById(inputs.TimeZone, out _))))
             Error("inputs.timeZone", "A supported IANA time zone is required.");
@@ -89,6 +91,25 @@ public static class ScenarioValidator
                 if (!FlightScheduling.TryDelayed(flight.DepartureAtUtc, flight.DelayMinutes, out var effectiveDeparture))
                     Error(field + ".delayMinutes", "Delayed departure exceeds the supported timestamp range.");
                 else if (inputs.Journey is null) InWindow(effectiveDeparture, field + ".departureAtUtc");
+            }
+        }
+        if (inputs.MinimumDepartureSpacingMinutes is >= 1 and <= 10080)
+        {
+            var minimum = inputs.MinimumDepartureSpacingMinutes.Value;
+            var departures = (inputs.Flights ?? []).Select((flight, index) => (Flight: flight, Index: index))
+                .Where(row => row.Flight is not null && row.Flight.Status != "cancelled"
+                    && row.Flight.DepartureAtUtc != default && row.Flight.DepartureAtUtc.Kind == DateTimeKind.Utc
+                    && FlightScheduling.TryDelayed(row.Flight.DepartureAtUtc, row.Flight.DelayMinutes, out _))
+                .Select(row => (row.Flight, row.Index, Time: row.Flight.DepartureAtUtc.AddMinutes(row.Flight.DelayMinutes)))
+                .OrderBy(row => row.Time).ToArray();
+            for (var index = 1; index < departures.Length; index++)
+            {
+                var first = departures[index - 1];
+                var second = departures[index];
+                if (second.Time - first.Time >= TimeSpan.FromMinutes(minimum)) continue;
+                var message = $"Plecările {first.Flight.Code} și {second.Flight.Code} trebuie distanțate cu minimum {minimum} de minute, inclusiv întârzierile configurate.";
+                Error($"inputs.flights[{first.Index}].departureAtUtc", message);
+                Error($"inputs.flights[{second.Index}].departureAtUtc", message);
             }
         }
         foreach (var conflict in inputs.Journey is not null ? [] : FlightScheduling.Conflicts(inputs with { Flights = (inputs.Flights ?? []).Where(x => x is not null).ToArray() }))

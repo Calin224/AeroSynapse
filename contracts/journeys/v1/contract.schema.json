@@ -260,6 +260,14 @@
             "$ref": "#/$defs/JourneyGateChoice"
           },
           "maxItems": 100
+        },
+        "gateOpenings": {
+          "type": "array",
+          "description": "Gates opened by staff members during the day; each adds a boarding lane for one flight without moving it.",
+          "items": {
+            "$ref": "#/$defs/JourneyGateOpening"
+          },
+          "maxItems": 200
         }
       },
       "required": [
@@ -1060,6 +1068,45 @@
       "required": [
         "eventId",
         "mode"
+      ]
+    },
+    "JourneyGateOpening": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A staff member opens a gate no flight is planned at; from the minute on it adds a boarding lane for the flight, which keeps its own gate.",
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "staffMemberId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId",
+        "staffMemberId",
+        "minute"
       ]
     }
   }

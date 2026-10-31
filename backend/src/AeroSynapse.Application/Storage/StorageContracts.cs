@@ -15,9 +15,3 @@ public interface ISceneQueryService
     Task<IReadOnlyList<SceneEvent>> EventsAsync(Guid sceneId, int limit, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SimulationRun>> RunsAsync(Guid sceneId, int limit, CancellationToken cancellationToken = default);
 }
-
-public interface ISimulationRunRepository
-{
-    Task<SimulationRun?> FindAsync(Guid sceneId, Guid runId, CancellationToken cancellationToken = default);
-    Task AddAsync(SimulationRun run, CancellationToken cancellationToken = default);
-}

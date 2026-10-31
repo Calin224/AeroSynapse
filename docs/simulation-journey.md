@@ -34,3 +34,12 @@ unui model demonstrativ, nu o predicție validată pentru un aeroport real.
 Toate comenzile de pornire sunt explicite. O ciornă nu este salvată automat,
 procesele în curs își afișează progresul, iar rezultatele calculate și istoricul
 rămân disponibile ulterior. Revezi rulările persistate în Time Travel după autentificare.
+
+
+### Închideri, puncte de control și redistribuirea cozilor
+
+În fila **Trasee**, închiderea unei zone recalculează imediat traseele din editor, fără să salveze scenariul. Rezultatul arată pasagerii cu acces la poartă, pasagerii fără traseu și durata medie de mers de bază. Salvarea aplică această configurație următoarelor simulări; cozile și riscul de întârziere se evaluează prin simulare.
+
+Agentul cu mutări de personal activate poate propune deschiderea unui punct de control existent, fără operatori, folosind rezerva sau un operator disponibil de la alt control. Poate redistribui și o parte din pasagerii încă aflați în coadă către un control cu capacitate liberă. Acțiunile respectă terminalul, disponibilitatea, personalul și timpul de transfer; motorul verifică din nou accesul spre poartă. Procesarea deja începută continuă, iar istoricul KPI rămâne capturat. Un pasager poate schimba coada o singură dată într-o rulare.
+
+În **AI Copilot**, acțiunea **Puncte de control și cozi** afișează variante calculate din snapshot-ul selectat și datele folosite. Analiza nu aplică modificări. Numărul propus de pasageri este o limită de transfer, iar beneficiul trebuie verificat în simulator. „Punct suplimentar” înseamnă un punct existent în layout, nu crearea unei noi infrastructuri.

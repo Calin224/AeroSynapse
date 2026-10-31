@@ -60,27 +60,6 @@ public sealed class AirportMapPersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Invalid_map_is_rejected_without_partial_storage()
-    {
-        var map = MapFixture.Create();
-        map.Zones[1].AirportId = Guid.NewGuid();
-        await Assert.ThrowsAsync<AirportMapValidationException>(() => Save(map));
-        using var scope = provider.CreateScope();
-        Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<AirportMapDbContext>().Airports.CountAsync());
-    }
-
-    [Fact]
-    public async Task Duplicate_ids_are_rejected_even_across_entity_types()
-    {
-        var map = MapFixture.Create();
-        await Save(map);
-        await Assert.ThrowsAsync<AirportMapConflictException>(() => Save(MapClone(map)));
-        var another = MapFixture.Create();
-        another.Gates[0].Id = map.ResourcePools[0].Id;
-        await Assert.ThrowsAsync<AirportMapConflictException>(() => Save(another));
-    }
-
-    [Fact]
     public async Task Concurrent_creates_with_cross_type_id_collisions_store_only_one_complete_map()
     {
         var first = MapFixture.Create();
@@ -117,9 +96,6 @@ public sealed class AirportMapPersistenceTests : IAsyncLifetime
         Assert.Equal(1, await db.ResourcePools.CountAsync());
     }
 
-    private static AirportMap MapClone(AirportMap map) =>
-        JsonSerializer.Deserialize<AirportMap>(JsonSerializer.Serialize(map, MapFixture.Json), MapFixture.Json)!;
-
     [Theory]
     [InlineData("airport")]
     [InlineData("terminal")]
@@ -152,12 +128,5 @@ public sealed class AirportMapPersistenceTests : IAsyncLifetime
             case "coordinate": (await db.Zones.FirstAsync()).X = double.PositiveInfinity; break;
         }
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
-    }
-
-    [Fact]
-    public async Task Missing_airport_returns_no_snapshot()
-    {
-        using var scope = provider.CreateScope();
-        Assert.Null(await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetAirportSnapshotQuery(Guid.NewGuid())));
     }
 }

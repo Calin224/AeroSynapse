@@ -82,6 +82,8 @@ class KpiCollector:
                 'utilization':ratio(window_busy,capacity*width),'cumulativeUtilization':ratio(busy,capacity*minute),
                 'boardingRiskPopulationCount':risk_population,'boardingAtRiskCount':at_risk,'boardingLateRisk':ratio(at_risk,risk_population),
                 'lateAtGateCount':late,'missedDeadlineUnfinishedCount':at_risk-late})
+            if station['transferredOut']:
+                self.snapshots[-1]['transferredOutPassengers'] = station['transferredOut']
             # Capacity and utilization stay nominal; the staffing in effect is reported beside them.
             if capacities is not None: self.snapshots[-1]['effectiveCapacity']=capacities[key]
             self.last[key]=(minute,completed,busy)

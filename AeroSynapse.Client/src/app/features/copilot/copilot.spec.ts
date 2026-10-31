@@ -148,6 +148,17 @@ describe('Copilot conversation', () => {
     );
   });
 
+  it('shows calculated checkpoint and queue options with their source figures', async () => {
+    const fixture = await open(); fixture.componentInstance.ask('Cum distribui coada?');
+    http.expectOne(path()).flush({ ...answer(), queueAdvice: {
+      options: [{ id: 'open', kind: 'checkpoint_open', text: 'Deschide controlul alternativ și distribuie până la 8 pasageri',
+        fromCheckpointId: zoneId, toCheckpointId: otherZone, passengerCount: 8 }],
+      facts: [{ id: 'queue', label: 'Coada observată', value: 17, unit: 'pasageri', runId, zoneId, sourcePath: '/kpis' }],
+      limitation: 'Variante de evaluat în simulator.' } });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('Deschide controlul alternativ');
+    expect(fixture.nativeElement.textContent).toContain('Variante de evaluat în simulator.');
+  });
   it('keeps each turn with the zone and minute it was asked about', async () => {
     const fixture = await open(),
       view = fixture.componentInstance;
@@ -385,6 +396,12 @@ describe('Copilot conversation', () => {
 });
 
 describe('Copilot evidence envelope', () => {
+  it('rejects queue advice that moves passengers from another zone', () => {
+    const value = { ...answer(), queueAdvice: { options: [{ id: 'queue', kind: 'queue_redistribution',
+      text: 'Distribuie coada', fromCheckpointId: otherZone, toCheckpointId: scope.zoneId, passengerCount: 10 }],
+      facts: [], limitation: 'Variantă de evaluat.' } } as unknown as CopilotAnswer;
+    expect(validAnswer(value, scope)).toBe(false);
+  });
   it('rejects nonfinite values, wrong time, unknown versions and answers without evidence', () => {
     expect(validAnswer(answer(), scope)).toBe(true);
     expect(validAnswer({ ...answer(), contractVersion: '2.0' }, scope)).toBe(false);

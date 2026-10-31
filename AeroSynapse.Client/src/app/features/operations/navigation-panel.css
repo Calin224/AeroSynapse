@@ -32,3 +32,14 @@ textarea {
 }
 summary { cursor: pointer; }
 .hint { color: var(--text-muted); font-size: 0.85rem; }
+
+.zone-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 0 1.5rem; border-top: 1px solid var(--border); }
+.zone-option { align-items: center; padding: 0.6rem; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.zone-option > span:first-of-type { flex: 1; min-width: 0; }
+.zone-option small { margin-top: 0.1rem; }
+.zone-state { color: var(--text-muted); font-size: 0.85rem; white-space: nowrap; }
+.route-impact { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 1rem 0; }
+.route-impact p { margin: 0; }
+.route-impact strong, .route-impact span { display: block; }
+.route-impact strong { font-size: 1.5rem; }
+.route-impact span { color: var(--text-muted); font-size: 0.85rem; }

@@ -12,25 +12,11 @@ namespace AeroSynapse.Management.Tests;
 public sealed class FlightScheduleApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static async Task<ScenarioDetails> Create(ManagementHost host)
-    {
-        using var response = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await response.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id,
-            Inputs = request.Inputs with { DurationMinutes = 90 } }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        return (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
-    private static async Task<RunInputSnapshot> Capture(ManagementHost host, Guid id)
-    {
-        using var response = await host.Client.PostAsync($"/scenarios/{id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        var run = (await response.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        return JsonSerializer.Deserialize<RunInputSnapshot>(run.InputSnapshotJson!, Json)!;
-    }
+    private static Task<ScenarioDetails> Create(ManagementHost host) =>
+        host.CreateScenarioAsync(request => request with { Inputs = request.Inputs with { DurationMinutes = 90 } });
+    private static async Task<RunInputSnapshot> Capture(ManagementHost host, Guid id) =>
+        JsonSerializer.Deserialize<RunInputSnapshot>((await host.StartRunAsync(id, dispatch: false)).InputSnapshotJson!, Json)!;
 
     [Fact]
     public async Task Edited_flight_and_gate_are_persisted_in_the_next_snapshot_while_the_previous_snapshot_stays_unchanged()

@@ -10,7 +10,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class StaffingPlannerClientTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static string Example(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "staffing", name + ".json"));
     private static StaffingSolveRequest Request => JsonSerializer.Deserialize<StaffingSolveRequest>(Example("staffing-request"), ContractJson.Options)!;
 

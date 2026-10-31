@@ -6,7 +6,7 @@ control and joins it at check-in finish + walkingMinutes. That join time is the 
 control semantics stay those of the v1 engine. Passengers who reach no control by the horizon stay in their
 control's population as not arrived.
 """
-import heapq
+import math
 import random
 
 from app.simulation.metrics import sample_minutes, wait_statistics
@@ -21,14 +21,44 @@ def service_minutes(seed, person_id, rate):
     return random.Random(f'{seed}/check-in-service/{person_id}').expovariate(rate)
 
 
-def openings(check_in):
-    """The minute each staffed desk opens. Desks only open during a run, so desk i is free from its opening on."""
-    steps = check_in.desk_steps or []
-    return [next((step.start_minute for step in steps if step.staff_count > desk), 0) for desk in range(check_in.staff_count)]
+def levels(check_in):
+    """Desks open over time as (startMinute, count) steps; a request without steps keeps every desk open from minute 0."""
+    steps = check_in.desk_steps
+    return [(0, check_in.staff_count)] if not steps else [(step.start_minute, step.staff_count) for step in steps]
+
+
+def windows(check_in):
+    """The spans each desk is open: desk i is open while the step level is above i. A desk that closes finishes its passenger."""
+    steps = levels(check_in)
+    result = []
+    for desk in range(check_in.staff_count):
+        spans, begin = [], None
+        for start, count in steps:
+            if count > desk and begin is None:
+                begin = start
+            elif count <= desk and begin is not None:
+                spans.append((begin, start))
+                begin = None
+        if begin is not None:
+            spans.append((begin, math.inf))
+        result.append(spans)
+    return result
+
+
+def next_open(spans, minute):
+    """The first minute at or after `minute` the desk is open, or None when it never is again."""
+    for begin, end in spans:
+        if minute < end:
+            return max(minute, begin)
+    return None
 
 
 def open_at(check_in, minute):
-    return sum(opened <= minute for opened in openings(check_in))
+    return next((count for start, count in reversed(levels(check_in)) if start <= minute), 0)
+
+
+def desk_minutes(check_in, minute):
+    return sum(max(0, min(end, minute) - begin) for spans in windows(check_in) for begin, end in spans)
 
 
 def route(check_in, seed, horizon, people):
@@ -40,16 +70,22 @@ def route(check_in, seed, horizon, people):
     queue = sorted((person for person in people if person['flightId'] is not None
                     and checks_in(seed, person['id'], check_in.hold_baggage_share)),
                    key=lambda person: (person['arrivalMinute'], person['id']))
-    desks = [float(opened) for opened in openings(check_in)]
-    heapq.heapify(desks)
+    spans = windows(check_in)
+    free = [0.0] * len(spans)
     records, late = [], []
     for person in queue:
         arrival, service = person['arrivalMinute'], service_minutes(seed, person['id'], check_in.service_rate_per_minute)
         start = finish = joins = None
-        if desks:
-            start = max(arrival, heapq.heappop(desks))
+        # First come, first served: the earliest start over every desk, given the passengers already placed.
+        best = None
+        for desk, desk_spans in enumerate(spans):
+            begin = next_open(desk_spans, max(arrival, free[desk]))
+            if begin is not None and (best is None or begin < best[0]):
+                best = (begin, desk)
+        if best is not None:
+            start = float(best[0])
             finish = start + service
-            heapq.heappush(desks, finish)
+            free[best[1]] = finish
             joins = finish + walking
         within = lambda minute: minute if minute is not None and minute <= horizon else None
         records.append({'id': person['id'], 'checkpointId': person['checkpointId'], 'terminalArrivalMinute': arrival,
@@ -74,8 +110,8 @@ def snapshot(check_in, records, minute):
     busy = sum(min(minute, record['finishedMinute'] if record['finishedMinute'] is not None else minute) - record['startedMinute']
                for record in started)
     capacity = open_at(check_in, minute)
-    # Desk-minutes open so far: staffCount × minute when every desk opens at 0.
-    offered = sum(max(0, minute - opened) for opened in openings(check_in))
+    # Desk-minutes open so far: staffCount × minute when every desk is open from 0.
+    offered = desk_minutes(check_in, minute)
     return {'zoneId': str(check_in.zone_id), 'zoneType': 'checkIn', 'minute': minute,
             'arrivedPassengers': len(arrived), 'queuedPassengers': len(arrived) - len(started),
             'processingPassengers': len(started) - len(finished), 'processedPassengers': len(finished),

@@ -15,15 +15,9 @@ namespace AeroSynapse.Management.Tests;
 public sealed class StaffingApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static async Task<ScenarioDetails> Create(ManagementHost host, bool profiles = true)
     {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var scenario = (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        var scenario = await host.CreateScenarioAsync();
         if (!profiles) return scenario;
         var settings = (await host.Client.GetFromJsonAsync<PassengerSettings>($"/scenarios/{scenario.Scenario.Id}/passengers/settings", Json, Token))!;
         using var configured = await host.Client.PutAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/passengers/settings",

@@ -36,6 +36,10 @@ def validate_result(value, path, errors, error):
         elif stage=='walking' and clear+hold+person['walkingMinutes']<=horizon: invalid(prefix)
         if 'routeHoldMinutes' in person and clear is None: invalid(prefix)
         if person.get('assignedCheckpointId')==person['checkpointId']: invalid(prefix)
+        if ('redistributedAtMinute' in person) != ('transferMinutes' in person): invalid(prefix)
+        if 'redistributedAtMinute' in person and ('assignedCheckpointId' not in person
+            or person['redistributedAtMinute'] < person['arrivalMinute'] or person['redistributedAtMinute'] > horizon
+            or start is not None and start < person['redistributedAtMinute'] + person['transferMinutes']): invalid(prefix)
         close=person['boardingCloseMinute']
         missed=close is not None and (gate>close if gate is not None else horizon>=close)
         risk=('unreachable' if stage=='unreachable' else 'not_applicable' if close is None else

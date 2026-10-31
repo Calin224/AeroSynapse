@@ -30,12 +30,14 @@ public static class KpiCorrelation
                 .Select(person => (Close: CheckInCorrelation.BoardingClose(timeline, person), From: timeline.Surge(person.Id)?.Event.Minute ?? 0)).ToArray();
             // A redirected arrival belongs to its assigned control until it arrives; surge demand exists from its event minute.
             ProcessPassenger[] Demand(int time) => processes.Passengers.Where(person => timeline.Visible(person, time)
-                && (person.ArrivalMinute <= time ? person.CheckpointId : person.AssignedCheckpointId ?? person.CheckpointId) == zone.CheckpointId).ToArray();
+                && ((person.RedistributedAtMinute ?? person.ArrivalMinute) <= time ? person.CheckpointId : person.AssignedCheckpointId ?? person.CheckpointId) == zone.CheckpointId).ToArray();
             var rows = snapshots[zone.CheckpointId].OrderBy(row => row.Minute).ToArray();
             if (!rows.Select(row => row.Minute).SequenceEqual(grid)) return false;
             foreach (var row in rows)
             {
                 var time = row.Minute; var start = row.WindowStartMinute;
+                var present = processes.Passengers.Where(person =>
+                    ((person.RedistributedAtMinute ?? person.ArrivalMinute) <= time ? person.CheckpointId : person.AssignedCheckpointId ?? person.CheckpointId) == zone.CheckpointId).ToArray();
                 bool Arrived(ProcessPassenger person) => person.ArrivalMinute <= time;
                 var waits = people.Where(person => person.SecurityClearedMinute <= time).Select(person => person.QueueWaitMinutes!.Value).Order().ToArray();
                 var median = waits.Length == 0 ? (double?)null : (waits[waits.Length / 2] + waits[(waits.Length - 1) / 2]) / 2;
@@ -51,15 +53,17 @@ public static class KpiCorrelation
                 var risk = riskPeople.Count(person => person.BoardingCloseMinute <= time && (person.GateArrivalMinute is null || person.GateArrivalMinute > person.BoardingCloseMinute))
                     + strandedRisk.Count(person => person.Close <= time);
                 var late = riskPeople.Count(person => person.GateArrivalMinute <= time && person.GateArrivalMinute > person.BoardingCloseMinute);
-                if (row.Capacity != zone.StaffCount || row.PopulationCount != population
+                var transferredCount = processes.Passengers.Count(p => p.AssignedCheckpointId == zone.CheckpointId && p.RedistributedAtMinute <= time);
+                int? transferred = transferredCount > 0 ? transferredCount : null;
+                if (row.TransferredOutPassengers != transferred || row.Capacity != zone.StaffCount || row.PopulationCount != population
                     || row.EffectiveCapacity != (request.Events is null ? null : timeline.Capacity(zone.CheckpointId, time)) || row.WaitSampleCount != waits.Length
                     || !KpiContractValidation.Timestamp(row.RecordedAtUtc, out var recorded) || recorded != request.StartsAtUtc.AddMinutes(time)
-                    || row.ArrivedPassengers != people.Count(Arrived)
-                    || row.UnreachablePassengers != people.Count(person => Arrived(person) && person.ErrorCode is not null)
-                    || row.QueuedPassengers != people.Count(person => Arrived(person) && person.ErrorCode is null && (person.ProcessingStartedMinute is null || person.ProcessingStartedMinute > time))
-                    || row.ProcessingPassengers != people.Count(person => person.ProcessingStartedMinute <= time && (person.SecurityClearedMinute is null || person.SecurityClearedMinute > time))
-                    || row.WalkingPassengers != people.Count(person => person.SecurityClearedMinute <= time && (person.GateArrivalMinute is null || person.GateArrivalMinute > time))
-                    || row.AtGatePassengers != people.Count(person => person.GateArrivalMinute <= time)
+                    || row.ArrivedPassengers != present.Count(Arrived)
+                    || row.UnreachablePassengers != present.Count(person => Arrived(person) && person.ErrorCode is not null)
+                    || row.QueuedPassengers != present.Count(person => Arrived(person) && person.ErrorCode is null && (person.ProcessingStartedMinute is null || person.ProcessingStartedMinute > time))
+                    || row.ProcessingPassengers != present.Count(person => person.ProcessingStartedMinute <= time && (person.SecurityClearedMinute is null || person.SecurityClearedMinute > time))
+                    || row.WalkingPassengers != present.Count(person => person.SecurityClearedMinute <= time && (person.GateArrivalMinute is null || person.GateArrivalMinute > time))
+                    || row.AtGatePassengers != present.Count(person => person.GateArrivalMinute <= time)
                     || !KpiContractValidation.Near(row.MeanWaitMinutes, waits.Length == 0 ? null : waits.Average())
                     || !KpiContractValidation.Near(row.MedianWaitMinutes, median) || !KpiContractValidation.Near(row.P95WaitMinutes, p95)
                     || !KpiContractValidation.Near(row.BusyMinutes, Area(0)) || !KpiContractValidation.Near(row.BusyMinutesInWindow, Area(start))

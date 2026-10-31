@@ -42,6 +42,9 @@ public sealed record ScenarioInputs
     public IntegratedResourceConfig? IntegratedResources { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? SnapshotIntervalMinutes { get; init; }
+    // Planning policy captured with new scenarios; absent in older documents.
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? MinimumDepartureSpacingMinutes { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ScenarioCheckIn? CheckIn { get; init; }
     // When present, these shifts staff the checkpoints over the day instead of the fixed StaffAllocations.

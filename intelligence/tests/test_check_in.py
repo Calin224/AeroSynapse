@@ -89,6 +89,20 @@ def test_unstaffed_desks_keep_their_passengers_as_not_arrived_demand_of_the_cont
     assert result['snapshots'][-1]['utilization'] is None
 
 
+def test_desk_steps_can_close_desks_without_starting_new_service_on_a_closed_desk():
+    steps = [{'startMinute': 0, 'staffCount': 3}, {'startMinute': 15, 'staffCount': 1}]
+    result = run(base(passengers=120, check_in={'staffCount': 3, 'deskSteps': steps}))['checkInResult']
+    assert [row['capacity'] for row in result['snapshots'] if row['minute'] in (10, 30)] == [3, 1]
+    starts = sorted(record['startedMinute'] for record in result['passengers'] if record['startedMinute'] is not None)
+    # After the close one desk serves, so starts at or after minute 15 cannot overlap each other.
+    late = [record for record in result['passengers'] if record['startedMinute'] is not None and record['startedMinute'] >= 15]
+    late.sort(key=lambda record: record['startedMinute'])
+    assert starts and all(second['startedMinute'] >= first['finishedMinute'] or first['startedMinute'] < 15
+                          for first, second in zip(late, late[1:]))
+    always = run(base(passengers=120, check_in={'staffCount': 3}))['checkInResult']
+    assert result['snapshots'][-1]['maximumQueue'] >= always['snapshots'][-1]['maximumQueue']
+
+
 def test_desk_snapshots_follow_the_kpi_grid_and_add_up():
     response = run(base(check_in={}))
     result = response['checkInResult']

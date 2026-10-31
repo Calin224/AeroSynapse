@@ -140,12 +140,6 @@ if (!string.IsNullOrWhiteSpace(postgresHost))
         var settings=provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SimulationOptions>>().Value;
         client.BaseAddress=new Uri((provider.GetRequiredService<TenantCatalog>().Current.IntelligenceBaseUrl ?? settings.BaseUrl).TrimEnd('/')+"/"); client.Timeout=TimeSpan.FromSeconds(30);
     });
-    builder.Services.AddHttpClient<IGateAdvisor, GateAdvisorClient>((provider, client) =>
-    {
-        var settings = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SimulationOptions>>().Value;
-        client.BaseAddress = new Uri((provider.GetRequiredService<TenantCatalog>().Current.IntelligenceBaseUrl ?? settings.BaseUrl).TrimEnd('/') + "/");
-        client.Timeout = TimeSpan.FromSeconds(30); // Each rolling solve has a deterministic budget of a few seconds.
-    });
     builder.Services.AddHttpClient<IStaffingPlanner, StaffingPlannerClient>((provider, client) =>
     {
         var settings = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SimulationOptions>>().Value;
@@ -266,7 +260,6 @@ if (!string.IsNullOrWhiteSpace(postgresHost))
     app.MapBatchEndpoints();
     app.MapSimulationEndpoints();
     app.MapSceneEndpoints();
-    app.MapGateAdviceEndpoints();
     app.MapGet("/scenarios/{id:guid}/operations", async (Guid id, Guid? runId, long? afterSequence, IOperationsReader reader, CancellationToken token) =>
         Results.Ok(await reader.StateAsync(id, runId, afterSequence, token))).AddEndpointFilter<ScenarioErrorFilter>();
     if (builder.Configuration.GetValue("Operations:Enabled", true))

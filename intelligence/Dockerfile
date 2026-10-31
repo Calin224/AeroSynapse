@@ -13,7 +13,7 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 
 FROM runtime AS contract-tests
 USER root
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/intelligence
 COPY intelligence/requirements-dev.lock ./
 RUN pip install --no-cache-dir -r requirements-dev.lock
 COPY intelligence/tests/ ./intelligence/tests/

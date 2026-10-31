@@ -16,7 +16,6 @@ namespace AeroSynapse.Management.Tests;
 
 public sealed class OperationsTests
 {
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly string[] Types = ["run.started", "run.snapshot", "run.completed", "optimization.completed"];
 
@@ -143,15 +142,7 @@ public sealed class OperationsTests
         }
     }
 
-    private static async Task<ScenarioDetails> Scenario(ManagementHost host, string code)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { Code = code, LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        return (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
+    private static Task<ScenarioDetails> Scenario(ManagementHost host, string code) => host.CreateScenarioAsync(request => request with { Code = code });
     private static async Task<SimulationRun> ExternalRun(ManagementHost host, Guid scenarioId)
     {
         await using var scope = host.Services.CreateAsyncScope();

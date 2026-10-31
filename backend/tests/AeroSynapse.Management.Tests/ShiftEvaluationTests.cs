@@ -16,7 +16,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class ShiftEvaluationTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private static readonly ShiftRules Rules = new(4, 12, 8, 5, 2, 1, 200, 2000, 75);
 
     private static async Task<ScenarioDetails> LongDay(ManagementHost host)

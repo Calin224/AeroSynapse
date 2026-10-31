@@ -18,14 +18,7 @@ public sealed class CriticalCorpusTests
     {
         var test = JsonNode.Parse(serialized)!;
         Assert.Equal(name, test["name"]!.GetValue<string>());
-        var value = JsonNode.Parse(File.ReadAllText(Path.Combine(Root, test["fixture"]!.GetValue<string>())))!;
-        foreach (var mutation in test["mutations"]!.AsArray())
-        {
-            var path = mutation!["path"]!.GetValue<string>().Split('/').Skip(1).ToArray(); var parent = value;
-            foreach (var key in path.SkipLast(1)) parent = parent is JsonArray array ? array[int.Parse(key)]! : parent[key]!;
-            if (parent is JsonArray list) list[int.Parse(path[^1])] = mutation["value"]?.DeepClone();
-            else parent[path[^1]] = mutation["value"]?.DeepClone();
-        }
+        var value = SharedCorpusTests.Apply(JsonNode.Parse(File.ReadAllText(Path.Combine(Root, test["fixture"]!.GetValue<string>())))!, test["mutations"]!.AsArray());
         var json = JsonSerializer.SerializeToElement(value);
         var definition = test["definition"]!.GetValue<string>();
         var errors = VersionedContract.Validate(definition, json);

@@ -114,10 +114,6 @@ internal sealed class ScenarioErrorFilter : IEndpointFilter
         {
             return Results.Problem(statusCode: 502, title: Safe(exception.Message), extensions: new Dictionary<string, object?> { ["code"] = "anomaly_detector_unavailable" });
         }
-        catch (GateAdvisorUnavailableException exception)
-        {
-            return Results.Problem(statusCode: 502, title: Safe(exception.Message), extensions: new Dictionary<string, object?> { ["code"] = "gate_advisor_unavailable" });
-        }
         catch (StaffingPlannerUnavailableException exception)
         {
             return Results.Problem(statusCode: 502, title: Safe(exception.Message), extensions: new Dictionary<string, object?> { ["code"] = "staffing_planner_unavailable" });

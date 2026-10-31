@@ -109,35 +109,15 @@ public sealed class AirportMapApiTests : IAsyncLifetime
             .GetProperty("type").GetString());
     }
 
+    // AirportMapValidationTests covers every issue code; one object and one graph issue prove the wire shape here.
     [Theory]
     [InlineData("airport", "cross_airport_reference")]
-    [InlineData("terminal", "cross_terminal_reference")]
-    [InlineData("pool", "missing_resource_pool")]
-    [InlineData("capacity", "invalid_value")]
-    [InlineData("rate", "invalid_value")]
-    [InlineData("duration", "invalid_value")]
     [InlineData("unreachable", "unreachable_zone")]
-    [InlineData("disconnectedEntrances", "disconnected_zone")]
-    [InlineData("checkpoint", "checkpoint_unavailable")]
     public async Task Invalid_maps_return_actionable_issues_without_storing_an_airport(string mutation, string code)
     {
         var map = MapFixture.Create();
-        switch (mutation)
-        {
-            case "airport": map.Zones[1].AirportId = Guid.NewGuid(); break;
-            case "terminal":
-                var other = new Terminal { Id = Guid.NewGuid(), AirportId = map.Airport.Id, Name = "Other terminal", IsActive = false };
-                map.Terminals.Add(other);
-                map.Routes[0].TerminalId = other.Id;
-                break;
-            case "pool": map.Checkpoints[0].ResourcePoolId = Guid.NewGuid(); break;
-            case "capacity": map.Zones[1].Capacity = 0; break;
-            case "rate": map.Gates[0].BoardingRatePerMinute = -1; break;
-            case "duration": map.Routes[0].TravelDurationSeconds = 0; break;
-            case "unreachable": map.Routes.RemoveAt(1); break;
-            case "disconnectedEntrances": map.Zones[2].Type = ZoneType.Entrance; map.Routes.RemoveAt(1); break;
-            case "checkpoint": map.Checkpoints[0].IsActive = false; break;
-        }
+        if (mutation == "airport") map.Zones[1].AirportId = Guid.NewGuid();
+        else map.Routes.RemoveAt(1);
 
         using var response = await client.PostAsJsonAsync("/api/airports", map, MapFixture.Json);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);

@@ -12,7 +12,8 @@ public sealed record KpiSnapshot(string KpiVersion, Guid RunId, Guid ZoneId, str
     double? MeanWaitMinutes, double? MedianWaitMinutes, double? P95WaitMinutes, double? ThroughputPerMinute,
     double? CumulativeThroughputPerMinute, double? Utilization, double? CumulativeUtilization,
     double? BoardingLateRisk, int Capacity, int PeakBusy, double BusyMinutes, double BusyMinutesInWindow, double? FirstQueueMinute,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? EffectiveCapacity = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? EffectiveCapacity = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransferredOutPassengers = null);
 public sealed record KpiResult(string KpiVersion, string Engine, Guid RunId, int IntervalMinutes, int HorizonMinutes,
     int PopulationCount, int ProcessedCount, int UnprocessedCount, int ArrivedCount, int NotArrivedCount,
     int UnreachableCount, int SnapshotCount, int MatchedSnapshotCount, int Offset, int ReturnedSnapshotCount,

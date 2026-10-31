@@ -13,16 +13,6 @@ namespace AeroSynapse.Management.Tests;
 public sealed class PassengerApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static CancellationToken Token => TestContext.Current.CancellationToken;
-    private static async Task<ScenarioDetails> Create(ManagementHost host)
-    {
-        using var published = await host.Client.PostAsync($"/scenes/{SyntheticScenarioSeeder.SceneId}/layout-versions", null, Token);
-        var layout = (await published.Content.ReadFromJsonAsync<PublishedLayout>(Json, Token))!;
-        var request = JsonSerializer.Deserialize<ScenarioWriteRequest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "scenario-request.json")), Json)!;
-        using var created = await host.Client.PostAsJsonAsync("/scenarios", request with { LayoutVersionId = layout.Version.Id }, Json, Token);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        return (await created.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
-    }
     private static async Task<ScenarioDetails> Configure(ManagementHost host, ScenarioDetails scenario, int seed = 42)
     {
         var id = scenario.Scenario.Id;
@@ -37,7 +27,7 @@ public sealed class PassengerApiTests
     public async Task Real_NumPy_generation_runs_and_replays_the_captured_population_after_a_scenario_edit()
     {
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        var scenario = await Configure(host, await Create(host), 31415);
+        var scenario = await Configure(host, await host.CreateScenarioAsync(), 31415);
         var id = scenario.Scenario.Id;
         var path = $"/scenarios/{id}/passengers?revision={scenario.Scenario.Revision}&limit=100000";
         var first = (await host.Client.GetFromJsonAsync<PassengerGenerationResult>(path, Json, Token))!;
@@ -48,10 +38,7 @@ public sealed class PassengerApiTests
         Assert.All(first.Passengers, passenger => Assert.True(passenger.IsSynthetic));
         using var export = await host.Client.GetAsync($"/scenarios/{id}/passengers/export?revision={scenario.Scenario.Revision}", Token);
         Assert.Equal(HttpStatusCode.NotFound, export.StatusCode);
-        using var started = await host.Client.PostAsync($"/scenarios/{id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(id);
         var completed = (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!;
         Assert.Equal("completed", completed.Status);
         scenario = await Configure(host, scenario, 27182);
@@ -67,7 +54,7 @@ public sealed class PassengerApiTests
     public async Task Real_engine_reports_alternative_flows_and_replays_a_blocked_stage_delay_from_the_run()
     {
         await using var host = await ManagementHost.CreateAsync(realEngine: true);
-        var scenario = await Create(host);
+        var scenario = await host.CreateScenarioAsync();
         var id = scenario.Scenario.Id;
         var settings = (await host.Client.GetFromJsonAsync<PassengerSettings>($"/scenarios/{id}/passengers/settings", Json, Token))!;
         var minutes = new PassengerDistribution("uniform", .5, 3, 1.75, .4, 1.75);
@@ -85,10 +72,7 @@ public sealed class PassengerApiTests
         Assert.Equal(20, report.Stages[0].BlockedMinutes);
         Assert.True(report.Segments.Single(segment => segment.Segment == "holdBaggage").MeanClosureDelayMinutes > 0);
         Assert.Equal(scenario.Inputs.Populations.Sum(population => population.Count), report.Segments.Sum(segment => segment.Passengers));
-        using var started = await host.Client.PostAsync($"/scenarios/{id}/runs", null, Token);
-        Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
-        var run = (await started.Content.ReadFromJsonAsync<SimulationRun>(Json, Token))!;
-        Assert.True(await host.Dispatch(Token));
+        var run = await host.StartRunAsync(id);
         Assert.Equal("completed", (await host.Client.GetFromJsonAsync<RunDetails>($"/runs/{run.Id}", Json, Token))!.Status);
         using var kpis = await host.Client.GetAsync($"/runs/{run.Id}/kpis", Token);
         Assert.Equal(HttpStatusCode.NotFound, kpis.StatusCode);
@@ -102,7 +86,7 @@ public sealed class PassengerApiTests
     public async Task Invalid_profiles_are_atomic_and_flight_edits_keep_counts_and_validation_consistent()
     {
         await using var host = await ManagementHost.CreateAsync();
-        var scenario = await Configure(host, await Create(host));
+        var scenario = await Configure(host, await host.CreateScenarioAsync());
         var id = scenario.Scenario.Id;
         var config = scenario.Inputs.PassengerGeneration!;
         using var invalid = await host.Client.PutAsJsonAsync($"/scenarios/{id}/passengers/settings",

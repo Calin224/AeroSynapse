@@ -140,7 +140,7 @@ public sealed class StorageTests
     }
 
     [Fact]
-    public async Task Queries_and_repository_support_ordering_limits_and_scene_isolation()
+    public async Task Queries_support_ordering_limits_and_scene_isolation()
     {
         await using var test = await TestDatabase.CreateAsync();
         var database = test.Context;
@@ -152,19 +152,17 @@ public sealed class StorageTests
         Assert.True(events[0].OccurredAtUtc > events[1].OccurredAtUtc);
         Assert.True(JsonDocument.Parse(events[0].PayloadJson).RootElement.GetProperty("isSynthetic").GetBoolean());
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => queries.EventsAsync(SyntheticScenarioSeeder.SceneId, 101, Token));
-        var repository = new SimulationRunRepository(database);
         var run = new SimulationRun
         {
             Id = Guid.NewGuid(), SceneId = SyntheticScenarioSeeder.SceneId, StartedAtUtc = DateTime.UtcNow,
             Status = "running", Seed = 27, IsSynthetic = true
         };
         run.LaunchedAtUtc = run.StartedAtUtc;
-        await repository.AddAsync(run, Token);
-        Assert.NotNull(await repository.FindAsync(run.SceneId, run.Id, Token));
-        Assert.Null(await repository.FindAsync(Guid.NewGuid(), run.Id, Token));
+        database.Runs.Add(run);
+        await database.SaveChangesAsync(Token);
         Assert.Equal(run.Id, (await queries.RunsAsync(run.SceneId, 1, Token)).Single().Id);
         await database.Database.MigrateAsync(Token);
-        Assert.NotNull(await repository.FindAsync(run.SceneId, run.Id, Token));
+        Assert.Equal(run.Id, (await queries.RunsAsync(run.SceneId, 1, Token)).Single().Id);
     }
 
     [Fact]

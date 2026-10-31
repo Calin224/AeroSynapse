@@ -46,13 +46,13 @@ public sealed class AgentFallbackTests
         AgentObservation alone = new("1.0", 15, [new(Busy, 1, 1, true, 7, 465, 1, 103, 31, 3.3, 9.7, 0, 31), Control(Quiet, 0, 0, 0)], null);
         Assert.Equal(["none"], AgentCandidates.Periodic(alone, Agent, new HashSet<Guid>(), Names, null).Select(o => o.Id));
         var offered = AgentCandidates.Periodic(alone, Agent, new HashSet<Guid>(), Names, null, reserveLeft: 10);
-        Assert.Equal(["none", "call-2", "call-5", "call-10"], offered.Select(o => o.Id));
+        Assert.Equal(["none", "call-2", "call-5", "call-10"], offered.Where(o => o.Kind != "checkpoint_open").Select(o => o.Id));
         // 496 passengers against 3 operators × 7/min × 30 min = 630: two are enough.
         var (option, reason) = AgentCandidates.Fallback(alone, offered, Names);
         Assert.Equal(("staff_call", Busy, 2), (option.Kind, option.ToCheckpointId, option.Count));
         Assert.Contains("CP-1", reason);
         // Calls never exceed what is left of the reserve.
-        Assert.Equal(["none", "call-2", "call-3"], AgentCandidates.Periodic(alone, Agent, new HashSet<Guid>(), Names, null, reserveLeft: 3).Select(o => o.Id));
+        Assert.Equal(["none", "call-2", "call-3"], AgentCandidates.Periodic(alone, Agent, new HashSet<Guid>(), Names, null, reserveLeft: 3).Where(o => o.Kind != "checkpoint_open").Select(o => o.Id));
     }
 
     [Fact]
@@ -77,6 +77,47 @@ public sealed class AgentFallbackTests
         Assert.Equal(Busy, schedule.CheckpointId);
         Assert.Equal([new StaffStep(0, 1), new StaffStep(21, 3)], schedule.Steps);
         Assert.Equal(3, applied.Checkpoints.Single(c => c.CheckpointId == Busy).StaffCount);
+    }
+
+    [Fact]
+    public void A_congested_boarding_opens_an_inactive_gate_with_a_free_staff_member_of_its_terminal()
+    {
+        Guid flight = Guid.NewGuid(), own = Guid.NewGuid(), free = Guid.NewGuid(), terminal = Guid.NewGuid(), otherTerminal = Guid.NewGuid();
+        var staff = new AgentGateStaff[] { new(Guid.NewGuid(), otherTerminal, "Ana"), new(Guid.NewGuid(), terminal, "Bogdan") };
+        var terminals = new Dictionary<Guid, Guid> { [own] = terminal, [free] = terminal };
+        var gateNames = new Dictionary<Guid, string> { [own] = "G-1", [free] = "G-2" };
+        var flightNames = new Dictionary<Guid, string> { [flight] = "RO101" };
+        AgentObservation Boarding(int queued, double closes) => new("1.0", 70, [Control(Busy, 2, 0, 0)], null,
+            Boarding: [new(flight, own, [], [free], closes, queued, 0, 0, 0, 1, 2)]);
+
+        // 20 queued × 2 min on one lane = 40 minutes, with 30 minutes of boarding left.
+        var observation = Boarding(20, 100);
+        var offered = AgentCandidates.GateOpenings(observation, staff, terminals, gateNames, flightNames);
+        var option = Assert.Single(offered);
+        Assert.Equal(("gate_open", flight, free, staff[1].Id), (option.Kind, option.FlightId, option.GateId, option.StaffMemberId));
+        Assert.Contains("Bogdan", option.Text);
+        Assert.Equal("gate_open", AgentCandidates.Fallback(observation, [new("none", "none", ""), option], Names).Option.Kind);
+        // Short queues, or none of them free, offer nothing.
+        Assert.Empty(AgentCandidates.GateOpenings(Boarding(1, 100), staff, terminals, gateNames, flightNames));
+        Assert.Empty(AgentCandidates.GateOpenings(observation, [staff[0]], terminals, gateNames, flightNames));
+        // A queue that clears before boarding closes is left to the lane it has.
+        Assert.Equal("none", AgentCandidates.Fallback(Boarding(20, 140), [new("none", "none", ""), option], Names).Option.Kind);
+    }
+
+    [Fact]
+    public void An_opened_gate_becomes_a_journey_opening_after_its_minute_and_the_flight_is_not_moved()
+    {
+        var journeyFlight = new JourneyFlight(Guid.NewGuid(), Guid.NewGuid(), 60, 65, 115, 120, 0, 4, false, true, null, 0, []);
+        var request = new SimulationRequest("1.0", Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid(), DateTimeOffset.UnixEpoch, "UTC", 720, 42, 100, 2,
+            [new(Busy, 7, 1)])
+        { Journey = new JourneyInput("1.0", 1, 2, 1, 1, 4, 10, [journeyFlight], [], []) };
+        var staffId = Guid.NewGuid();
+        var gate = Guid.NewGuid();
+        var open = new AgentOption("gate-open", "gate_open", "", FlightId: journeyFlight.FlightId, GateId: gate, StaffMemberId: staffId);
+        var applied = AgentDecisionInputs.Apply(request, [(70, open)], 5);
+        Assert.Equal([new JourneyGateOpening(journeyFlight.FlightId, gate, staffId, 71)], applied.Journey!.GateOpenings);
+        Assert.Equal(journeyFlight.GateId, applied.Journey.Flights.Single().GateId);
+        Assert.Equal(["o poartă deschisă de un membru al personalului"], AgentImpactSummary.Changes([open], Names));
     }
 
     private static KpiSnapshot Row(Guid zone, int minute, int queued, int samples = 0, double? mean = null, double? p95 = null) =>
@@ -104,5 +145,34 @@ public sealed class AgentFallbackTests
         // 100 + 30 against 60: one more desk (90) is not, so two.
         var two = Decide(Observe(busyQueue: 0, new(Guid.NewGuid(), 2, 1, 100, 30, null)), desks: 6);
         Assert.Equal(("desk_open", 2), (two.Option.Kind, two.Option.Count));
+    }
+
+    [Fact]
+    public void An_optimized_plan_is_offered_and_chosen_by_the_fallback_over_one_step_rules()
+    {
+        var plan = new AgentRecommendation(5, 12, [new(36, 4), new(61, 2)], [new(Busy, 2, 4), new(Quiet, 3, 2)], 1);
+        var observation = Observe(busyQueue: 50) with { Recommendation = plan, CheckIn = new(Guid.NewGuid(), 2, 1, 40, 30, null) };
+        var offered = AgentCandidates.Periodic(observation, Agent, new HashSet<Guid>(), Names, 6, reserveLeft: 1);
+        Assert.Equal(["plan", "plan-staff", "plan-desks"], offered.Where(o => o.Kind == "plan").Select(o => o.Id));
+        Assert.Equal(1, offered.Single(o => o.Id == "plan-staff").Count);
+        var (option, _) = AgentCandidates.Fallback(observation, offered, Names);
+        Assert.Equal("plan", option.Id);
+        // Beyond the reserve left or the desks of the area, that part of the plan is not offered.
+        var short_ = AgentCandidates.Periodic(observation, Agent, new HashSet<Guid>(), Names, 3, reserveLeft: 0);
+        Assert.DoesNotContain(short_, o => o.Kind == "plan");
+    }
+
+    [Fact]
+    public void A_plan_adds_operators_after_the_transfer_and_takes_them_at_once_and_sets_the_desk_levels_without_closing_a_served_desk()
+    {
+        var request = new SimulationRequest("1.0", Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid(), DateTimeOffset.UnixEpoch, "UTC", 120, 42, 100, 2,
+            [new(Busy, 7, 2), new(Quiet, 8, 3)]) with { CheckIn = new CheckInInput(Guid.NewGuid(), 2, .5, .5, 1) };
+        var plan = new AgentOption("plan", "plan", "", Count: 1, Staff: [new(Busy, 2, 4), new(Quiet, 3, 2)], Desks: [new(31, 4), new(61, 1)]);
+        var applied = AgentDecisionInputs.Apply(request, [(30, plan)], 5);
+        var schedules = applied.StaffSchedules!.ToDictionary(s => s.CheckpointId);
+        Assert.Equal([new StaffStep(0, 2), new StaffStep(36, 4)], schedules[Busy].Steps);
+        Assert.Equal([new StaffStep(0, 3), new StaffStep(31, 2)], schedules[Quiet].Steps);
+        Assert.Equal([new StaffStep(0, 2), new StaffStep(31, 4), new StaffStep(61, 1)], applied.CheckIn!.DeskSteps);
+        Assert.Equal(4, applied.CheckIn.StaffCount);
     }
 }

@@ -23,16 +23,7 @@ public sealed class ContractTests
     {
         var test = JsonNode.Parse(caseJson)!;
         Assert.Equal(name, test["name"]!.GetValue<string>());
-        var payload = JsonNode.Parse(Example(test["example"]!.GetValue<string>()).GetRawText())!;
-        foreach (var mutation in test["mutations"]!.AsArray())
-        {
-            var parts = mutation!["path"]!.GetValue<string>().Split('/').Skip(1).ToArray();
-            var parent = payload;
-            foreach (var part in parts.SkipLast(1)) parent = parent is JsonArray ? parent[int.Parse(part)]! : parent[part]!;
-            if (mutation["op"]!.GetValue<string>() == "remove") parent.AsObject().Remove(parts.Last());
-            else if (parent is JsonArray array) array[int.Parse(parts.Last())] = mutation["value"]?.DeepClone();
-            else parent[parts.Last()] = mutation["value"]?.DeepClone();
-        }
+        var payload = SharedCorpusTests.Apply(JsonNode.Parse(Example(test["example"]!.GetValue<string>()).GetRawText())!, test["mutations"]!.AsArray());
         var errors = VersionedContract.Validate(test["definition"]!.GetValue<string>(), JsonSerializer.SerializeToElement(payload));
         if (test["status"]!.GetValue<int>() == 200) Assert.Empty(errors);
         else

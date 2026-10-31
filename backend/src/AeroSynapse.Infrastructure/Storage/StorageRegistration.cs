@@ -12,7 +12,6 @@ public static class StorageRegistration
     {
         services.AddDbContext<TwinDbContext>((provider, options) => Configure(options, tenantSettings?.Invoke(provider) ?? settings, seedSynthetic));
         services.AddScoped<ISceneQueryService, SceneQueryService>();
-        services.AddScoped<ISimulationRunRepository, SimulationRunRepository>();
         services.AddScoped<IScenarioService, ScenarioService>();
         services.AddScoped<IRunStorageService, RunStorageService>();
         services.AddScoped<AeroSynapse.Application.Management.IOperationalNotifications, AeroSynapse.Infrastructure.Execution.OperationalNotifications>();
