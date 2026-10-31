@@ -9,6 +9,21 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../../contracts/journeys/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.journeys.v1.json" />
+    <EmbeddedResource Include="../../../contracts/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.v1.json" />
+    <EmbeddedResource Include="../../../contracts/v1/contract.openapi.json" LogicalName="AeroSynapse.Contracts.v1.openapi.json" />
+    <EmbeddedResource Include="../../../contracts/passengers/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.passengers.v1.json" />
+    <EmbeddedResource Include="../../../contracts/navigation/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.navigation.v1.json" />
+    <EmbeddedResource Include="../../../contracts/processes/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.processes.v1.json" />
+    <EmbeddedResource Include="../../../contracts/kpis/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.kpis.v1.json" />
+    <EmbeddedResource Include="../../../contracts/events/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.events.v1.json" />
+    <EmbeddedResource Include="../../../contracts/resources/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.resources.v1.json" />
+    <EmbeddedResource Include="../../../contracts/forecast/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.forecast.v1.json" />
+    <EmbeddedResource Include="../../../contracts/anomaly/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.anomaly.v1.json" />
+    <EmbeddedResource Include="../../../contracts/staffing/v1/contract.schema.json" LogicalName="AeroSynapse.Contracts.staffing.v1.json" />
   </ItemGroup>
 </Project>

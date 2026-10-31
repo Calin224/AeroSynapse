@@ -4,7 +4,7 @@ namespace AeroSynapse.Domain.Airports;
 
 public static class AirportMapValidator
 {
-    public static IReadOnlyList<MapIssue> Validate(AirportMap map, bool validateNavigation = true)
+    public static IReadOnlyList<MapIssue> Validate(AirportMap map)
     {
         var issues = new List<MapIssue>();
         void Add(string code, Guid? id, string field, string message) =>
@@ -128,7 +128,7 @@ public static class AirportMapValidator
             Positive(gate.BoardingRatePerMinute, gate.Id, "boardingRatePerMinute");
         }
 
-        if (issues.Count == 0 && validateNavigation) ValidateNavigation(map, issues);
+        if (issues.Count == 0) ValidateNavigation(map, issues);
         return issues;
     }
 

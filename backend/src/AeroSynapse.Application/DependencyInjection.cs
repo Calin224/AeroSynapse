@@ -5,10 +5,13 @@ namespace AeroSynapse.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, bool includeOperationalManagement = false)
     {
         services.AddMediatR(configuration =>
-            configuration.RegisterServicesFromAssemblyContaining<GetHealthQuery>());
+        {
+            configuration.TypeEvaluator = type => includeOperationalManagement || type.Namespace != "AeroSynapse.Application.Management";
+            configuration.RegisterServicesFromAssemblyContaining<GetHealthQuery>();
+        });
 
         return services;
     }

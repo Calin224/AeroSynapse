@@ -1,0 +1,65 @@
+{
+  "code": "baseline",
+  "name": "Operațiuni standard",
+  "description": "Scenariu demonstrativ pentru terminalul fictiv Aurora.",
+  "sceneId": "60000000-0000-0000-0000-000000000001",
+  "layoutVersionId": "00000000-0000-0000-0000-000000000000",
+  "inputs": {
+    "startsAtUtc": "2026-10-11T10:00:00Z",
+    "durationMinutes": 60,
+    "seed": 42,
+    "flights": [
+      {
+        "id": "70000000-0000-0000-0000-000000000001",
+        "code": "AS-201",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "departureAtUtc": "2026-10-11T10:55:00Z",
+        "passengerCapacity": 130,
+        "boardingOpensAtUtc": "2026-10-11T10:25:00Z",
+        "boardingClosesAtUtc": "2026-10-11T10:50:00Z",
+        "delayMinutes": 0,
+        "status": "scheduled",
+        "isSynthetic": true
+      }
+    ],
+    "populations": [
+      {
+        "id": "70000000-0000-0000-0000-000000000002",
+        "name": "Pasageri la plecare",
+        "count": 120
+      }
+    ],
+    "flows": [
+      {
+        "id": "70000000-0000-0000-0000-000000000003",
+        "populationId": "70000000-0000-0000-0000-000000000002",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "passengerCount": 120,
+        "startsAtUtc": "2026-10-11T10:00:00Z",
+        "endsAtUtc": "2026-10-11T10:45:00Z"
+      }
+    ],
+    "staffAllocations": [
+      {
+        "staffMemberId": "60000000-0000-0000-0000-000000000301",
+        "checkpointId": "60000000-0000-0000-0000-000000000101"
+      },
+      {
+        "staffMemberId": "60000000-0000-0000-0000-000000000302",
+        "checkpointId": "60000000-0000-0000-0000-000000000101"
+      }
+    ],
+    "events": [
+      {
+        "id": "70000000-0000-0000-0000-000000000004",
+        "type": "checkpoint-opened",
+        "occurredAtUtc": "2026-10-11T10:01:00Z",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "gateId": null,
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "payloadJson": "{\"lanes\":2}"
+      }
+    ]
+  }
+}

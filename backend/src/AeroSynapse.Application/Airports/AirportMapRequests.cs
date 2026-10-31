@@ -3,6 +3,13 @@ using MediatR;
 
 namespace AeroSynapse.Application.Airports;
 
+public sealed record AirportMapSnapshot(AirportMap Map, IReadOnlyList<MapIssue> Issues)
+{
+    public int SchemaVersion => 1;
+    public bool IsNavigable => Map.Airport.IsActive && Map.Terminals.Any(terminal => terminal.IsActive)
+        && Issues.All(issue => issue.Severity != MapIssueSeverity.Error);
+}
+
 public sealed record CreateAirportMapCommand(AirportMap Map) : IRequest<AirportMapSnapshot>;
 public sealed record GetAirportSnapshotQuery(Guid AirportId) : IRequest<AirportMapSnapshot?>;
 public sealed record ListAirportsQuery : IRequest<IReadOnlyList<Airport>>;

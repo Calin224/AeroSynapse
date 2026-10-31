@@ -12,3 +12,9 @@ public sealed record NavigationAccessProfile(string GroupKind, bool RequireStepF
 public record NavigationConfig(string NavigationVersion, NavigationGraph Graph,
     IReadOnlyList<NavigationBinding> CheckpointBindings, IReadOnlyList<NavigationBinding> GateBindings,
     IReadOnlyList<NavigationAccessProfile> AccessProfiles, IReadOnlyList<Guid> ClosedZoneIds, IReadOnlyList<Guid> ClosedEdgeIds);
+public sealed record NavigationFlightGate(Guid FlightId, Guid GateId);
+public sealed record NavigationInput(string NavigationVersion, NavigationGraph Graph,
+    IReadOnlyList<NavigationBinding> CheckpointBindings, IReadOnlyList<NavigationBinding> GateBindings,
+    IReadOnlyList<NavigationAccessProfile> AccessProfiles, IReadOnlyList<Guid> ClosedZoneIds, IReadOnlyList<Guid> ClosedEdgeIds,
+    IReadOnlyList<NavigationFlightGate> FlightGates)
+    : NavigationConfig(NavigationVersion, Graph, CheckpointBindings, GateBindings, AccessProfiles, ClosedZoneIds, ClosedEdgeIds);
