@@ -1,0 +1,16 @@
+{
+  "url": "models/aerosynapse/terminal-daylight.hdr",
+  "bytes": 1086297,
+  "sourceUrl": "https://polyhaven.com/a/kloppenheim_05_puresky",
+  "authors": [
+    "Greg Zaal",
+    "Jarod Guest"
+  ],
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "sha256": "9da5a7f9c799fa6e41cac8fbc4fb7aa2d4556e2f00ce9943abe0fd83b6d4caf5",
+  "resolution": [
+    1024,
+    512
+  ]
+}

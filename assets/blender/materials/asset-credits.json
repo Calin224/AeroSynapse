@@ -1,0 +1,254 @@
+{
+  "textures": [
+    {
+      "id": "marble_01",
+      "name": "Marble 01",
+      "url": "https://polyhaven.com/a/marble_01",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://polyhaven.com/license",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "dimensionsMeters": [
+        1.5,
+        1.5
+      ],
+      "maps": [
+        {
+          "kind": "Diffuse",
+          "file": "marble_01_Diffuse.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_diff_1k.jpg",
+          "sourceMd5": "04325ced5018eb8a2e598a4ef69cb176",
+          "sourceResolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            1024,
+            1024
+          ],
+          "runtimeBytes": 142121,
+          "runtimeSha256": "ec39d1564d0548cf44f090bed635018d906f9e8def2088b6b7698a9df1266a1b"
+        },
+        {
+          "kind": "nor_gl",
+          "file": "marble_01_nor_gl.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_nor_gl_1k.jpg",
+          "sourceMd5": "fa073d722cde733c1bd6cc6e8897c8e3",
+          "sourceResolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 8307,
+          "runtimeSha256": "da2ce31aaf0b3f8ee5ed060cc29aa2d88936b25ddc693105c528d865bacacfe6"
+        },
+        {
+          "kind": "arm",
+          "file": "marble_01_arm.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_arm_1k.jpg",
+          "sourceMd5": "51017a4e4f320c3b58763c66727d89c1",
+          "sourceResolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 23181,
+          "runtimeSha256": "e7b4f49815dc6ebdb6a17c253d19b71a997931a5a7c1f6a1237e8fb63fd5b2f8"
+        }
+      ]
+    },
+    {
+      "id": "oak_veneer_01",
+      "name": "Oak Veneer 01",
+      "url": "https://polyhaven.com/a/oak_veneer_01",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://polyhaven.com/license",
+      "dimensionsMeters": [
+        1.8300000429153442,
+        1.8300000429153442
+      ],
+      "authors": {
+        "Jenelle van Heerden": "All"
+      },
+      "maps": [
+        {
+          "kind": "Diffuse",
+          "file": "oak_veneer_01_Diffuse.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_diff_1k.jpg",
+          "sourceMd5": "39a99df4e328d62d74f3122722a64a95",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            1024,
+            1024
+          ],
+          "runtimeBytes": 197577,
+          "runtimeSha256": "85216d9fae2a9cf8a81f44e49ff3a0e68d16f441caec8d2c1eb41d6360b5dc47"
+        },
+        {
+          "kind": "nor_gl",
+          "file": "oak_veneer_01_nor_gl.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_nor_gl_1k.jpg",
+          "sourceMd5": "d05406f5fdaf51f0d7b115b35d9af1b7",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 13009,
+          "runtimeSha256": "01f006fba16e377a9c5542cb402c84394382bb9557075eb7e73416bedd28c0a8"
+        },
+        {
+          "kind": "arm",
+          "file": "oak_veneer_01_arm.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_arm_1k.jpg",
+          "sourceMd5": "dfba0f063663289248f4e887f836bdcc",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 99282,
+          "runtimeSha256": "931f49a4f263a09d6f71d50dcfe7e636956bbf840cf24aebf67d285856ecfd06"
+        }
+      ]
+    },
+    {
+      "id": "white_plaster_02",
+      "name": "White Plaster 02",
+      "url": "https://polyhaven.com/a/white_plaster_02",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://polyhaven.com/license",
+      "dimensionsMeters": [
+        1.0,
+        1.0
+      ],
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "maps": [
+        {
+          "kind": "Diffuse",
+          "file": "white_plaster_02_Diffuse.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_plaster_02/white_plaster_02_diff_1k.jpg",
+          "sourceMd5": "7b10c2686bcfd76d1f309a20fd06b57e",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            1024,
+            1024
+          ],
+          "runtimeBytes": 266811,
+          "runtimeSha256": "c2535438c02928c26a110fab9b28ed55f47e50a98e5417510fcce664c5869aa5"
+        },
+        {
+          "kind": "nor_gl",
+          "file": "white_plaster_02_nor_gl.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_plaster_02/white_plaster_02_nor_gl_1k.jpg",
+          "sourceMd5": "55fc03203ebf1dc703a380fde93ff502",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 38466,
+          "runtimeSha256": "cf0ea8b499c6267e933348a7a25127a1c136c4e097002d82bae5c945c53567c7"
+        },
+        {
+          "kind": "arm",
+          "file": "white_plaster_02_arm.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_plaster_02/white_plaster_02_arm_1k.jpg",
+          "sourceMd5": "4a5a080e2421fac4fa602680bef4c8b1",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 69972,
+          "runtimeSha256": "b8e22b9bd0cf87590d69b26b2d025c30c6d59c3d9f42c1874cedfd3405dbfaf0"
+        }
+      ]
+    },
+    {
+      "id": "fabric_leather_02",
+      "name": "Fabric Leather 02",
+      "url": "https://polyhaven.com/a/fabric_leather_02",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://polyhaven.com/license",
+      "dimensionsMeters": [
+        0.5,
+        0.4999999403953552
+      ],
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "maps": [
+        {
+          "kind": "nor_gl",
+          "file": "fabric_leather_02_nor_gl.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_leather_02/fabric_leather_02_nor_gl_1k.jpg",
+          "sourceMd5": "1600b3fed674702eaa350cd627278a0f",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 40015,
+          "runtimeSha256": "606f37182c9f5ce7bfbc8da3bf01879633e4e87ab6157f01780d3dd594596e0c"
+        },
+        {
+          "kind": "arm",
+          "file": "fabric_leather_02_arm.jpg",
+          "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_leather_02/fabric_leather_02_arm_1k.jpg",
+          "sourceMd5": "a1e746c80203a76940eb8aa7fec8d4cf",
+          "resolution": [
+            1024,
+            1024
+          ],
+          "runtimeResolution": [
+            512,
+            512
+          ],
+          "runtimeBytes": 123767,
+          "runtimeSha256": "f0e380571cc4ad1dc99a76e9a0f0aea40f74e5505af2cdfc7f45ddc0938cd675"
+        }
+      ]
+    }
+  ],
+  "font": {
+    "family": "Lato",
+    "license": "OFL-1.1",
+    "url": "https://github.com/google/fonts/tree/main/ofl/lato",
+    "licenseFile": "OFL.txt"
+  },
+  "originalGraphics": [
+    "terminal-carpet.jpg",
+    "terminal-display-atlas.png"
+  ]
+}
