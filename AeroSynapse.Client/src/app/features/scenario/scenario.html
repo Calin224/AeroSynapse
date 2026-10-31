@@ -1,67 +1,117 @@
+<app-simulation-journey active="run" [scenarioId]="selected()?.id ?? null" />
+@let state = resource.state();
 <div class="page-heading">
   <div>
-    <p class="eyebrow">WHAT-IF EXPLORATION</p>
-    <h1>Scenario</h1>
-    <p class="page-description">Explorează configurații demonstrative în același model 3D.</p>
+    <h1 class="display">Scenariile mele</h1>
   </div>
-  <p-button
-    label="Actualizează"
-    icon="pi pi-refresh"
-    [outlined]="true"
-    [disabled]="resource.state().status === 'loading'"
-    (onClick)="resource.reload()"
-  />
+  <a class="btn-primary create-link" routerLink="/scenario-studio"
+    ><i class="pi pi-plus" aria-hidden="true"></i> Creează un scenariu</a
+  >
 </div>
-@let state = resource.state();
 @if (state.status === 'ready') {
-  <div class="scenario-grid">
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
-          <h2>Scenarii disponibile</h2>
-          <p>Selectează o configurație</p>
-        </div>
-        <span class="pill">DEMO</span>
-      </div>
-      <div class="options">
+  @if (!selected()) {
+    <section class="panel choose-scenario">
+      <h2>Alege un scenariu salvat</h2>
+
+      <div class="scenario-grid">
         @for (item of state.data; track item.id) {
           <button
             class="scenario-option"
-            [class.selected]="selected()?.id === item.id"
-            [attr.aria-pressed]="selected()?.id === item.id"
-            (click)="selectedId.set(item.id)"
+            [disabled]="simulationActive()"
+            (click)="selectScenario(item.id)"
           >
-            <i class="pi pi-sliders-h" aria-hidden="true"></i><strong>{{ item.name }}</strong
-            ><span>{{ item.description }}</span>
+            <i class="pi pi-send" aria-hidden="true"></i><strong>{{ item.name }}</strong>
+            @if (item.description) {
+              <span>{{ item.description }}</span>
+            }
           </button>
         }
       </div>
     </section>
-    @if (selected(); as scenario) {
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <h2>{{ scenario.name }}</h2>
-            <p>{{ scenario.impact }}</p>
-          </div>
-          <span class="pill">PREVIZUALIZARE</span>
-        </div>
-        <app-digital-twin [scene]="scenario.scene" />
-        <div class="twin-footer">
-          <span>Configurație ilustrativă, fără motor de simulare.</span
-          ><span>Trage pentru rotire · Scroll pentru zoom</span>
-        </div>
-      </section>
-    }
-  </div>
+  } @else {
+    <div class="selected-toolbar">
+      <label
+        >Scenariul ales<select
+          [ngModel]="selectedId()"
+          (ngModelChange)="selectScenario($event)"
+          [disabled]="simulationActive()"
+        >
+          @for (item of state.data; track item.id) {
+            <option [value]="item.id">{{ item.name }}</option>
+          }
+        </select></label
+      >
+      @if (!simulationActive()) {
+        <a routerLink="/scenario-studio" [queryParams]="{ scenarioId: selected()!.id }"
+          >Modifică zborurile și pasagerii</a
+        >
+      }
+      <button type="button" [disabled]="simulationActive()" (click)="reload()">Actualizează</button>
+    </div>
+  }
 } @else {
-  <div class="panel">
+  <section class="panel choose-scenario">
     <app-data-state
       [status]="state.status"
       label="scenariile"
       [message]="state.status === 'error' ? state.message : ''"
-      emptyMessage="Nu există scenarii disponibile pentru acest aeroport."
+      emptyMessage="Niciun scenariu disponibil."
       (retry)="resource.reload()"
     />
-  </div>
+    @if (state.status === 'empty') {
+      <div class="empty-actions">
+        <a class="btn-primary create-link" routerLink="/scenario-studio"
+          >Creează primul scenariu →</a
+        >
+      </div>
+    }
+  </section>
+}
+<app-simulation-panel
+  [hidden]="!selected() && !simulationActive()"
+  [scenarioId]="selected()?.id ?? null"
+  (finished)="refreshPreview($event)"
+  (scenarioSelected)="setScenario($event)"
+  (working)="simulationActive.set($event)"
+/>
+@if (selected(); as scenario) {
+  @let view = preview();
+  <section class="panel stage">
+    <header class="panel-heading">
+      <div>
+        <h2>{{ scenario.name }}</h2>
+        @if (view.status === 'ready') {
+          <p>
+            Simularea selectată{{
+              view.overview.finishedAtUtc
+                ? ': ' + (view.overview.finishedAtUtc | date: 'dd.MM.yyyy, HH:mm')
+                : ''
+            }}
+          </p>
+        }
+      </div>
+    </header>
+    @if (view.status === 'ready') {
+      <app-run-summary
+        [overview]="view.overview"
+        (playFromStart)="playFromStart(view.overview)"
+        (showBusiest)="twin()?.playFrom($event.elapsedMinutes, $event.zoneId)"
+      />
+      <app-digital-twin [scene]="view.overview.scene" openAt="busiest" />
+    } @else if (view.status === 'loading') {
+      <div class="no-run" role="status">Se încarcă rezultatele anterioare…</div>
+    } @else if (view.status === 'error') {
+      <div class="no-run" role="alert">
+        <strong>Rezultatele nu s-au putut încărca</strong><span>{{ view.message }}</span
+        ><button type="button" (click)="refreshPreview()">Încearcă din nou</button>
+      </div>
+    } @else {
+      <div class="no-run">
+        <i class="pi pi-chart-line" aria-hidden="true"></i
+        ><strong>{{
+          simulationActive() ? 'Se calculează rezultatele' : 'Pregătit pentru prima simulare'
+        }}</strong>
+      </div>
+    }
+  </section>
 }

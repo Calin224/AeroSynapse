@@ -1,6 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { Subject } from 'rxjs';
+import { SessionState } from '../../core/auth/session-state';
+import { convertToParamMap } from '@angular/router';
+import { OperationsStream } from '../../core/http/operations-stream';
 import { Operations } from './operations';
 import { ScenarioDetails } from './operations.models';
 
@@ -32,7 +38,25 @@ describe('Persisted scenario and run controls', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    TestBed.overrideComponent(Operations, {
+      set: {
+        providers: [
+          {
+            provide: OperationsStream,
+            useValue: {
+              connect: vi.fn(),
+              trackRun: vi.fn(),
+              recover: vi.fn(),
+              updates: new Subject(),
+              state: signal(null),
+              status: signal('polling'),
+              error: signal(''),
+            },
+          },
+        ],
+      },
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -42,53 +66,124 @@ describe('Persisted scenario and run controls', () => {
   });
   function component() {
     const fixture = TestBed.createComponent(Operations);
-    http.expectOne('/api/scenes').flush([{ id: 'scene-1', name: 'Aurora', code: 'AUR' }]);
     http.expectOne('/api/scenarios').flush([scenario.scenario]);
     fixture.detectChanges();
     return fixture;
   }
-  it('rejects an out-of-range passenger count before publishing or saving anything', () => {
+  it('groups the sections into a preparation step and a results step', () => {
     const fixture = component();
     const view = fixture.componentInstance;
-    view.airportId = 'scene-1';
-    view.code = 'baseline';
-    view.name = 'Baseline';
-    view.passengers = 2147483648;
-    view.create();
-    http.expectNone((request) => request.method === 'POST');
-    expect(view.message()).toContain('pasageri: 1–2147483647');
-    expect(view.busy()).toBe(false);
+    view.selected.set(scenario);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const navigation = () =>
+      element.querySelector('[aria-label="Secțiuni operaționale"]') as HTMLElement;
+
+    expect(navigation().getAttribute('aria-orientation')).toBe('horizontal');
+    expect(navigation().querySelectorAll('[role="tab"]')).toHaveLength(6);
+    const results = [...element.querySelectorAll<HTMLButtonElement>('.phases button')].find(
+      (button) => button.textContent?.includes('Analizează rezultatele'),
+    )!;
+    results.click();
+    fixture.detectChanges();
+    expect(navigation().querySelectorAll('[role="tab"]')).toHaveLength(2);
+    const forecast = navigation().querySelector('#tab-forecast') as HTMLButtonElement;
+    forecast.click();
+    fixture.detectChanges();
+
+    expect(view.tab()).toBe('forecast');
+    expect(forecast.getAttribute('aria-selected')).toBe('true');
+    http.match(() => true);
     fixture.destroy();
   });
-  it('publishes a layout and saves complete scenario inputs before offering a run', () => {
+  it('filters the scenario gallery by name or code', () => {
     const fixture = component();
     const view = fixture.componentInstance;
-    view.airportId = 'scene-1';
-    view.code = 'baseline';
-    view.name = 'Baseline';
-    view.create();
-    http.expectOne('/api/scenes/scene-1/layout-versions').flush({
-      version: { id: 'layout-1' },
-      layout: {
-        gates: [{ id: 'gate-1' }],
-        routes: [{ id: 'route-1', toGateId: 'gate-1' }],
-        staff: [{ id: 'staff-1', checkpointId: 'checkpoint-1' }],
-        checkpoints: [{ id: 'checkpoint-1' }],
-      },
-    });
-    const saved = http.expectOne('/api/scenarios');
-    expect(saved.request.method).toBe('POST');
-    expect(saved.request.body.layoutVersionId).toBe('layout-1');
-    expect(saved.request.body.inputs.seed).toBe(42);
-    expect(saved.request.body.inputs.staffAllocations).toEqual([
-      { staffMemberId: 'staff-1', checkpointId: 'checkpoint-1' },
-    ]);
-    expect(saved.request.body.inputs.flights).toHaveLength(1);
-    saved.flush(scenario);
-    http.expectOne('/api/scenarios').flush([scenario.scenario]);
-    expect(view.selected()?.scenario.id).toBe('scenario-1');
-    expect(view.busy()).toBe(false);
+    view.query.set('BASE');
+    expect(view.visibleScenarios().map((item) => item.id)).toEqual(['scenario-1']);
+    view.query.set('nimic');
+    fixture.detectChanges();
+    expect(view.visibleScenarios()).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Niciun scenariu');
+    fixture.destroy();
   });
+  it.each(['resourcesBusy', 'staffingBusy', 'runSettingsBusy'] as const)(
+    'blocks scenario creation, selection and simulation while %s is active',
+    (activity) => {
+      const fixture = component();
+      const view = fixture.componentInstance;
+      view.selected.set(scenario);
+      view[activity].set(true);
+
+      view.create();
+      view.select('scenario-2');
+      view.run();
+
+      http.expectNone(() => true);
+      expect(view.selected()).toBe(scenario);
+      expect(view.busy()).toBe(false);
+      expect(view.live.connect).not.toHaveBeenCalled();
+      fixture.destroy();
+    },
+  );
+  it('opens the single guided creation flow and honors read-only access', () => {
+    const fixture = component(),
+      view = fixture.componentInstance;
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    view.create();
+    expect(navigate).not.toHaveBeenCalled();
+    TestBed.inject(SessionState).session.set({
+      username: 'operator.demo',
+      roles: ['Operator'],
+      expiresAtUtc: '2099-01-01T00:00:00Z',
+    });
+    view.create();
+    expect(navigate).toHaveBeenCalledWith(['/scenario-studio']);
+    http.expectNone((request) => request.method === 'POST');
+  });
+  it('opens the saved scenario from the completion link', () => {
+    const params = new Subject<ReturnType<typeof convertToParamMap>>();
+    Object.defineProperty(TestBed.inject(ActivatedRoute), 'queryParamMap', { value: params });
+    const fixture = component();
+    params.next(convertToParamMap({ scenarioId: 'scenario-1' }));
+    http.expectOne('/api/scenarios/scenario-1').flush(scenario);
+    http.expectOne('/api/scenarios/scenario-1/runs').flush([]);
+    expect(fixture.componentInstance.selected()?.scenario.id).toBe('scenario-1');
+    fixture.destroy();
+  });
+  it.each([null, 'older-run'])(
+    'loads the latest run or the run requested in the URL (%s)',
+    async (requestedRun) => {
+      const fixture = component();
+      const view = fixture.componentInstance;
+      view.select('scenario-1', requestedRun);
+      http.expectOne('/api/scenarios/scenario-1').flush(scenario);
+      http.expectOne('/api/scenarios/scenario-1/runs').flush([
+        { id: 'latest-run', status: 'completed', scenarioRevision: 1, seed: 42 },
+        { id: 'older-run', status: 'completed', scenarioRevision: 1, seed: 42 },
+      ]);
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/scenarios/scenario-1/flight-schedule').flush({
+        scenarioId: 'scenario-1',
+        revision: 1,
+        startsAtUtc: scenario.inputs.startsAtUtc,
+        durationMinutes: 60,
+        flights: [],
+        gates: [],
+        isSynthetic: true,
+      });
+      const expectedRun = requestedRun ?? 'latest-run';
+      http.expectOne(`/api/runs/${expectedRun}`).flush({
+        id: expectedRun,
+        status: 'completed',
+        metrics: [],
+        snapshots: [],
+        resultsValid: false,
+      });
+      expect(view.result()?.id).toBe(expectedRun);
+      fixture.destroy();
+    },
+  );
   it('polls an accepted run until completion and stops polling after a terminal status', async () => {
     const fixture = component();
     const view = fixture.componentInstance;
@@ -101,6 +196,17 @@ describe('Persisted scenario and run controls', () => {
       .flush({ id: 'run-1', status: 'planned', revision: 1 });
     await vi.advanceTimersByTimeAsync(0);
     http
+      .expectOne('/api/scenarios/scenario-1/flight-schedule')
+      .flush({
+        scenarioId: 'scenario-1',
+        revision: 1,
+        startsAtUtc: scenario.inputs.startsAtUtc,
+        durationMinutes: 60,
+        flights: [],
+        gates: [],
+        isSynthetic: true,
+      });
+    http
       .expectOne('/api/runs/run-1')
       .flush({ id: 'run-1', status: 'running', metrics: [], snapshots: [], resultsValid: false });
     await vi.advanceTimersByTimeAsync(1000);
@@ -112,29 +218,83 @@ describe('Persisted scenario and run controls', () => {
     expect(view.result()?.status).toBe('completed');
     fixture.destroy();
   });
-  it('retries with the failed run revision and cancels pending requests on destruction', async () => {
+  it('cancels pending run requests on destruction', async () => {
     const fixture = component();
     const view = fixture.componentInstance;
-    view.result.set({
-      id: 'failed',
-      status: 'failed',
-      revision: 3,
-      seed: 42,
-      scenarioRevision: 1,
-      retryOfRunId: null,
-      resultsValid: false,
-      failureReason: 'offline',
-      metrics: [],
-      snapshots: [],
-      error: { code: 'engine_unavailable', message: 'offline' },
-    });
-    view.retry();
-    const retry = http.expectOne('/api/runs/failed/retry');
-    expect(retry.request.body).toEqual({ revision: 3 });
-    retry.flush({ id: 'retry-1', status: 'planned', revision: 1 });
+    view.refreshRun('run-1');
     await vi.advanceTimersByTimeAsync(0);
-    const pending = http.expectOne('/api/runs/retry-1');
+    const pending = http.expectOne('/api/runs/run-1');
     fixture.destroy();
     expect(pending.cancelled).toBe(true);
+  });
+  it('shows live running status and retries a lost terminal REST response while SignalR stays connected', async () => {
+    const fixture = component();
+    const view = fixture.componentInstance;
+    view.select('scenario-1');
+    http.expectOne('/api/scenarios/scenario-1').flush(scenario);
+    http.expectOne('/api/scenarios/scenario-1/runs').flush([]);
+    view.run();
+    http
+      .expectOne('/api/scenarios/scenario-1/runs')
+      .flush({ id: 'run-1', status: 'planned', revision: 1 });
+    await vi.advanceTimersByTimeAsync(0);
+    http
+      .expectOne('/api/scenarios/scenario-1/flight-schedule')
+      .flush({
+        scenarioId: 'scenario-1',
+        revision: 1,
+        startsAtUtc: scenario.inputs.startsAtUtc,
+        durationMinutes: 60,
+        flights: [],
+        gates: [],
+        isSynthetic: true,
+      });
+    http
+      .expectOne('/api/runs/run-1')
+      .flush({
+        id: 'run-1',
+        status: 'planned',
+        revision: 1,
+        metrics: [],
+        snapshots: [],
+        resultsValid: false,
+      });
+    view.live.status.set('live');
+    const running = {
+      runId: 'run-1',
+      status: 'running',
+      revision: 2,
+      resultsValid: false,
+      simulationMinute: 0,
+      snapshot: null,
+    };
+    const state = {
+      scenarioId: 'scenario-1',
+      sequence: 1,
+      resetRequired: false,
+      run: running,
+      runs: [running],
+      optimization: null,
+    };
+    view.live.state.set(state);
+    view.live.updates.next(state);
+    expect(view.result()?.status).toBe('running');
+    await vi.advanceTimersByTimeAsync(1000);
+    http.expectNone('/api/runs/run-1');
+    const completed = {
+      ...state,
+      sequence: 2,
+      run: { ...running, status: 'completed', resultsValid: true },
+    };
+    view.live.state.set(completed);
+    view.live.updates.next(completed);
+    await vi.advanceTimersByTimeAsync(0);
+    http.expectOne('/api/runs/run-1').flush({}, { status: 503, statusText: 'offline' });
+    await vi.advanceTimersByTimeAsync(1000);
+    http
+      .expectOne('/api/runs/run-1')
+      .flush({ id: 'run-1', status: 'completed', metrics: [], snapshots: [], resultsValid: true });
+    expect(view.result()?.status).toBe('completed');
+    fixture.destroy();
   });
 });

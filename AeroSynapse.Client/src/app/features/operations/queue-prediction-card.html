@@ -1,0 +1,39 @@
+<section class="prediction" aria-labelledby="queue-prediction-title">
+  <header>
+    <div>
+      <h3 id="queue-prediction-title">Predictor ML · comparație de cercetare</h3>
+      <p>Coada la minutul {{ forecast().toMinute }}: forecast determinist față de modelul antrenat pe simulări.</p>
+    </div>
+  </header>
+  @if (state() === 'loading') { <p class="muted" role="status">Se calculează predicția…</p> }
+  @else if (state() === 'failed') { <p class="notice" role="alert">Predicția nu este disponibilă; forecast-ul determinist de mai sus rămâne valid.</p> }
+  @else if (prediction(); as result) {
+    @if (fallback(); as reason) { <p class="fallback" role="status">{{ reason }}</p> }
+    @else {
+      <div class="table-scroll"><table>
+        <caption>Estimări la orizont; intervalul are acoperire nominală {{ rows()[0]?.predictionInterval?.nominalCoverage | percent }} calibrată conform pe scenarii nevăzute.</caption>
+        <thead><tr><th>Control</th><th>Determinist (pax)</th><th>ML (pax)</th><th>Δ ML</th><th>Interval</th>
+          @if (result.queueThresholdPassengers !== null) { <th>P(coadă &gt; {{ result.queueThresholdPassengers }})</th> }</tr></thead>
+        <tbody>@for (row of rows(); track row.checkpointId) {
+          <tr [class.selected]="row.checkpointId === selectedId()">
+            <th scope="row">{{ name(row.checkpointId) }}</th>
+            <td>{{ row.deterministicQueuePassengers | number:'1.0-1' }}</td>
+            <td><strong>{{ row.predictedQueuePassengers | number:'1.0-1' }}</strong></td>
+            <td [class.up]="row.delta > 0.05" [class.down]="row.delta < -0.05">{{ row.delta > 0 ? '+' : '' }}{{ row.delta | number:'1.0-1' }}</td>
+            <td>{{ row.predictionInterval!.lowerPassengers | number:'1.0-1' }}–{{ row.predictionInterval!.upperPassengers | number:'1.0-1' }}</td>
+            @if (result.queueThresholdPassengers !== null) {
+              <td><span class="probability"><span class="track" aria-hidden="true"><span class="bar" [style.width.%]="row.exceedanceProbability! * 100"></span></span>{{ row.exceedanceProbability | percent:'1.0-0' }}</span></td>
+            }
+          </tr>
+        }</tbody>
+      </table></div>
+      <p class="provenance">
+        Model <code>{{ result.predictor.modelVersion }}</code> · estimator {{ result.predictor.estimator }} ·
+        dataset {{ result.predictor.datasetVersion }} (<code>{{ shortHash(result.predictor.datasetHash) }}</code>) ·
+        antrenat pe simulări SimPy sintetice ·
+        {{ result.observationSource === 'live_simulation' ? 'observație: progresul simulării în curs' : 'observație: snapshot capturat' }}
+      </p>
+    }
+
+  }
+</section>

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { SessionState } from './core/auth/session-state';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -15,25 +16,30 @@ describe('App', () => {
   it('should create the app', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/health').flush({ status: 'Healthy' });
-    TestBed.inject(HttpTestingController)
-      .expectOne('/intelligence/health')
-      .flush({ status: 'Healthy' });
+    TestBed.inject(HttpTestingController).expectNone('/api/health');
+    TestBed.inject(HttpTestingController).expectNone('/intelligence/health');
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
   });
 
-  it('offers the feature routes in the application shell', async () => {
+  it('offers the feature routes in the application header', async () => {
+    TestBed.inject(SessionState).session.set({
+      username: 'navigation-test',
+      roles: ['Operator'],
+      expiresAtUtc: '2099-01-01T00:00:00Z',
+    });
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/health').flush({ status: 'Healthy' });
-    TestBed.inject(HttpTestingController)
-      .expectOne('/intelligence/health')
-      .flush({ status: 'Healthy' });
+    TestBed.inject(HttpTestingController).expectNone('/api/health');
+    TestBed.inject(HttpTestingController).expectNone('/intelligence/health');
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('a[href="/control-tower"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/scenario"]')).toBeTruthy();
-    expect(compiled.querySelector('a[href="/operations"]')).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/operations"]')).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/batches"]')).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/scenario-studio"]')).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/passenger"]')).toBeNull();
+    expect(compiled.querySelector('app-header nav a[href="/evacuation-training"]')).toBeNull();
   });
 });

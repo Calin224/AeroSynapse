@@ -1,0 +1,317 @@
+<header class="page-heading">
+  <div>
+    <h1>Baggage Digital Twin</h1>
+  </div>
+</header>
+<div class="scope-note">
+  Modul opțional, independent de simulările de securitate. Bagajele sunt generate local în
+  simulator; nu există conexiuni la sisteme reale de bagaje.
+</div>
+
+<form #config="ngForm" (ngSubmit)="run()" class="panel config">
+  <fieldset [disabled]="busy()">
+    <legend>1. Populație și resurse comune</legend>
+    <div class="fields">
+      <label
+        >Bagaje sintetice<input
+          name="unitCount"
+          type="number"
+          min="0"
+          max="5000"
+          step="1"
+          required
+          [(ngModel)]="draft.unitCount"
+      /></label>
+      <label
+        >Seed<input
+          name="seed"
+          type="number"
+          min="0"
+          max="2147483647"
+          step="1"
+          required
+          [(ngModel)]="draft.seed"
+      /></label>
+      <label
+        >Orizont (min)<input
+          name="horizon"
+          type="number"
+          min="1"
+          max="240"
+          step="1"
+          required
+          [(ngModel)]="draft.durationMinutes"
+      /></label>
+      <label
+        >Fereastră sosiri (min)<input
+          name="arrivals"
+          type="number"
+          min="0"
+          [max]="draft.durationMinutes"
+          step="0.1"
+          required
+          [(ngModel)]="draft.arrivalWindowMinutes"
+      /></label>
+      <label
+        >Termen încărcare (min)<input
+          name="deadline"
+          type="number"
+          min="0"
+          [max]="draft.durationMinutes"
+          step="0.1"
+          required
+          [(ngModel)]="draft.loadingDeadlineMinute"
+      /></label>
+    </div>
+
+    <div class="resource-grid">
+      @for (id of ids; track id) {
+        <div class="resource-config">
+          <strong>{{ labels[id] }}</strong>
+          <label
+            >Sloturi simultane<input
+              [name]="id + '-capacity'"
+              type="number"
+              min="1"
+              max="32"
+              step="1"
+              required
+              [(ngModel)]="draft.resources[id].capacity"
+          /></label>
+          <label
+            >Serviciu (min/bagaj)<input
+              [name]="id + '-service'"
+              type="number"
+              min="0.01"
+              max="30"
+              step="0.01"
+              required
+              [(ngModel)]="draft.resources[id].serviceMinutes"
+          /></label>
+        </div>
+      }
+    </div>
+  </fieldset>
+  <fieldset [disabled]="busy()">
+    <legend>2. Scenariu alternativ</legend>
+    <label class="check"
+      ><input name="incidentEnabled" type="checkbox" [(ngModel)]="incidentEnabled" /> Incident de
+      bandă</label
+    >
+    @if (incidentEnabled) {
+      <div class="fields incident-fields">
+        <label
+          >Bandă afectată<select name="belt" [(ngModel)]="incident.belt">
+            <option value="beltA">Bandă A</option>
+            <option value="beltB">Bandă B</option>
+          </select></label
+        >
+        <label
+          >Început (min)<input
+            name="incidentStart"
+            type="number"
+            min="0"
+            [max]="draft.durationMinutes - 0.01"
+            step="0.01"
+            required
+            [(ngModel)]="incident.startMinute"
+        /></label>
+        <label
+          >Oprire (min)<input
+            name="incidentDuration"
+            type="number"
+            min="0.01"
+            max="240"
+            step="0.01"
+            required
+            [(ngModel)]="incident.durationMinutes"
+        /></label>
+      </div>
+      <label class="check"
+        ><input name="divert" type="checkbox" [(ngModel)]="incident.divert" /> Deviază sosirile noi
+        către cealaltă bandă pe durata opririi</label
+      >
+    }
+    <div class="fields additions">
+      <label
+        >Sloturi suplimentare · sortare<input
+          name="extraSorting"
+          type="number"
+          min="0"
+          [max]="32 - draft.resources.sorting.capacity"
+          step="1"
+          required
+          [(ngModel)]="extraSorting"
+      /></label>
+      <label
+        >Sloturi suplimentare · încărcare<input
+          name="extraLoading"
+          type="number"
+          min="0"
+          [max]="32 - draft.resources.loading.capacity"
+          step="1"
+          required
+          [(ngModel)]="extraLoading"
+      /></label>
+    </div>
+  </fieldset>
+  <div class="run-actions">
+    <button class="primary" type="submit" [disabled]="busy() || config.invalid">
+      {{ busy() ? 'Se simulează…' : 'Rulează comparația' }}
+    </button>
+  </div>
+</form>
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+@if (busy()) {
+  <p class="status" role="status">Se execută două scenarii SimPy cu date sintetice…</p>
+}
+
+@if (results(); as pair) {
+  <section class="panel results" aria-label="KPI bagaje separate de securitate">
+    <div class="section-heading">
+      <div>
+        <h2>Baseline / Scenariu alternativ</h2>
+      </div>
+      <span
+        >Seed {{ pair.baseline.request.seed }} · {{ pair.baseline.request.unitCount }} bagaje ·
+        {{ pair.baseline.request.durationMinutes }} min</span
+      >
+    </div>
+    <p class="result-context">
+      Termen încărcare: minutul {{ pair.baseline.request.loadingDeadlineMinute }}.
+      @if (pair.candidate.request.incident; as event) {
+        {{ labels[event.belt] }} oprită de la minutul {{ event.startMinute }} pentru
+        {{ event.durationMinutes }} min · {{ event.divert ? 'cu deviere' : 'fără deviere' }}.
+      } @else {
+        Fără incident de bandă.
+      }
+      Sortare: {{ pair.baseline.request.resources.sorting.capacity }} →
+      {{ pair.candidate.request.resources.sorting.capacity }} sloturi · Încărcare:
+      {{ pair.baseline.request.resources.loading.capacity }} →
+      {{ pair.candidate.request.resources.loading.capacity }} sloturi.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <caption>
+          Indicatori observați la sfârșitul orizontului, pentru aceeași populație sintetică
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Indicator</th>
+            <th scope="col">Baseline</th>
+            <th scope="col">Alternativ</th>
+            <th scope="col">Δ alternativ − baseline</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (metric of metrics; track metric.key) {
+            <tr>
+              <th scope="row">
+                {{ metric.label }} <small>{{ metric.unit }}</small>
+              </th>
+              <td>{{ pair.baseline.kpis[metric.key] | number: '1.0-2' }}</td>
+              <td>{{ pair.candidate.kpis[metric.key] | number: '1.0-2' }}</td>
+              <td>
+                {{
+                  pair.candidate.kpis[metric.key] - pair.baseline.kpis[metric.key] | number: '1.0-2'
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  @if (selected(); as result) {
+    @if (frame(); as current) {
+      <section class="panel replay" aria-label="Heatmap și replay bagaje">
+        <div class="section-heading">
+          <h2>3. Explorează fluxul</h2>
+          <div class="variant">
+            <button
+              type="button"
+              [attr.aria-pressed]="variant() === 'baseline'"
+              (click)="variant.set('baseline')"
+            >
+              Baseline</button
+            ><button
+              type="button"
+              [attr.aria-pressed]="variant() === 'candidate'"
+              (click)="variant.set('candidate')"
+            >
+              Alternativ
+            </button>
+          </div>
+        </div>
+        <div class="timeline">
+          <button type="button" (click)="play()">{{ playing() ? 'Pauză' : 'Redă' }}</button
+          ><label for="baggage-minute"
+            >Minut {{ minute() }} / {{ result.request.durationMinutes }}</label
+          ><input
+            id="baggage-minute"
+            type="range"
+            min="0"
+            [max]="result.request.durationMinutes"
+            step="1"
+            [ngModel]="minute()"
+            (ngModelChange)="seek(+$event)"
+          /><span>{{ current.loadedCount }} încărcate la cursor</span>
+        </div>
+        <app-baggage-view [result]="result" [frame]="current" />
+        <div class="heatmap" aria-label="Heatmap backlog pe resurse la minutul selectat">
+          @for (row of current.resources; track row.resourceId) {
+            <div class="heat-cell" [style.border-top-color]="color(row)">
+              <strong>{{ labels[row.resourceId] }}</strong
+              ><b>{{ row.queued }} <small>în coadă</small></b
+              ><span>{{ row.inService }}/{{ row.capacity }} sloturi ocupate</span
+              ><span>{{ row.stopped ? 'STOP · serviciu suspendat' : 'Activ' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+      <section class="panel resource-report">
+        <h2>
+          Resurse · {{ variant() === 'baseline' ? 'Baseline' : 'Alternativ' }} · întregul orizont
+        </h2>
+        <div class="table-scroll">
+          <table>
+            <caption>
+              Capacitate, coadă maximă și utilizare observată a resurselor de bagaje
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Resursă</th>
+                <th scope="col">Capacitate</th>
+                <th scope="col">Ocupare maximă</th>
+                <th scope="col">Coadă maximă</th>
+                <th scope="col">Finalizate</th>
+                <th scope="col">Așteptare medie (min)</th>
+                <th scope="col">Utilizare</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of result.resources; track row.resourceId) {
+                <tr>
+                  <th scope="row">{{ labels[row.resourceId] }}</th>
+                  <td>{{ row.capacity }}</td>
+                  <td>{{ row.peakBusy }}</td>
+                  <td>{{ row.peakQueue }}</td>
+                  <td>{{ row.completed }}</td>
+                  <td>{{ row.meanWaitingMinutes | number: '1.0-2' }}</td>
+                  <td>{{ row.utilization * 100 | number: '1.0-1' }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+} @else if (!busy() && !error()) {
+  <div class="empty">
+    <i class="pi pi-briefcase" aria-hidden="true"></i>
+    <h2>Un flux complet, pregătit de explorare</h2>
+  </div>
+}

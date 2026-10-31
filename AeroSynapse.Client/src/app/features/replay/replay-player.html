@@ -1,0 +1,340 @@
+<section
+  class="player"
+  [class.compact]="compact()"
+  aria-label="Time Travel și replay"
+  [attr.data-run-id]="replay().data.run.id"
+  [attr.data-cursor]="time()"
+  [attr.data-snapshot-minute]="frame().anchor"
+>
+  @if (!compact()) {
+    <div class="player-heading">
+      <div>
+        <span class="instrument-label">REPLAY OPERAȚIONAL</span>
+        <div class="time-readout">
+          {{ time() | number: '2.0-2'
+          }}<span>/ {{ replay().data.captured.scenario.inputs.durationMinutes }} min</span>
+        </div>
+      </div>
+      <div class="playback-status">
+        <span class="status-dot" [class.active]="playing()"></span
+        >{{ playing() ? 'În redare' : 'Pe pauză'
+        }}<small>{{ replay().minutes.length }} momente capturate</small>
+      </div>
+    </div>
+  }
+  <div class="transport">
+    <button
+      type="button"
+      class="btn-primary play"
+      [attr.aria-pressed]="playing()"
+      (click)="toggle()"
+    >
+      <i
+        class="pi"
+        [class.pi-pause]="playing()"
+        [class.pi-play]="!playing()"
+        aria-hidden="true"
+      ></i>
+      {{ playing() ? 'Pauză' : 'Redă replay' }}
+    </button>
+    <label class="minute"
+      ><span>Minutul</span
+      ><input
+        type="number"
+        aria-label="Minutul replay-ului"
+        min="0"
+        [max]="replay().data.captured.scenario.inputs.durationMinutes"
+        step="0.01"
+        [value]="time()"
+        (input)="seekInput($event)"
+      /><span class="of"
+        >/ {{ replay().data.captured.scenario.inputs.durationMinutes }}</span
+      ></label
+    >
+    <div class="timeline">
+      <input
+        type="range"
+        aria-label="Timeline comun pentru animație și KPI"
+        min="0"
+        [max]="replay().data.captured.scenario.inputs.durationMinutes"
+        step="0.01"
+        [value]="time()"
+        [style.--progress.%]="
+          (time() / replay().data.captured.scenario.inputs.durationMinutes) * 100
+        "
+        (input)="seekInput($event)"
+      />
+      @if (events().length) {
+        <div class="event-track" aria-label="Evenimente în timeline">
+          @for (group of eventGroups(); track group.events[0].id) {
+            <button
+              type="button"
+              class="event-marker"
+              [style.left.%]="
+                (group.minute / replay().data.captured.scenario.inputs.durationMinutes) * 100
+              "
+              [class.selected]="selectedEvent() && time() === group.minute"
+              [attr.aria-label]="group.events.length + ' evenimente la minutul ' + group.minute"
+              [title]="group.events.length + ' evenimente · minutul ' + group.minute"
+              (click)="seek(group.minute, group.events[0].checkpointId, group.events[0].id)"
+            >
+              <span aria-hidden="true"></span>
+            </button>
+          }
+        </div>
+      }
+      @if (!compact()) {
+        <div class="timeline-scale" aria-hidden="true">
+          @for (tick of timelineTicks(); track $index) {
+            <span>{{ tick | number: '1.0-1' }}</span>
+          }
+        </div>
+      }
+    </div>
+    <div class="speeds" role="group" aria-label="Viteza de redare">
+      @for (value of speeds; track value) {
+        <button type="button" [attr.aria-pressed]="speed() === value" (click)="setSpeed(value)">
+          {{ value }}x
+        </button>
+      }
+    </div>
+    <button type="button" class="restart" title="La început" (click)="seek(0)">
+      <i class="pi pi-replay" aria-hidden="true"></i><span>La început</span>
+    </button>
+  </div>
+
+</section>
+@if (!frame().complete || overview().available < overview().total) {
+  <p role="status" class="gap">
+    <i class="pi pi-info-circle" aria-hidden="true"></i> Lipsesc date pentru una sau mai multe zone
+    la acest minut. Lipsa datelor nu înseamnă zero.
+  </p>
+}
+@if (!compact()) {
+  <div class="metrics" aria-label="Indicatorii momentului capturat">
+    <div class="metric">
+      <span>Pasageri în coadă <i class="pi pi-users" aria-hidden="true"></i></span
+      ><strong data-testid="replay-queued">{{ overview().queued ?? '—' }}</strong
+      ><small>Total în zonele capturate</small>
+    </div>
+    <div class="metric">
+      <span>Așteptare medie maximă <i class="pi pi-clock" aria-hidden="true"></i></span
+      ><strong data-testid="replay-wait"
+        >{{ overview().maxWait === null ? '—' : (overview().maxWait | number: '1.0-2')
+        }}<em>min</em></strong
+      ><small>Cea mai mare medie dintre zone</small>
+    </div>
+    <div class="metric">
+      <span>Acoperire date <i class="pi pi-check-circle" aria-hidden="true"></i></span
+      ><strong
+        >{{ overview().available }}<em>/ {{ overview().total }} zone</em></strong
+      ><small>{{
+        overview().available === overview().total ? 'Captură completă' : 'Captură parțială'
+      }}</small>
+    </div>
+    <div class="metric">
+      <span>Moment observat <i class="pi pi-camera" aria-hidden="true"></i></span
+      ><strong>{{ frame().anchor | number: '1.0-2' }}<em>min</em></strong
+      ><small>Valori capturate, fără interpolare</small>
+    </div>
+  </div>
+}
+<div class="replay-workspace" [class.compact-workspace]="compact()">
+  <div class="terminal-panel">
+    @if (!compact()) {
+      <div class="section-heading">
+        <div>
+          <span class="section-index">01</span>
+          <h2>Terminalul la momentul selectat</h2>
+        </div>
+        <span class="subtle-badge">DEMO · {{ frame().anchor | number: '1.0-2' }} min</span>
+      </div>
+    }
+    <app-digital-twin
+      [scene]="scene"
+      [heatmap]="replay().heatmap"
+      [replayMode]="true"
+      [replayFrame]="renderFrame()"
+    />
+  </div>
+  @if (!compact()) {
+    <aside class="event-panel" aria-label="Evenimente din captura scenariului">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">02</span>
+          <h2>Evenimente</h2>
+        </div>
+        <span class="count">{{ events().length }}</span>
+      </div>
+
+      <div class="event-list">
+        @for (event of events(); track event.id) {
+          <button
+            type="button"
+            class="event-row"
+            (click)="seek(event.minute, event.checkpointId, event.id)"
+            [attr.aria-pressed]="selectedEvent() === event.id"
+            [title]="event.type"
+          >
+            <span class="event-time">{{ event.minute | number: '2.0-2' }}<small>MIN</small></span>
+            <span class="event-content"
+              ><strong>{{ eventLabel(event.type) }}</strong
+              ><span>{{ eventZone(event.checkpointId) }}</span>
+              @if (event.duration !== null) {
+                <small
+                  >{{ event.duration }} min · până la
+                  {{ event.minute + event.duration | number: '1.0-2' }} min</small
+                >
+              }</span
+            ><i class="pi pi-arrow-up-right" aria-hidden="true"></i>
+          </button>
+        } @empty {
+          <div class="empty-events">
+            <i class="pi pi-calendar" aria-hidden="true"></i
+            ><strong>Fără evenimente programate</strong>
+
+          </div>
+        }
+      </div>
+    </aside>
+  }
+</div>
+@if (!compact()) {
+  <section class="analytics-panel" aria-label="Indicatori pe zone">
+    <div class="section-heading">
+      <div>
+        <span class="section-index">03</span>
+        <h2>Indicatori pe zone</h2>
+      </div>
+      <label class="zone-filter"
+        >Zonă<select
+          aria-label="Zonă KPI în replay"
+          [value]="zoneId()"
+          (change)="zoneId.set($any($event.target).value)"
+        >
+          <option value="">Toate zonele</option>
+          @for (cp of replay().data.captured.layout.layout.checkpoints; track cp.id) {
+            <option [value]="cp.id">{{ cp.code }} · {{ cp.name }}</option>
+          }
+          @if (frame().desks; as desks) {
+            <option [value]="desks.area.id">{{ desks.area.code }} · {{ desks.area.name }}</option>
+          }
+        </select></label
+      >
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel KPI pe zone">
+      <table>
+        <thead>
+          <tr>
+            <th>Zonă</th>
+            <th>În coadă</th>
+            <th>Procesați</th>
+            <th>Așteptare medie (min)</th>
+            <th>P95 (min)</th>
+            <th>Servicii în eșantion</th>
+            <th>Throughput (pasageri/min)</th>
+            <th>Utilizare</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of visibleZones(); track row.checkpoint.id) {
+            <tr [attr.data-zone-id]="row.checkpoint.id">
+              <td>
+                {{ row.checkpoint.code }}<small>{{ row.checkpoint.name }}</small>
+              </td>
+              <td data-kpi="queued">{{ row.sample?.queuedPassengers ?? '—' }}</td>
+              <td>{{ row.sample?.processedPassengers ?? '—' }}</td>
+              <td>
+                {{
+                  row.sample?.kpi?.meanWaitMinutes == null
+                    ? '—'
+                    : (row.sample!.kpi!.meanWaitMinutes | number: '1.0-2')
+                }}
+              </td>
+              <td>
+                {{
+                  row.sample?.kpi?.p95WaitMinutes == null
+                    ? '—'
+                    : (row.sample!.kpi!.p95WaitMinutes | number: '1.0-2')
+                }}
+              </td>
+              <td>{{ row.sample?.kpi?.waitSampleCount ?? '—' }}</td>
+              <td>
+                {{
+                  row.sample?.kpi?.throughputPerMinute == null
+                    ? '—'
+                    : (row.sample!.kpi!.throughputPerMinute | number: '1.0-2')
+                }}
+              </td>
+              <td>
+                {{
+                  row.sample?.kpi?.utilization == null
+                    ? '—'
+                    : (row.sample!.kpi!.utilization! * 100 | number: '1.0-1') + '%'
+                }}
+              </td>
+            </tr>
+          }
+          @if (frame().desks; as desks) {
+            @if (!zoneId() || zoneId() === desks.area.id) {
+              <tr [attr.data-zone-id]="desks.area.id">
+                <td>
+                  {{ desks.area.code }}<small>{{ desks.area.name }}</small>
+                </td>
+                <td data-kpi="queued">{{ desks.sample?.queuedPassengers ?? '—' }}</td>
+                <td>{{ desks.sample?.processedPassengers ?? '—' }}</td>
+                <td>
+                  {{
+                    desks.sample?.checkIn?.meanWaitMinutes == null
+                      ? '—'
+                      : (desks.sample!.checkIn!.meanWaitMinutes | number: '1.0-2')
+                  }}
+                </td>
+                <td>
+                  {{
+                    desks.sample?.checkIn?.p95WaitMinutes == null
+                      ? '—'
+                      : (desks.sample!.checkIn!.p95WaitMinutes | number: '1.0-2')
+                  }}
+                </td>
+                <td>{{ desks.sample?.processedPassengers ?? '—' }}</td>
+                <td>—</td>
+                <td>
+                  {{
+                    desks.sample?.checkIn?.utilization == null
+                      ? '—'
+                      : (desks.sample!.checkIn!.utilization! * 100 | number: '1.0-3') + '% cumulat'
+                  }}
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="analytics-footer">
+      <details>
+        <summary>Salt la o observație persistată</summary>
+        <div class="observations">
+          @for (minute of observationMinutes(); track minute) {
+            <button type="button" class="btn-sm" (click)="seek(minute)">{{ minute }}</button>
+          }
+          <button
+            type="button"
+            [disabled]="observationPage() === 0"
+            (click)="observationPage.set(observationPage() - 1)"
+          >
+            Observații anterioare
+          </button>
+          <button
+            type="button"
+            [disabled]="(observationPage() + 1) * 100 >= replay().minutes.length"
+            (click)="observationPage.set(observationPage() + 1)"
+          >
+            Observații următoare
+          </button>
+        </div>
+      </details>
+    </div>
+  </section>
+}

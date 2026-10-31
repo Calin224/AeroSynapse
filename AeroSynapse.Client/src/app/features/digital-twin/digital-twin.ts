@@ -1,486 +1,273 @@
 import {
   afterNextRender,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
   inject,
+  Injector,
   InjectionToken,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
+import { A11yModule } from '@angular/cdk/a11y';
 import { DataState } from '../../shared/ui/data-state';
-import { ThreeTwinRenderer } from './three-twin-renderer';
+import { TerminalMap } from './terminal-map';
+import { TERMINAL_MAP_ZONES } from './terminal-zones';
+import { ZoneInspector } from './zone-inspector';
+import { HeatmapControls } from './heatmap-controls';
+import { PassengerPlayback } from './passenger-playback';
+import { FlowLegend } from './flow-legend';
+import { PassengerPacket, PassengerStats } from './passenger-model';
 import {
+  buildHeatmapFrame,
+  busiestMoment,
+  comparable,
+  CONGESTION_BANDS,
+  HeatmapDataset,
+  HeatmapFrame,
+  heatmapMinutes,
+  TwinHover,
+} from './heatmap-model';
+import {
+  DEFAULT_TWIN_RESOURCES,
+  TwinDetailPolicy,
+  TwinExteriorStatus,
   TwinDisplayMode,
+  TwinCameraView,
   TwinRenderer,
   TwinResource,
   TwinResources,
   TwinScene,
-  TwinSurface,
   TwinSelection,
-  TWIN_SURFACES,
+  TwinNavigationMode,
+  TwinPerformance,
+  TwinFailureReason,
 } from './twin-model';
 
-export const TWIN_RENDERER_FACTORY = new InjectionToken<
-  (host: HTMLElement, onError: () => void) => TwinRenderer
->('TWIN_RENDERER_FACTORY', {
-  providedIn: 'root',
-  factory: () => (host, onError) => new ThreeTwinRenderer(host, onError),
-});
+export type TwinRendererFactory = (
+  host: HTMLElement,
+  onError: (reason?: TwinFailureReason) => void,
+  signal: AbortSignal,
+) => TwinRenderer | Promise<TwinRenderer>;
+export const TWIN_RENDERER_FACTORY = new InjectionToken<TwinRendererFactory>(
+  'TWIN_RENDERER_FACTORY',
+  {
+    providedIn: 'root',
+    factory: () => async (host, onError, signal) => {
+      const { ThreeTwinRenderer } = await import('./three-twin-renderer');
+      signal.throwIfAborted();
+      return new ThreeTwinRenderer(host, onError);
+    },
+  },
+);
+export const TWIN_READY_TIMEOUT_MS = 10_000;
 @Component({
   selector: 'app-digital-twin',
-  imports: [ButtonModule, DataState],
-  template: ` <div class="viewport" [attr.aria-busy]="status() === 'loading' || assetLoading()">
-    <div #host class="canvas-host" [class.hidden]="status() === 'error'"></div>
-    @if (status() === 'loading') {
-      <div class="overlay"><app-data-state status="loading" label="terminalul 3D" /></div>
-    }
-    @if (status() === 'error') {
-      <div class="overlay">
-        <app-data-state
-          status="error"
-          message="Scena 3D nu este disponibilă. Verifică suportul WebGL și accelerarea hardware a browserului."
-          (retry)="initialize()"
-        />
-      </div>
-    }
-    @if (status() === 'ready') {
-      <div class="scene-label">AEROPORTUL TĂU · DEMO SYNTHETIC</div>
-      <div class="camera-action">
-        <p-button
-          label="Resetează camera"
-          icon="pi pi-compass"
-          [outlined]="true"
-          size="small"
-          (onClick)="resetCamera()"
-        />
-      </div>
-      <div class="scene-tools">
-        <div class="mode-controls" aria-label="Mod de afișare">
-          <button
-            type="button"
-            [attr.aria-pressed]="mode() === 'interior'"
-            (click)="setMode('interior')"
-          >
-            Interior
-          </button>
-          <button
-            type="button"
-            [attr.aria-pressed]="mode() === 'exterior'"
-            (click)="setMode('exterior')"
-          >
-            Exterior
-          </button>
-          @if (mode() === 'exterior') {
-            <label
-              ><input
-                type="checkbox"
-                [checked]="resources().aircraft"
-                (change)="toggleResource('aircraft', $event)"
-              />
-              Aeronave</label
-            >
-            <label
-              ><input
-                type="checkbox"
-                [checked]="resources().baggage"
-                (change)="toggleResource('baggage', $event)"
-              />
-              Bagaje</label
-            >
-            <label
-              ><input
-                type="checkbox"
-                [checked]="resources().vehicles"
-                (change)="toggleResource('vehicles', $event)"
-              />
-              Vehicule</label
-            >
-            <label
-              ><input
-                type="checkbox"
-                [checked]="resources().runway"
-                (change)="toggleResource('runway', $event)"
-              />
-              Pistă</label
-            >
-          }
-        </div>
-        <div class="zone-control">
-          <label for="{{ zoneSelectId }}">Selectează zonă</label>
-          <select
-            [id]="zoneSelectId"
-            [value]="selection()?.entityId ?? ''"
-            (change)="selectZone($event)"
-          >
-            <option value="">Click pe model sau alege o zonă</option>
-            @for (zone of zones(); track zone.entityId) {
-              <option [value]="zone.entityId">{{ zone.label }}</option>
-            }
-          </select>
-        </div>
-      </div>
-      @if (selection(); as selected) {
-        <div class="selection" aria-live="polite">
-          <strong>{{ selected.label }}</strong> <span>synthetic · {{ selected.zoneType }}</span
-          ><code>zoneId: {{ selected.zoneId }}</code> <code>entityId: {{ selected.entityId }}</code>
-        </div>
-      }
-      @if (assetLoading()) {
-        <div class="asset-status" role="status">Se încarcă resursele exterioare…</div>
-      }
-      @if (assetError()) {
-        <div class="asset-status" role="status">{{ assetError() }}</div>
-      }
-      <div class="legend">
-        3 controale · 5 porți · Geometrie și mișcări demonstrative. Nu reproduce Craiova.
-      </div>
-    }
-  </div>
-  @if (status() === 'ready') {
-    <section class="material-editor" aria-label="Editor de materiale">
-      <div class="material-heading">
-        <div>
-          <strong>Materiale terminal</strong>
-          <span>Alege o suprafață și aplic-o pe zona selectată.</span>
-        </div>
-        @if (selection(); as selected) {
-          <span class="zone-chip">{{ selected.label }}</span>
-        } @else {
-          <span class="zone-hint">Selectează mai întâi o zonă din model</span>
-        }
-      </div>
-      <div class="surface-grid" role="group" aria-label="Alege materialul">
-        @for (surface of surfaceOptions; track surface.id) {
-          <button
-            type="button"
-            class="surface-option"
-            [class.selected]="selectedSurface() === surface.id"
-            [attr.aria-pressed]="selectedSurface() === surface.id"
-            (click)="chooseSurface(surface.id)"
-          >
-            <img [src]="surface.texture" [alt]="surface.label" />
-            <span>{{ surface.label }}</span>
-          </button>
-        }
-      </div>
-      <div class="material-actions">
-        <div class="material-status" aria-live="polite">
-          @if (surfaceLoading()) {
-            Se încarcă materialul…
-          } @else if (surfaceError()) {
-            <span class="material-error" role="alert">{{ surfaceError() }}</span>
-          } @else if (appliedSurface()) {
-            Material {{ appliedSurface() }} aplicat pe {{ selection()?.label }}.
-          } @else {
-            Materialul se aplică doar modelului local.
-          }
-        </div>
-        <div class="material-buttons">
-          <p-button
-            label="Aplică material"
-            icon="pi pi-palette"
-            size="small"
-            [disabled]="!selection() || mode() !== 'interior' || surfaceLoading()"
-            (onClick)="applySurface()"
-          />
-          <p-button
-            label="Revino la original"
-            icon="pi pi-undo"
-            [outlined]="true"
-            size="small"
-            [disabled]="!selection() || !appliedSurface() || surfaceLoading()"
-            (onClick)="resetSurface()"
-          />
-        </div>
-      </div>
-    </section>
-  }`,
-  styles: `
-    :host {
-      display: block;
-    }
-    .viewport {
-      position: relative;
-      height: 540px;
-      background: #0e1b27;
-    }
-    .canvas-host {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      touch-action: none;
-    }
-    .hidden {
-      visibility: hidden;
-    }
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      align-items: center;
-    }
-    .scene-label {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      font-size: 10px;
-      letter-spacing: 1.4px;
-      color: #a8c4ce;
-      pointer-events: none;
-    }
-    .camera-action {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-    }
-    .scene-tools {
-      position: absolute;
-      top: 64px;
-      left: 16px;
-      right: 16px;
-      display: grid;
-      gap: 10px;
-    }
-    .mode-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    button,
-    select {
-      background: #132c3d;
-      color: #dceef2;
-      border: 1px solid #456371;
-      border-radius: 5px;
-      padding: 7px 10px;
-      font: inherit;
-      font-size: 12px;
-    }
-    button[aria-pressed='true'] {
-      background: #125951;
-      border-color: #5ee2d3;
-    }
-    button:focus-visible,
-    select:focus-visible,
-    input:focus-visible {
-      outline: 2px solid #5ee2d3;
-      outline-offset: 2px;
-    }
-    .mode-controls label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: #dceef2;
-      background: #132c3dcc;
-      padding: 5px;
-      font-size: 12px;
-    }
-    .zone-control {
-      display: flex;
-      gap: 7px;
-      align-items: center;
-      font-size: 11px;
-      color: #a8c4ce;
-    }
-    .zone-control select {
-      max-width: 250px;
-    }
-    .selection {
-      position: absolute;
-      bottom: 52px;
-      left: 16px;
-      display: grid;
-      gap: 4px;
-      padding: 10px;
-      background: #102635ed;
-      border: 1px solid #456371;
-      color: #dceef2;
-      font-size: 11px;
-      max-width: calc(100% - 32px);
-    }
-    code {
-      overflow-wrap: anywhere;
-      font-size: 10px;
-    }
-    .legend {
-      position: absolute;
-      bottom: 16px;
-      left: 16px;
-      right: 16px;
-      font-size: 10px;
-      color: #a8c4ce;
-      pointer-events: none;
-    }
-    .asset-status {
-      position: absolute;
-      bottom: 32px;
-      right: 16px;
-      padding: 7px;
-      background: #102635ed;
-      color: #e8c47c;
-      font-size: 11px;
-      max-width: 75%;
-    }
-    .material-editor {
-      display: grid;
-      gap: 12px;
-      padding: 16px;
-      background: #101a24;
-      border-top: 1px solid #25313e;
-    }
-    .material-heading,
-    .material-actions,
-    .material-buttons {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .material-heading > div {
-      display: grid;
-      gap: 4px;
-    }
-    .material-heading strong {
-      color: #e8eef5;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .material-heading span,
-    .material-status {
-      color: #8e9caf;
-      font-size: 10px;
-    }
-    .zone-chip {
-      padding: 5px 8px;
-      border: 1px solid #2e4c49;
-      border-radius: 5px;
-      color: #59d9ba !important;
-      white-space: nowrap;
-    }
-    .surface-grid {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .surface-option {
-      display: grid;
-      gap: 6px;
-      padding: 5px;
-      border: 1px solid #25313e;
-      border-radius: 7px;
-      background: #131e29;
-      color: #c3cedb;
-      cursor: pointer;
-      text-align: left;
-    }
-    .surface-option.selected {
-      border-color: #59d9ba;
-      color: #e8eef5;
-    }
-    .surface-option img {
-      width: 100%;
-      aspect-ratio: 2 / 1;
-      border-radius: 4px;
-      object-fit: cover;
-    }
-    .surface-option span {
-      font-size: 10px;
-    }
-    .material-buttons {
-      justify-content: flex-end;
-    }
-    .material-error {
-      color: #ff9a91;
-    }
-    @media (max-width: 650px) {
-      .viewport {
-        height: 520px;
-      }
-      .scene-label {
-        top: 62px;
-      }
-      .scene-tools {
-        top: 88px;
-      }
-      .zone-control {
-        flex-wrap: wrap;
-      }
-      .selection {
-        bottom: 64px;
-      }
-      .surface-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-      .material-heading,
-      .material-actions {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .material-buttons {
-        justify-content: flex-start;
-        flex-wrap: wrap;
-      }
-    }
-  `,
+  host: { '[class.dashboard-view]': 'dashboardMode()' },
+  imports: [
+    A11yModule,
+    DataState,
+    TerminalMap,
+    ZoneInspector,
+    HeatmapControls,
+    PassengerPlayback,
+    FlowLegend,
+  ],
+  templateUrl: './digital-twin.html',
+  styleUrl: './digital-twin.css',
 })
 export class DigitalTwin {
+  private readonly injector = inject(Injector);
+  private expandedTrigger: HTMLElement | null = null;
   private static instance = 0;
   protected readonly zoneSelectId = `twin-zone-${++DigitalTwin.instance}`;
   readonly scene = input.required<TwinScene>();
-  protected readonly status = signal<'loading' | 'ready' | 'error'>('loading');
+  readonly initialPresentation = input<'2d' | '3d'>('2d');
+  readonly heatmap = input<HeatmapDataset | null>(null);
+  readonly replayMode = input(false);
+  /** The central dashboard owns analytics and follows the latest observation. */
+  readonly dashboardMode = input(false);
+  readonly replayFrame = input<{ snapshotMinute: number; packet: PassengerPacket } | null>(null);
+  /** Finished runs can open where something happens (the longest queue) instead of the last minute. */
+  readonly openAt = input<'latest' | 'busiest'>('latest');
+  protected readonly dataset = computed(() => this.heatmap() ?? this.scene().heatmap ?? null);
+  protected readonly heatmapEnabled = signal(true);
+  protected readonly minute = signal(0);
+  protected readonly followLatest = signal(true);
+  protected readonly variant = signal<HeatmapFrame['variant']>('baseline');
+  protected readonly heatmapFrame = computed(() => {
+    const dataset = this.dataset();
+    return dataset ? buildHeatmapFrame(dataset, this.variant(), this.minute()) : null;
+  });
+  protected readonly timelineMinutes = computed(() =>
+    this.dataset() ? heatmapMinutes(this.dataset()!) : [],
+  );
+  protected readonly passengerRun = computed(() => {
+    const dataset = this.dataset();
+    return this.variant() === 'optimized' && dataset && comparable(dataset)
+      ? dataset.optimized
+      : dataset?.baseline;
+  });
+  protected readonly passengerPacket = signal<PassengerPacket | null>(null);
+  protected playheadMinute(): number {
+    return Math.floor(this.passengerPacket()?.timeMinutes ?? 0);
+  }
+  protected readonly passengerStats = signal<PassengerStats | null>(null);
+  protected readonly hover = signal<(TwinHover & { left: number; top: number }) | null>(null);
+  protected readonly hoverZone = computed(() =>
+    this.heatmapFrame()?.zones.find((zone) => zone.zoneId === this.hover()?.selection.zoneId),
+  );
+  protected readonly congestionBands = CONGESTION_BANDS;
+  private heatmapContext = '';
+  protected readonly status = signal<'loading' | 'ready' | 'error'>('ready');
   protected readonly mode = signal<TwinDisplayMode>('interior');
-  protected readonly resources = signal<TwinResources>({
-    aircraft: true,
-    baggage: true,
-    vehicles: true,
-    runway: false,
+  protected readonly cameraView = signal<TwinCameraView>('overview');
+  protected readonly touring = signal(false);
+  private tourTimer?: ReturnType<typeof setInterval>;
+  protected readonly expanded = signal(false);
+  protected readonly presentation = signal<'3d' | '2d'>('2d');
+  protected readonly navigation = signal<TwinNavigationMode>('orbit');
+  protected readonly performance = signal<TwinPerformance | null>(null);
+  protected readonly errorMessage = signal('');
+  protected readonly resources = signal<TwinResources>({ ...DEFAULT_TWIN_RESOURCES });
+  protected readonly detailPolicy = signal<TwinDetailPolicy>('auto');
+  protected readonly exteriorStatus = signal<TwinExteriorStatus>({
+    level: 'unloaded',
+    policy: 'auto',
+    entities: 0,
   });
   protected readonly selection = signal<TwinSelection | null>(null);
   protected readonly zones = signal<TwinSelection[]>([]);
   protected readonly assetLoading = signal(false);
   protected readonly assetError = signal('');
-  protected readonly surfaceOptions = TWIN_SURFACES;
-  protected readonly selectedSurface = signal<TwinSurface>('terrazzo');
-  protected readonly appliedSurface = signal<TwinSurface | null>(null);
-  protected readonly surfaceLoading = signal(false);
-  protected readonly surfaceError = signal('');
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  private readonly map = viewChild(TerminalMap);
+  private readonly playback = viewChild(PassengerPlayback);
+  protected readonly playbackAvailable = computed(() => this.playback()?.canPlay() ?? false);
   private readonly createRenderer = inject(TWIN_RENDERER_FACTORY);
   private renderer?: TwinRenderer;
+  private rendererRequest?: AbortController;
   private modeVersion = 0;
 
   constructor() {
-    afterNextRender(() => void this.initialize());
+    const closeExpanded = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && this.expanded()) this.expandViewport();
+    };
+    const visibilityChanged = () => {
+      if (document.hidden) this.stopTour();
+    };
+    document.addEventListener('keydown', closeExpanded);
+    document.addEventListener('visibilitychange', visibilityChanged);
+    afterNextRender(() => {
+      if (this.initialPresentation() === '3d') void this.initialize();
+      else this.refreshZones();
+    });
     effect(() => {
       const scene = this.scene();
-      this.renderer?.setScene(scene);
+      try {
+        this.renderer?.setScene(scene);
+      } catch {
+        this.fail();
+      }
     });
-    inject(DestroyRef).onDestroy(() => this.releaseRenderer());
+    effect(() => {
+      const dataset = this.dataset();
+      const context = dataset?.baseline.runId ?? '';
+      if (context !== this.heatmapContext) {
+        this.selection.set(null);
+        this.hover.set(null);
+        this.passengerStats.set(null);
+        this.passengerPacket.set(null);
+        this.renderSafely((renderer) => renderer.selectEntity?.(''));
+      }
+      if (this.replayMode()) {
+        this.heatmapContext = context;
+        this.variant.set('baseline');
+        this.followLatest.set(false);
+        const frame = this.replayFrame();
+        this.minute.set(frame?.snapshotMinute ?? 0);
+        this.passengerPacket.set(frame?.packet ?? null);
+        return;
+      }
+      if (context !== this.heatmapContext) {
+        this.heatmapContext = context;
+        this.variant.set('baseline');
+        const busiest =
+          dataset && untracked(this.openAt) === 'busiest' ? busiestMoment(dataset) : null;
+        this.followLatest.set(!busiest);
+        this.minute.set(
+          busiest?.elapsedMinutes ?? (dataset ? (heatmapMinutes(dataset).at(-1) ?? 0) : 0),
+        );
+      }
+      if (dataset && this.followLatest()) this.minute.set(heatmapMinutes(dataset).at(-1) ?? 0);
+      if (dataset && this.variant() === 'optimized' && !comparable(dataset))
+        this.variant.set('baseline');
+    });
+    effect(() => {
+      // Subscribe before the asynchronous renderer exists so time changes keep
+      // the 3D surfaces synchronized with the inspector and HTML metrics.
+      const frame = this.heatmapFrame();
+      this.renderSafely((renderer) => renderer.setHeatmap?.(this.heatmapEnabled() ? frame : null));
+    });
+    effect(() => {
+      const packet = this.passengerPacket();
+      const run = this.passengerRun();
+      this.renderSafely((renderer) =>
+        renderer.setPassengers?.(
+          run?.runId === packet?.replay.runId && run?.layoutId === packet?.replay.layoutId
+            ? packet
+            : null,
+        ),
+      );
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.stopTour();
+      document.removeEventListener('keydown', closeExpanded);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+      this.releaseRenderer();
+    });
   }
   protected async initialize(): Promise<void> {
     this.releaseRenderer();
+    const request = new AbortController();
+    this.rendererRequest = request;
     this.status.set('loading');
     this.mode.set('interior');
+    this.cameraView.set('overview');
+    this.presentation.set('3d');
+    this.performance.set(null);
     this.assetError.set('');
     this.assetLoading.set(false);
     this.selection.set(null);
-    this.appliedSurface.set(null);
-    this.surfaceError.set('');
-    this.surfaceLoading.set(false);
     let renderer: TwinRenderer | undefined;
+    let earlyFailure: TwinFailureReason | undefined;
     try {
-      renderer = this.createRenderer(this.host().nativeElement, () => this.fail());
+      renderer = await this.createRenderer(
+        this.host().nativeElement,
+        (reason) => {
+          if (!renderer) earlyFailure = reason ?? 'unavailable';
+          else if (this.renderer === renderer) this.fail(reason);
+        },
+        request.signal,
+      );
+      if (request.signal.aborted) {
+        renderer.dispose();
+        return;
+      }
+      if (earlyFailure) {
+        renderer.dispose();
+        this.fail(earlyFailure);
+        return;
+      }
       this.renderer = renderer;
       renderer.setSelectionHandler?.((value) => {
+        if (this.renderer !== renderer) return;
         this.selection.set(value);
-        this.appliedSurface.set(
-          value ? renderer?.getAppliedSurface(value.entityId) ?? null : null,
-        );
+        if (value) this.cameraView.set('overview');
       });
       renderer.setAssetStatusHandler?.((value) => {
         if (this.renderer !== renderer) return;
@@ -488,20 +275,68 @@ export class DigitalTwin {
         this.assetError.set(value.error ?? '');
         this.refreshZones();
       });
+      renderer.setExteriorDetailPolicy?.(this.detailPolicy());
+      renderer.setExteriorStatusHandler?.((value) => {
+        if (this.renderer !== renderer) return;
+        this.exteriorStatus.set(value);
+        this.refreshZones();
+      });
       renderer.setResources?.(this.resources());
+      renderer.setNavigationMode?.(this.navigation());
+      renderer.setHeatmap?.(this.heatmapEnabled() ? this.heatmapFrame() : null);
+      renderer.setPassengerStatsHandler?.((stats) => {
+        if (this.renderer === renderer) this.passengerStats.set(stats);
+      });
+      const packet = this.passengerPacket(),
+        run = this.passengerRun();
+      renderer.setPassengers?.(
+        run?.runId === packet?.replay.runId && run?.layoutId === packet?.replay.layoutId
+          ? packet
+          : null,
+      );
+      renderer.setHoverHandler?.((value) => {
+        if (this.renderer === renderer) this.showHover(value);
+      });
+      renderer.setPerformanceHandler?.((value) => {
+        if (this.renderer === renderer) this.performance.set(value);
+      });
       renderer.setScene(this.scene());
-      if (renderer.ready) await renderer.ready;
+      if (request.signal.aborted) return;
+      if (renderer.ready) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let onAbort: (() => void) | undefined;
+        try {
+          await Promise.race([
+            renderer.ready,
+            new Promise<never>((_, reject) => {
+              onAbort = () => reject(request.signal.reason);
+              request.signal.addEventListener('abort', onAbort, { once: true });
+              timer = setTimeout(
+                () => reject(new Error('Scene initialization timed out.')),
+                TWIN_READY_TIMEOUT_MS,
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+          if (onAbort) request.signal.removeEventListener('abort', onAbort);
+        }
+      }
       if (this.renderer === renderer) {
         this.refreshZones();
-        this.status.set('ready');
+        if (this.renderer === renderer) this.status.set('ready');
       }
     } catch {
+      if (request.signal.aborted) return;
       if (!renderer || this.renderer === renderer) this.fail();
     }
   }
   protected async setMode(mode: TwinDisplayMode): Promise<void> {
+    this.stopTour();
     const version = ++this.modeVersion;
     this.mode.set(mode);
+    this.hover.set(null);
+    this.cameraView.set('overview');
     this.assetError.set('');
     try {
       await this.renderer?.setDisplayMode?.(mode);
@@ -515,62 +350,212 @@ export class DigitalTwin {
     }
     if (version === this.modeVersion) this.refreshZones();
   }
+  protected setDetailPolicy(policy: TwinDetailPolicy): void {
+    this.detailPolicy.set(policy);
+    this.renderSafely((renderer) => renderer.setExteriorDetailPolicy?.(policy));
+  }
   protected toggleResource(resource: TwinResource, event: Event): void {
     this.resources.update((value) => ({
       ...value,
       [resource]: (event.target as HTMLInputElement).checked,
     }));
-    this.renderer?.setResources?.(this.resources());
+    this.renderSafely((renderer) => renderer.setResources?.(this.resources()));
     this.refreshZones();
   }
   protected selectZone(event: Event): void {
-    this.renderer?.selectEntity?.((event.target as HTMLSelectElement).value);
+    this.focusEntity((event.target as HTMLSelectElement).value);
   }
-  protected chooseSurface(surface: TwinSurface): void {
-    this.selectedSurface.set(surface);
-    this.surfaceError.set('');
+  /** Seeks passenger playback to `minute`, optionally focuses a zone, and plays from there. */
+  playFrom(minute: number, zoneId?: string): void {
+    this.setMinute(minute);
+    this.playback()?.playFrom(minute);
+    const zone = TERMINAL_MAP_ZONES.find((item) => item.zoneId === zoneId);
+    if (zone) this.focusEntity(zone.entityId);
   }
-  protected async applySurface(): Promise<void> {
-    const renderer = this.renderer;
-    const selection = this.selection();
-    if (!renderer || !selection || this.mode() !== 'interior') return;
-    const surface = this.selectedSurface();
-    this.surfaceLoading.set(true);
-    this.surfaceError.set('');
-    try {
-      await renderer.applySurface(selection.entityId, surface);
-      if (this.renderer === renderer && this.selection()?.entityId === selection.entityId)
-        this.appliedSurface.set(renderer.getAppliedSurface(selection.entityId));
-    } catch (error) {
-      if (this.renderer === renderer)
-        this.surfaceError.set(
-          `Materialul nu a putut fi aplicat: ${error instanceof Error ? error.message : 'eroare necunoscută'}`,
-        );
-    } finally {
-      if (this.renderer === renderer) this.surfaceLoading.set(false);
-    }
-  }
-  protected resetSurface(): void {
-    const selection = this.selection();
-    if (!selection || !this.renderer) return;
-    this.renderer.resetSurface(selection.entityId);
-    this.appliedSurface.set(null);
-    this.surfaceError.set('');
+  private focusEntity(entityId: string): void {
+    this.stopTour();
+    if (this.presentation() === '2d')
+      this.selection.set(TERMINAL_MAP_ZONES.find((zone) => zone.entityId === entityId) ?? null);
+    else this.renderSafely((renderer) => renderer.selectEntity?.(entityId));
   }
   private refreshZones(): void {
-    this.zones.set(this.renderer?.getSelectableZones?.() ?? []);
+    try {
+      this.zones.set(
+        this.presentation() === '2d'
+          ? [...TERMINAL_MAP_ZONES]
+          : (this.renderer?.getSelectableZones?.() ?? []),
+      );
+    } catch {
+      this.fail();
+    }
   }
   protected resetCamera(): void {
-    this.renderer?.resetCamera();
+    this.stopTour();
+    this.cameraView.set('overview');
+    if (this.presentation() === '2d') this.map()?.reset();
+    else this.renderSafely((renderer) => renderer.resetCamera());
   }
-  private fail(): void {
+  /** One picker for every vantage point: the terminal's camera views and the airside context. */
+  protected async selectView(event: Event): Promise<void> {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'exterior') return this.setMode('exterior');
+    const fromExterior = this.mode() === 'exterior';
+    // Returning inside already lands on the overview.
+    if (fromExterior) await this.setMode('interior');
+    if (!fromExterior || value !== 'overview') this.setView(value as TwinCameraView);
+  }
+  protected setView(view: TwinCameraView): void {
+    this.stopTour();
+    this.cameraView.set(view);
+    this.renderSafely((renderer) => renderer.setCameraView?.(view));
+  }
+  protected toggleTour(): void {
+    if (this.touring()) {
+      this.stopTour();
+      return;
+    }
+    if (this.presentation() !== '3d' || this.mode() !== 'interior') return;
+    const views: TwinCameraView[] = ['gates', 'security', 'immersive', 'overview'];
+    let step = 0;
+    this.touring.set(true);
+    this.selection.set(null);
+    this.renderSafely((renderer) => renderer.selectEntity?.(''));
+    const advance = () => {
+      const view = views[step++];
+      this.cameraView.set(view);
+      this.renderSafely((renderer) => renderer.setCameraView?.(view));
+      if (step === views.length) this.stopTour();
+    };
+    advance();
+    if (this.touring()) this.tourTimer = setInterval(advance, 6500);
+  }
+  protected stopTour(): void {
+    if (this.tourTimer !== undefined) clearInterval(this.tourTimer);
+    this.tourTimer = undefined;
+    this.touring.set(false);
+  }
+  protected expandViewport(): void {
+    const opening = !this.expanded();
+    if (opening)
+      this.expandedTrigger =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.expanded.set(opening);
+    afterNextRender(
+      () => {
+        if (this.expanded() !== opening) return;
+        if (opening)
+          this.host()
+            .nativeElement.closest('.viewport')
+            ?.querySelector<HTMLButtonElement>('.camera-action button:last-child')
+            ?.focus();
+        else if (this.expandedTrigger?.isConnected) this.expandedTrigger.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+  protected setPresentation(mode: '3d' | '2d'): void {
+    this.stopTour();
+    if (mode === '3d' && !this.renderer) {
+      void this.initialize();
+      return;
+    }
+    if (mode === '2d' && this.status() === 'loading') {
+      this.releaseRenderer();
+      this.status.set('ready');
+      this.assetLoading.set(false);
+    }
+    this.presentation.set(mode);
+    if (mode === '2d' && this.mode() === 'exterior') void this.setMode('interior');
+    this.selection.set(null);
+    this.renderSafely((renderer) => {
+      renderer.selectEntity?.('');
+      renderer.setActive?.(mode === '3d');
+    });
+    this.refreshZones();
+  }
+  protected setNavigation(mode: TwinNavigationMode): void {
+    this.stopTour();
+    this.navigation.set(mode);
+    this.renderSafely((renderer) => renderer.setNavigationMode?.(mode));
+  }
+  protected zoom(direction: 'in' | 'out'): void {
+    this.stopTour();
+    if (this.presentation() === '2d') this.map()?.zoom(direction);
+    else this.renderSafely((renderer) => renderer.zoomCamera?.(direction));
+  }
+  protected panMap(direction: 'left' | 'right' | 'up' | 'down'): void {
+    this.map()?.pan(direction);
+  }
+  protected selectMapZone(zone: TwinSelection): void {
+    this.selection.set(zone);
+  }
+  protected showHover(value: TwinHover | null): void {
+    if (!value) {
+      this.hover.set(null);
+      return;
+    }
+    const rect = this.host().nativeElement.getBoundingClientRect();
+    this.hover.set({
+      ...value,
+      left: Math.max(8, Math.min(value.clientX - rect.left + 14, rect.width - 280)),
+      top: Math.max(
+        8,
+        Math.min(value.clientY - rect.top + 14, this.host().nativeElement.clientHeight - 125),
+      ),
+    });
+  }
+  protected setMinute(minute: number): void {
+    this.followLatest.set(false);
+    this.minute.set(minute);
+  }
+  protected togglePlayback(): void {
+    this.playback()?.togglePlayback();
+  }
+  protected setVariant(variant: HeatmapFrame['variant']): void {
+    const dataset = this.dataset();
+    if (variant === 'baseline' || (dataset && comparable(dataset))) this.variant.set(variant);
+  }
+  protected clearSelection(): void {
+    this.selection.set(null);
+    this.renderSafely((renderer) => renderer.selectEntity?.(''));
+  }
+  private renderSafely(action: (renderer: TwinRenderer) => void): void {
+    if (!this.renderer) return;
+    try {
+      action(this.renderer);
+    } catch {
+      this.fail();
+    }
+  }
+  private fail(reason: TwinFailureReason = 'unavailable'): void {
     this.releaseRenderer();
+    this.assetLoading.set(false);
+    this.assetError.set('');
+    const selected = this.selection();
+    if (selected && !TERMINAL_MAP_ZONES.some((zone) => zone.entityId === selected.entityId))
+      this.selection.set(null);
+    this.presentation.set('2d');
+    this.mode.set('interior');
     this.status.set('error');
+    this.errorMessage.set(
+      reason === 'performance'
+        ? 'Scena 3D nu menține pragul de 30 FPS. Harta 2D rămâne disponibilă pentru investigare.'
+        : 'Scena 3D nu este disponibilă. Harta 2D rămâne disponibilă pentru investigare.',
+    );
+    this.refreshZones();
   }
   private releaseRenderer(): void {
+    this.stopTour();
+    this.rendererRequest?.abort();
+    this.rendererRequest = undefined;
     const renderer = this.renderer;
     this.renderer = undefined;
+    this.hover.set(null);
     ++this.modeVersion;
-    renderer?.dispose();
+    try {
+      renderer?.dispose();
+    } catch {
+      /* A lost graphics context must not break the console. */
+    }
   }
 }

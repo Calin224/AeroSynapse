@@ -1,0 +1,9 @@
+FROM node:24-bookworm-slim
+ENV NG_BUILD_MAX_WORKERS=2 NODE_OPTIONS=--max-old-space-size=2048
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --cache /tmp/npm-cache && rm -rf /tmp/npm-cache \
+ && npx --no-install playwright install --with-deps --only-shell chromium \
+ && rm -rf /var/lib/apt/lists/* /root/.npm/_cacache
+COPY . ./
+ENTRYPOINT ["npm", "run", "test:critical-e2e"]

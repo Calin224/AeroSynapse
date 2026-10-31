@@ -1,0 +1,95 @@
+<h3 id="shift-plan-title">Alocare personal pe controale · intervale de 15 minute</h3>
+@if (!plan().recommended) {
+  <p class="rejected" role="note">Plan nerecomandat.</p>
+}
+
+<div class="scroll" tabindex="0" role="region" aria-labelledby="shift-plan-title">
+  <table>
+    <caption class="hidden">
+      Alocare personal pe controale la intervale de 15 minute: referință și plan pe ture
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="name">Control</th>
+        @for (hour of hours(); track hour.left) {
+          <th scope="colgroup" colspan="4">{{ hour.label }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of plan().rows; track row.checkpointId) {
+        <tr class="arrivals">
+          <th scope="row" class="name">{{ row.name }}</th>
+          @for (count of row.arrivals; track $index) {
+            <td>
+              <i [style.height.%]="(count / row.peak) * 100" aria-hidden="true"></i>
+              <span class="hidden">{{ count }} pasageri</span>
+            </td>
+          }
+        </tr>
+        <tr class="now">
+          <th scope="row" class="name">Referință</th>
+          @for (count of row.now; track $index) {
+            <td>{{ count }}</td>
+          }
+        </tr>
+        <tr class="proposed">
+          <th scope="row" class="name">Pe ture</th>
+          @for (count of row.proposed; track $index) {
+            <td [class.more]="count > row.now[$index]" [class.less]="count < row.now[$index]">
+              {{ count }}
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<details>
+  <summary>
+    Alocări individuale · {{ plan().people.length }} operatori,
+    {{ plan().moves === 1 ? 'o mutare' : plan().moves + ' mutări' }} între controale
+  </summary>
+  <ul class="legend">
+    @for (checkpoint of checkpoints(); track checkpoint.name) {
+      <li [attr.data-tone]="checkpoint.tone">{{ checkpoint.name }}</li>
+    }
+    <li class="pause">pauză</li>
+  </ul>
+  <div class="gantt" role="list" aria-label="Tura fiecărui operator">
+    <div class="axis" aria-hidden="true">
+      @for (tick of plan().ticks; track tick.left) {
+        <span [style.left.%]="tick.left">{{ tick.label }}</span>
+      }
+    </div>
+    @for (person of plan().people; track person.id) {
+      <div class="person" role="listitem">
+        <span class="who">
+          <strong>{{ person.name }}</strong>
+          <small>{{ person.hours }}</small>
+        </span>
+        <span class="track">
+          @for (bar of person.bars; track bar.left) {
+            <i
+              class="bar"
+              [attr.data-tone]="bar.tone"
+              [class.moved]="bar.moved"
+              [style.left.%]="bar.left"
+              [style.width.%]="bar.width"
+              [attr.title]="bar.checkpoint"
+            ></i>
+          }
+          @for (pause of person.breaks; track pause.left) {
+            <i class="pause" [style.left.%]="pause.left" [style.width.%]="pause.width"></i>
+          }
+          <span class="hidden">
+            @for (bar of person.bars; track bar.left) {
+              {{ bar.checkpoint }}{{ $last ? '' : ', ' }}
+            }
+          </span>
+        </span>
+      </div>
+    }
+  </div>
+</details>

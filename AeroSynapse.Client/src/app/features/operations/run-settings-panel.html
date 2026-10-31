@@ -1,0 +1,42 @@
+<section class="panel" aria-labelledby="run-settings-title">
+  <header class="panel-heading">
+    <h2 id="run-settings-title">Setările rulării</h2>
+  </header>
+  <div class="panel-body">
+    <div class="toolbar">
+      <label for="snapshot-interval">
+        Interval de înregistrare a rezultatelor
+        <span class="interval-control">
+          <input
+            id="snapshot-interval"
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            [(ngModel)]="interval"
+            [disabled]="disabled() || saving()"
+            [attr.aria-valuetext]="
+              interval + (interval === 1 ? ' minut virtual' : ' minute virtuale')
+            "
+            aria-describedby="snapshot-interval-help"
+          />
+          <output for="snapshot-interval">
+            {{ interval }} {{ interval === 1 ? 'minut virtual' : 'minute virtuale' }}
+          </output>
+        </span>
+      </label>
+      <button type="button" (click)="save()" [disabled]="disabled() || saving()">
+        {{ saving() ? 'Se salvează…' : 'Salvează intervalul' }}
+      </button>
+    </div>
+    @let savedInterval = scenario().inputs.snapshotIntervalMinutes ?? 1;
+    <p id="snapshot-interval-help">
+      Interval salvat: {{ savedInterval }}
+      {{ savedInterval === 1 ? 'minut virtual' : 'minute virtuale' }}. Schimbarea se aplică
+      următoarei rulări.
+    </p>
+    @if (message()) {
+      <p role="status">{{ message() }}</p>
+    }
+  </div>
+</section>

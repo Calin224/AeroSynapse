@@ -1,0 +1,430 @@
+<div
+  class="viewport"
+  [class.heatmap-active]="heatmapFrame() !== null"
+  [class.exterior-view]="mode() === 'exterior'"
+  [class.expanded]="expanded()"
+  [attr.role]="expanded() ? 'dialog' : null"
+  [attr.aria-modal]="expanded() ? true : null"
+  [attr.aria-label]="
+    expanded()
+      ? mode() === 'exterior'
+        ? 'Explorare context aeroportuar'
+        : 'Explorare terminal'
+      : null
+  "
+  [cdkTrapFocus]="expanded()"
+  [attr.aria-busy]="status() === 'loading' || assetLoading()"
+>
+  @if (status() === 'error') {
+    <div class="fallback-status" role="status">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <span>{{ errorMessage() }}</span>
+      <button type="button" (click)="initialize()">Reîncearcă 3D</button>
+    </div>
+  }
+
+  @if (status() !== 'loading' || presentation() === '3d') {
+    <div class="toolbar" role="group" aria-label="Controale scenă">
+      <div class="segmented" role="group" aria-label="Vizualizare terminal">
+        <button
+          type="button"
+          [disabled]="status() === 'error' || status() === 'loading'"
+          [attr.aria-pressed]="presentation() === '3d'"
+          (click)="setPresentation('3d')"
+        >
+          3D
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="presentation() === '2d'"
+          (click)="setPresentation('2d')"
+        >
+          Hartă 2D
+        </button>
+      </div>
+      @if (presentation() === '3d' && status() === 'ready') {
+        <label class="view-select">
+          <i class="pi pi-video" aria-hidden="true"></i>
+          <span class="sr-only">Vedere</span>
+          <select
+            [value]="mode() === 'exterior' ? 'exterior' : cameraView()"
+            (change)="selectView($event)"
+          >
+            <option value="overview">Ansamblu</option>
+            <option value="gates">Porți</option>
+            <option value="security">Securitate</option>
+            <option value="immersive">Nivelul ochilor</option>
+            <option value="exterior">Exterior aeroport</option>
+          </select>
+        </label>
+      }
+      @if (status() !== 'loading') {
+        <div class="zone-control">
+          <label for="{{ zoneSelectId }}" class="sr-only">Selectează zonă</label>
+          <select
+            [id]="zoneSelectId"
+            [value]="selection()?.entityId ?? ''"
+            (change)="selectZone($event)"
+          >
+            <option value="">Alege o zonă…</option>
+            @for (zone of zones(); track zone.entityId) {
+              <option [value]="zone.entityId">{{ zone.label }}</option>
+            }
+          </select>
+        </div>
+        <details class="layer-settings">
+          <summary class="tool icon" title="Opțiuni">
+            <i class="pi pi-sliders-h" aria-hidden="true"></i><span class="sr-only">Opțiuni</span>
+          </summary>
+          <div class="layer-content">
+            @if (dataset() || (presentation() === '3d' && mode() === 'interior')) {
+              <p class="layer-title">Afișare</p>
+              <div class="navigation-controls">
+                @if (dataset()) {
+                  <button
+                    type="button"
+                    [attr.aria-pressed]="heatmapEnabled()"
+                    (click)="heatmapEnabled.set(!heatmapEnabled())"
+                  >
+                    Aglomerație
+                  </button>
+                }
+                @if (presentation() === '3d' && mode() === 'interior') {
+                  <button
+                    type="button"
+                    class="tour-button"
+                    [attr.aria-pressed]="touring()"
+                    (click)="toggleTour()"
+                  >
+                    {{ touring() ? 'Oprește turul' : 'Tur ghidat' }}
+                  </button>
+                }
+              </div>
+            }
+            <p class="layer-title">Cameră</p>
+            <div class="navigation-controls" aria-label="Control cameră">
+              <button type="button" (click)="resetCamera()">Resetează camera</button>
+              @if (presentation() === '3d') {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="navigation() === 'orbit'"
+                  (click)="setNavigation('orbit')"
+                >
+                  Rotire
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="navigation() === 'pan'"
+                  (click)="setNavigation('pan')"
+                >
+                  Deplasare
+                </button>
+              }
+              <button type="button" aria-label="Apropie camera" (click)="zoom('in')">+</button>
+              <button type="button" aria-label="Depărtează camera" (click)="zoom('out')">−</button>
+              @if (presentation() === '2d') {
+                <button
+                  type="button"
+                  aria-label="Deplasează harta la stânga"
+                  (click)="panMap('left')"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  aria-label="Deplasează harta la dreapta"
+                  (click)="panMap('right')"
+                >
+                  →
+                </button>
+                <button type="button" aria-label="Deplasează harta în sus" (click)="panMap('up')">
+                  ↑
+                </button>
+                <button type="button" aria-label="Deplasează harta în jos" (click)="panMap('down')">
+                  ↓
+                </button>
+              }
+            </div>
+            @if (presentation() === '3d' && mode() === 'exterior') {
+              <p class="layer-title">Detaliu exterior</p>
+              <div class="navigation-controls" role="group" aria-label="Detaliu exterior">
+                <button
+                  type="button"
+                  [attr.aria-pressed]="detailPolicy() === 'auto'"
+                  (click)="setDetailPolicy('auto')"
+                >
+                  LOD automat
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="detailPolicy() === 'low'"
+                  (click)="setDetailPolicy('low')"
+                >
+                  Economic
+                </button>
+              </div>
+              <p class="layer-title">Resurse exterioare</p>
+              <div class="mode-controls" aria-label="Mod de afișare">
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().stands"
+                    (change)="toggleResource('stands', $event)"
+                  />
+                  Standuri</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().apron"
+                    (change)="toggleResource('apron', $event)"
+                  />
+                  Platformă</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().aircraft"
+                    (change)="toggleResource('aircraft', $event)"
+                  />
+                  Aeronave</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().baggage"
+                    (change)="toggleResource('baggage', $event)"
+                  />
+                  Bagaje</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().vehicles"
+                    (change)="toggleResource('vehicles', $event)"
+                  />
+                  Vehicule</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="resources().runway"
+                    (change)="toggleResource('runway', $event)"
+                  />
+                  Pistă</label
+                >
+              </div>
+            }
+            @if (presentation() === '3d') {
+              @if (performance(); as measured) {
+                <!-- Read before a presentation on the real device; off the scene itself. -->
+                <p class="layer-title">Fluiditate</p>
+                <p class="help">
+                  {{ measured.fps }} FPS ·
+                  {{ measured.state === 'ok' ? 'în buget' : 'verificare în curs' }}
+                </p>
+              }
+            }
+          </div>
+        </details>
+      }
+      <div class="camera-action">
+        <button
+          type="button"
+          class="tool icon"
+          [title]="expanded() ? 'Micșorează' : 'Extinde'"
+          (click)="expandViewport()"
+        >
+          <i [class]="expanded() ? 'pi pi-window-minimize' : 'pi pi-expand'" aria-hidden="true"></i
+          ><span class="sr-only">{{ expanded() ? 'Micșorează' : 'Extinde' }}</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="stage">
+    <div
+      #host
+      class="canvas-host"
+      [class.hidden]="presentation() === '2d'"
+      (pointerdown)="stopTour()"
+      (wheel)="stopTour()"
+      (keydown)="stopTour()"
+    ></div>
+    @if (status() === 'loading') {
+      <div class="overlay"><app-data-state status="loading" label="terminalul 3D" /></div>
+    }
+    @if (presentation() === '2d') {
+      <app-terminal-map
+        [scene]="scene()"
+        [selectedEntityId]="selection()?.entityId ?? ''"
+        [heatmap]="heatmapEnabled() ? heatmapFrame() : null"
+        (zoneSelected)="selectMapZone($event)"
+        (zoneHovered)="showHover($event)"
+      />
+    }
+    @if (status() !== 'loading') {
+      @if (performance(); as measured) {
+        @if (presentation() === '3d') {
+          <!-- Frame-rate probe for readiness checks; operators do not need it on screen. -->
+          <div
+            class="performance"
+            aria-hidden="true"
+            data-testid="twin-performance"
+            [attr.data-fps]="measured.fps"
+            [attr.data-frame-p95-ms]="measured.frameP95Ms"
+            [attr.data-pixel-ratio]="measured.pixelRatio"
+            [attr.data-quality]="measured.quality"
+            [attr.data-sample-frames]="measured.sampleFrames"
+            [attr.data-sample-seconds]="measured.sampleSeconds"
+          >
+            {{ measured.fps }} FPS ·
+            {{
+              measured.state === 'ok'
+                ? passengerPacket()?.playing
+                  ? 'Redare animată'
+                  : 'Navigare activă'
+                : 'Verificare fluiditate'
+            }}
+          </div>
+        }
+      }
+      @if (presentation() === '3d' && mode() === 'interior' && passengerPacket()?.enabled) {
+        @if (passengerStats(); as people) {
+          @if (people.mode === 'aggregate') {
+            <app-flow-legend
+              [minute]="playheadMinute()"
+              [queued]="people.represented"
+              [walking]="!!people.walking"
+            />
+          }
+        }
+      }
+      @if (mode() === 'exterior' && presentation() === '3d') {
+        <div
+          class="exterior-provenance"
+          role="status"
+          data-testid="exterior-status"
+          [attr.data-lod]="exteriorStatus().level"
+        >
+          <strong>Exterior</strong>
+          <span
+            >{{ exteriorStatus().entities }} resurse ·
+            {{ exteriorStatus().level === 'detail' ? 'LOD detaliat' : 'LOD simplificat' }}</span
+          >
+        </div>
+      }
+      @if (selection(); as selected) {
+        <app-zone-inspector
+          class="selection"
+          [selection]="selected"
+          [scene]="scene()"
+          [heatmap]="heatmapFrame()"
+          (dismiss)="clearSelection()"
+        />
+      }
+      @if (heatmapFrame(); as frame) {
+        @if (mode() === 'interior' && hover(); as hovered) {
+          <div
+            class="zone-tooltip"
+            role="tooltip"
+            [style.left.px]="hovered.left"
+            [style.top.px]="hovered.top"
+            [attr.data-run-id]="frame.runId"
+            [attr.data-minute]="frame.minute"
+          >
+            <strong>{{ hovered.selection.label }}</strong>
+            <small>Minutul {{ frame.minute }} · runId {{ frame.runId }}</small>
+            @if (hoverZone(); as zone) {
+              <span
+                >{{ zone.queuedPassengers }} în coadă ·
+                @if (zone.staffCount !== null) {
+                  {{ zone.staffCount === 1 ? '1 operator' : zone.staffCount + ' operatori' }} ·
+                }
+                {{ zone.capacityPerMinute ?? '—' }} pasageri/min</span
+              >
+              <span
+                >{{ congestionBands[zone.band].label }} · {{ zone.processedPassengers }} procesați
+                cumulat</span
+              >
+            } @else {
+              <span>Fără snapshot la acest minut.</span>
+            }
+          </div>
+        }
+      }
+      @if (assetLoading()) {
+        <div class="asset-status" role="status">Se încarcă resursele exterioare…</div>
+      }
+      @if (assetError()) {
+        <div class="asset-status" role="status">{{ assetError() }}</div>
+      }
+    }
+  </div>
+
+  @if (status() !== 'loading') {
+    <!-- Replays and dashboards drive time from their own transport, so only live views get this bar. -->
+    @if (dataset() && mode() === 'interior' && !dashboardMode() && !replayMode()) {
+      <div class="caption">
+        <div class="playback-controls" aria-label="Redare hartă 3D">
+          <span class="playback-state">
+            {{ passengerPacket()?.playing ? 'În redare' : 'Pe pauză' }} ·
+            {{ (passengerPacket()?.timeMinutes ?? minute()).toFixed(2) }} min ·
+            {{ passengerPacket()?.speed ?? 16 }}x
+          </span>
+          <button
+            type="button"
+            [disabled]="!playbackAvailable()"
+            [attr.aria-pressed]="passengerPacket()?.playing ?? false"
+            (click)="togglePlayback()"
+          >
+            {{ passengerPacket()?.playing ? 'Pauză 3D' : 'Redă 3D' }}
+          </button>
+        </div>
+      </div>
+    }
+    @if (heatmapFrame(); as frame) {
+      @if (dataset(); as data) {
+        @if (!replayMode() && !dashboardMode()) {
+          <div class="dock">
+            <app-heatmap-controls
+              [dataset]="data"
+              [frame]="frame"
+              [followingLatest]="followLatest()"
+              [valuesOpen]="status() === 'error'"
+              (followLatest)="followLatest.set(true)"
+              (minuteChange)="setMinute($event)"
+              (variantChange)="setVariant($event)"
+            >
+              @if (passengerRun(); as run) {
+                <app-passenger-playback
+                  [run]="run"
+                  [minute]="minute()"
+                  [timelineMinutes]="timelineMinutes()"
+                  [presentation]="presentation()"
+                  [stats]="passengerStats()"
+                  (packetChange)="passengerPacket.set($event)"
+                  (minuteChange)="setMinute($event)"
+                />
+              }
+            </app-heatmap-controls>
+          </div>
+        }
+      }
+    }
+  }
+  @if (heatmapFrame(); as frame) {
+    @if (dataset(); as data) {
+      @if (dashboardMode() || replayMode()) {
+        <div class="dock">
+          <app-heatmap-controls
+            [dataset]="data"
+            [frame]="frame"
+            [readOnly]="true"
+            [valuesOpen]="status() === 'error'"
+          />
+        </div>
+      }
+    }
+  }
+</div>

@@ -1,0 +1,53 @@
+<div class="timeline" role="group" aria-label="Cronologia zborurilor">
+  <div class="axis" aria-hidden="true">
+    @for (tick of line().ticks; track tick.left) {
+      <span [style.left.%]="tick.left">{{ tick.label }}</span>
+    }
+  </div>
+  @for (flight of line().flights; track flight.id) {
+    <button
+      type="button"
+      class="flight"
+      [class.selected]="selected() === flight.id"
+      [disabled]="disabled() || flight.cancelled"
+      [attr.aria-pressed]="selected() === flight.id"
+      (click)="pick.emit(flight.id)"
+    >
+      <span class="flight-name">
+        <strong>{{ flight.code }}</strong>
+        <small
+          >plecare {{ flight.departure }} · {{ flight.gate }} · {{ flight.passengers }} pasageri{{
+            flight.cancelled ? ' · anulat' : ''
+          }}</small
+        >
+      </span>
+      <span class="track" aria-hidden="true">
+        @for (tick of line().ticks; track tick.left) {
+          <i class="grid" [style.left.%]="tick.left"></i>
+        }
+        @if (flight.arrivals; as span) {
+          <i class="arrivals" [style.left.%]="span.left" [style.width.%]="span.width"></i>
+        }
+        @if (flight.boarding; as span) {
+          <i class="boarding" [style.left.%]="span.left" [style.width.%]="span.width"></i>
+        }
+        @if (line().surge; as band) {
+          @if (band.flightId === flight.id) {
+            <i class="surge" [style.left.%]="band.left" [style.width.%]="band.width"></i>
+          }
+        }
+        @if (flight.departureAt !== null) {
+          <i class="departure" [style.left.%]="flight.departureAt"
+            ><span class="pi pi-send"></span
+          ></i>
+        }
+      </span>
+    </button>
+  }
+  <ul class="legend">
+    <li class="arrivals">sosiri pasageri</li>
+    <li class="boarding">îmbarcare</li>
+    <li class="surge">valul de pasageri</li>
+    <li class="departure"><i class="pi pi-send" aria-hidden="true"></i> plecare</li>
+  </ul>
+</div>

@@ -1,0 +1,140 @@
+<section class="panel" aria-labelledby="events-title">
+  <header class="panel-heading">
+    <div>
+      <h2 id="events-title">Evenimente programate</h2>
+
+    </div>
+    <button appWriteAccess class="btn-primary" type="button" [disabled]="blocked() || !settings()" (click)="add()">
+      Adaugă eveniment
+    </button>
+  </header>
+  <div class="panel-body">
+    @if (message()) {
+      <p class="notice" role="alert">{{ message() }}</p>
+    }
+    @if (loading()) {
+      <p role="status">Se încarcă controalele și coridoarele…</p>
+    }
+
+    @if (draft; as draft) {
+      <form appWriteAccess class="inset" (ngSubmit)="save()">
+        <div class="fields">
+          <label
+            >Tip<select name="type" [(ngModel)]="draft.type" [disabled]="blocked()">
+              @for (type of types; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Minut virtual<input
+              type="number"
+              name="minute"
+              [(ngModel)]="draft.minute"
+              min="0"
+              [max]="scenario().inputs.durationMinutes - 1"
+              step="1"
+              required
+              [disabled]="blocked()"
+          /></label>
+          @if (draft.type === 'resume') {
+            <label
+              >Reia<select name="target" [(ngModel)]="draft.target" [disabled]="blocked()">
+                <option value="checkpoint">Un control</option>
+                <option value="zone">Un coridor</option>
+              </select></label
+            >
+          }
+          @if (uses(draft, 'checkpointId')) {
+            <label
+              >Control<select name="checkpoint" [(ngModel)]="draft.checkpointId" required [disabled]="blocked()">
+                @for (checkpoint of settings()?.checkpoints ?? []; track checkpoint.id) {
+                  <option [value]="checkpoint.id">{{ checkpoint.name }}</option>
+                }
+              </select></label
+            >
+          }
+          @if (uses(draft, 'zoneId')) {
+            <label
+              >Coridor / zonă<select name="zone" [(ngModel)]="draft.zoneId" required [disabled]="blocked() || !zones().length">
+                @for (zone of zones(); track zone.id) {
+                  <option [value]="zone.id">{{ zone.name }}</option>
+                }
+              </select></label
+            >
+          }
+          @if (uses(draft, 'flightId')) {
+            <label
+              >{{ draft.type === 'passenger_surge' ? 'Zbor (opțional)' : 'Zbor' }}<select
+                name="flight"
+                [(ngModel)]="draft.flightId"
+                [disabled]="blocked()"
+              >
+                @if (draft.type === 'passenger_surge') {
+                  <option value="">Fără zbor · fără termen de boarding</option>
+                }
+                @for (flight of scenario().inputs.flights; track flight.id) {
+                  <option [value]="flight.id">{{ flight.code }}</option>
+                }
+              </select></label
+            >
+          }
+          @if (uses(draft, 'passengerCount')) {
+            <label
+              >Pasageri suplimentari<input type="number" name="passengers" [(ngModel)]="draft.passengerCount" min="1" max="10000" step="1" required [disabled]="blocked()"
+            /></label>
+            <label
+              >Fereastră de sosire (min)<input type="number" name="window" [(ngModel)]="draft.windowMinutes" min="1" step="1" required [disabled]="blocked()"
+            /></label>
+          }
+          @if (uses(draft, 'staffCount')) {
+            <label
+              >Operatori rămași în serviciu<input type="number" name="staff" [(ngModel)]="draft.staffCount" min="0" step="1" required [disabled]="blocked()"
+            /></label>
+          }
+          @if (uses(draft, 'delayMinutes')) {
+            <label
+              >{{ scenario().inputs.journey ? 'Întârziere zbor (min)' : 'Mutare termen boarding (min)' }}<input type="number" name="delay" [(ngModel)]="draft.delayMinutes" [min]="scenario().inputs.journey ? 1 : -1440" max="1440" step="1" required [disabled]="blocked()"
+            /></label>
+          }
+        </div>
+        @if (uses(draft, 'zoneId') && !zones().length) {
+          <p>Activează rutarea din tabul Trasee pentru a închide sau redeschide coridoare.</p>
+        }
+        <div class="toolbar">
+          <button appWriteAccess type="submit" [disabled]="blocked()">Programează evenimentul</button>
+          <button appWriteAccess type="button" [disabled]="blocked()" (click)="cancel()">Renunță</button>
+        </div>
+      </form>
+    }
+
+    <div class="table-wrap">
+      <table>
+        <caption>Ordinea de aplicare: minut, apoi tip (infrastructură → capacitate → cerere), apoi ID.</caption>
+        <thead>
+          <tr><th>#</th><th>Minut</th><th>Tip</th><th>Țintă</th><th>Parametri</th><th>Acțiuni</th></tr>
+        </thead>
+        <tbody>
+          @for (entry of timeline(); track entry.item.id; let index = $index) {
+            <tr>
+              <td>{{ index + 1 }}</td>
+              <td>{{ entry.minute }}</td>
+              <td>{{ label(entry.item.type) }}</td>
+              <td>{{ target(entry.item) }}</td>
+              <td>{{ details(entry.item) }}</td>
+              <td>
+                <button appWriteAccess class="btn-sm btn-danger" type="button" [disabled]="blocked()" (click)="remove(entry.item)"
+                  [attr.aria-label]="'Șterge evenimentul ' + (index + 1)">Șterge</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6">Niciun eveniment programat. Rularea folosește capacitatea și cererea capturate.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (notes()) {
+      <p>{{ notes() }} note descriptive nu intră în cronologia simulării.</p>
+    }
+  </div>
+</section>

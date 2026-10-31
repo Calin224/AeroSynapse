@@ -1,25 +1,9 @@
 {
-  "/api/airports": {
-    "target": "http://127.0.0.1:5080",
-    "secure": false
-  },
-  "/api/airports/**": {
-    "target": "http://127.0.0.1:5080",
-    "secure": false
-  },
-  "/api/health": {
-    "target": "http://127.0.0.1:5080",
-    "secure": false,
-    "pathRewrite": { "^/api/health$": "/health" }
-  },
-  "/api/**": {
-    "target": "http://127.0.0.1:5080",
-    "secure": false,
-    "pathRewrite": { "^/api": "" }
-  },
+  "/api/airports": { "target": "http://127.0.0.1:5080", "secure": false },
+  "/api/airports/**": { "target": "http://127.0.0.1:5080", "secure": false },
+  "/api/**": { "target": "http://127.0.0.1:5080", "secure": false, "ws": true, "pathRewrite": { "^/api": "" } },
   "/intelligence/**": {
-    "target": "http://127.0.0.1:8000",
-    "secure": false,
-    "pathRewrite": { "^/intelligence": "" }
+    "target": "http://127.0.0.1:5080",
+    "secure": false
   }
 }

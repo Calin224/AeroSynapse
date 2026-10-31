@@ -1,195 +1,204 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { SessionState } from '../../core/auth/session-state';
+import { SimulationContext } from '../../core/simulation-context';
+import { WriteAccess } from '../../core/auth/write-access';
+import { Component, computed, DestroyRef, inject, signal, WritableSignal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY, finalize, Subject, switchMap, takeWhile, timer } from 'rxjs';
+import {
+  catchError,
+  EMPTY,
+  exhaustMap,
+  finalize,
+  Subject,
+  switchMap,
+  takeWhile,
+  timer,
+} from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { createDataResource } from '../../shared/data-resource';
+import { CountUp } from '../../shared/ui/count-up';
 import { DataState } from '../../shared/ui/data-state';
-import {
-  PublishedLayout,
-  RunDetails,
-  RunSummary,
-  ScenarioDetails,
-  ScenarioInputs,
-  ScenarioSummary,
-  SceneSummary,
-} from './operations.models';
+import { fromNow, statusLabels } from '../../shared/ui/run-picker';
+import { OperationsStream } from '../../core/http/operations-stream';
+import { FlightSchedulePanel } from './flight-schedule-panel';
+import { PassengerGenerationPanel } from './passenger-generation-panel';
+import { RunHeatmap } from '../digital-twin/run-heatmap';
+import { NavigationPanel } from './navigation-panel';
+import { RunSettingsPanel } from './run-settings-panel';
+import { EventsPanel } from './events-panel';
+import { StaffingPanel } from './staffing-panel';
+import { ResourcePanel } from './resource-panel';
+import { QueueForecastPanel } from './queue-forecast-panel';
+import { RunDetails, RunSummary, ScenarioDetails, ScenarioSummary } from './operations.models';
+
+const TABS = [
+  { id: 'schedule', phase: 'prepare', label: 'Orar zboruri', icon: 'pi-calendar' },
+  { id: 'passengers', phase: 'prepare', label: 'Pasageri', icon: 'pi-users' },
+  { id: 'routes', phase: 'prepare', label: 'Trasee', icon: 'pi-share-alt' },
+  { id: 'events', phase: 'prepare', label: 'Evenimente', icon: 'pi-bolt' },
+  { id: 'staffing', phase: 'prepare', label: 'Personal', icon: 'pi-id-card' },
+  { id: 'resources', phase: 'prepare', label: 'Resurse integrate', icon: 'pi-box' },
+  { id: 'runs', phase: 'results', label: 'Harta rulării', icon: 'pi-map' },
+  { id: 'forecast', phase: 'results', label: 'Prognoza cozilor', icon: 'pi-chart-line' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
+type Phase = (typeof TABS)[number]['phase'];
+const ACTIVE = ['pending', 'planned', 'running'];
+const RECENT_RUNS = 6;
 
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, DataState],
+  imports: [
+    WriteAccess,
+    CountUp,
+    DataState,
+    FlightSchedulePanel,
+    RunHeatmap,
+    PassengerGenerationPanel,
+    NavigationPanel,
+    RunSettingsPanel,
+    EventsPanel,
+    StaffingPanel,
+    ResourcePanel,
+    QueueForecastPanel,
+  ],
+  providers: [OperationsStream],
   templateUrl: './operations.html',
   styleUrl: './operations.css',
 })
 export class Operations {
+  readonly session = inject(SessionState);
   private readonly api = inject(ApiClient);
+  private readonly simulation = inject(SimulationContext);
   private readonly destroy = inject(DestroyRef);
   private readonly watch = new Subject<string | null>();
-  readonly airports = createDataResource(
-    () => this.api.get<SceneSummary[]>('scenes'),
-    (data) => data.length === 0,
-  );
+  readonly live = inject(OperationsStream);
   readonly scenarios = createDataResource(
     () => this.api.get<ScenarioSummary[]>('scenarios'),
     (data) => data.length === 0,
   );
+  readonly tab = signal<TabId>('schedule');
+  readonly phase = computed(() => TABS.find((item) => item.id === this.tab())!.phase);
+  readonly tabs = computed(() => TABS.filter((item) => item.phase === this.phase()));
+  readonly query = signal('');
   readonly selected = signal<ScenarioDetails | null>(null);
   readonly runs = signal<RunSummary[]>([]);
   readonly result = signal<RunDetails | null>(null);
   readonly busy = signal(false);
+  readonly scheduleBusy = signal(false);
+  readonly passengerBusy = signal(false);
+  readonly navigationBusy = signal(false);
+  readonly runSettingsBusy = signal(false);
+  readonly eventsBusy = signal(false);
+  readonly resourcesBusy = signal(false);
+  readonly staffingBusy = signal(false);
   readonly message = signal('');
   readonly pollingError = signal('');
-  readonly checkpointNames = computed<Record<string, string>>(() => {
-    try {
-      const input = JSON.parse(this.result()?.inputSnapshotJson ?? '{}');
-      return Object.fromEntries(
-        (input.layout?.layout?.checkpoints ?? [])
-          .filter(
-            (item: { id: unknown; name: unknown }) =>
-              typeof item.id === 'string' && typeof item.name === 'string',
-          )
-          .map((item: { id: string; name: string }) => [item.id, item.name]),
-      );
-    } catch {
-      return {};
-    }
+  private readonly router = inject(Router);
+  private readonly activity = [
+    this.busy,
+    this.scheduleBusy,
+    this.passengerBusy,
+    this.navigationBusy,
+    this.runSettingsBusy,
+    this.eventsBusy,
+    this.resourcesBusy,
+    this.staffingBusy,
+  ];
+  /** Any load, run or panel save in flight: scenario switching and new runs wait for it. */
+  readonly locked = computed(() => this.activity.some((working) => working()));
+  readonly lastScenarioId = computed(() => this.simulation.current()?.scenarioId ?? null);
+  readonly visibleScenarios = computed(() => {
+    const state = this.scenarios.state();
+    const query = this.query().trim().toLocaleLowerCase('ro');
+    if (state.status !== 'ready') return [];
+    return state.data
+      .filter((scenario) =>
+        `${scenario.name} ${scenario.code} ${scenario.description}`
+          .toLocaleLowerCase('ro')
+          .includes(query),
+      )
+      .sort((a, b) => (b.updatedAtUtc ?? '').localeCompare(a.updatedAtUtc ?? ''));
   });
-  airportId = '';
-  code = '';
-  name = '';
-  description = '';
-  duration = 60;
-  passengers = 120;
-  seed = 42;
+  readonly recentRuns = computed(() => this.runs().slice(0, RECENT_RUNS));
+  /** Live simulated minute of the run on screen, while it is still running. */
+  readonly progress = computed(() => {
+    const result = this.result();
+    if (!result || !ACTIVE.includes(result.status)) return null;
+    const live = this.live.state()?.run;
+    const minute = live?.runId === result.id ? (live.simulationMinute ?? 0) : 0;
+    const total = Math.max(1, this.selected()?.inputs.durationMinutes ?? 1);
+    return { minute, total, percent: Math.min(100, Math.round((minute / total) * 100)) };
+  });
+  readonly statusLabel = (status: string) => statusLabels[status] ?? status;
+  readonly fromNow = fromNow;
 
   constructor() {
+    this.live.updates.pipe(takeUntilDestroyed(this.destroy)).subscribe((state) => {
+      if (state.scenarioId !== this.selected()?.scenario.id) return;
+      this.runs.update((items) =>
+        items.map((item) => {
+          const current = state.runs.find((run) => run.runId === item.id);
+          return current ? { ...item, status: current.status, revision: current.revision } : item;
+        }),
+      );
+      const current = state.run;
+      const result = this.result();
+      if (current && result?.id === current.runId && current.status !== result.status) {
+        if (['completed', 'failed'].includes(current.status)) this.watch.next(current.runId);
+        else this.result.set({ ...result, status: current.status, revision: current.revision });
+      }
+    });
     this.watch
       .pipe(
         switchMap((id) => {
           this.pollingError.set('');
           if (!id) return EMPTY;
           return timer(0, 1000).pipe(
-            switchMap(() => this.api.get<RunDetails>(`runs/${id}`)),
-            takeWhile((value) => value.status === 'planned' || value.status === 'running', true),
-            catchError(() => {
-              this.pollingError.set('Rezultatul nu poate fi încărcat. Apasă Actualizează rularea.');
-              return EMPTY;
-            }),
+            exhaustMap((tick) =>
+              tick > 0 &&
+              this.live.status() === 'live' &&
+              !['completed', 'failed'].includes(this.live.state()?.run?.status ?? '')
+                ? EMPTY
+                : this.api.get<RunDetails>(`runs/${id}`).pipe(
+                    catchError(() => {
+                      this.pollingError.set('Reconectare la rezultate…');
+                      return EMPTY;
+                    }),
+                  ),
+            ),
+            takeWhile((value) => ['pending', 'planned', 'running'].includes(value.status), true),
           );
         }),
         takeUntilDestroyed(this.destroy),
       )
       .subscribe((value) => {
+        this.pollingError.set('');
         this.result.set(value);
+        if (value.scenarioId === this.selected()?.scenario.id)
+          this.simulation.remember(value.scenarioId!, value.id);
         this.runs.update((items) => items.map((item) => (item.id === value.id ? value : item)));
+      });
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed(this.destroy))
+      .subscribe((params) => {
+        const id = params.get('scenarioId');
+        const runId = params.get('runId');
+        if (id && id !== this.selected()?.scenario.id) this.select(id, runId);
+        else if (runId && this.runs().some((run) => run.id === runId)) this.refreshRun(runId);
       });
   }
 
   create() {
-    if (this.busy()) return;
-    if (
-      !this.airportId ||
-      !this.code.trim() ||
-      !this.name.trim() ||
-      !Number.isInteger(this.duration) ||
-      this.duration < 1 ||
-      this.duration > 10080 ||
-      !Number.isInteger(this.passengers) ||
-      this.passengers < 1 ||
-      this.passengers > 2147483647 ||
-      !Number.isInteger(this.seed) ||
-      this.seed < 0 ||
-      this.seed > 2147483647
-    ) {
-      this.message.set(
-        'Completează aeroportul, codul și numele. Durata: 1–10080 minute; pasageri: 1–2147483647; seed: 0–2147483647.',
-      );
-      return;
-    }
-    this.busy.set(true);
-    this.message.set('');
-    // A published layout freezes the catalog used to build the complete aggregate.
-    this.api
-      .post<PublishedLayout>(`scenes/${this.airportId}/layout-versions`)
-      .pipe(
-        switchMap((published) => {
-          const gate = published.layout.gates.find((item) =>
-            published.layout.routes.some((route) => route.toGateId === item.id),
-          );
-          const route = published.layout.routes.find((item) => item.toGateId === gate?.id);
-          if (!gate || !route)
-            throw new Error('Aeroportul nu are un traseu către o poartă disponibilă.');
-          const start = new Date();
-          start.setUTCMilliseconds(0);
-          const flightId = crypto.randomUUID();
-          const populationId = crypto.randomUUID();
-          const inputs: ScenarioInputs = {
-            startsAtUtc: start.toISOString(),
-            durationMinutes: this.duration,
-            seed: this.seed,
-            timeZone: 'UTC',
-            flights: [
-              {
-                id: flightId,
-                code: `${this.code}-01`,
-                gateId: gate.id,
-                departureAtUtc: new Date(+start + this.duration * 60000).toISOString(),
-                passengerCapacity: this.passengers,
-              },
-            ],
-            populations: [
-              { id: populationId, name: 'Pasageri la plecare', count: this.passengers },
-            ],
-            flows: [
-              {
-                id: crypto.randomUUID(),
-                populationId,
-                flightId,
-                routeId: route.id,
-                passengerCount: this.passengers,
-                startsAtUtc: start.toISOString(),
-                endsAtUtc: new Date(+start + this.duration * 60000).toISOString(),
-              },
-            ],
-            staffAllocations: published.layout.staff
-              .filter(
-                (item) =>
-                  item.checkpointId &&
-                  published.layout.checkpoints.some(
-                    (checkpoint) => checkpoint.id === item.checkpointId,
-                  ),
-              )
-              .map((item) => ({ staffMemberId: item.id, checkpointId: item.checkpointId! })),
-            events: [],
-          };
-          return this.api.post<ScenarioDetails>('scenarios', {
-            code: this.code.trim(),
-            name: this.name.trim(),
-            description: this.description,
-            sceneId: this.airportId,
-            layoutVersionId: published.version.id,
-            inputs,
-          });
-        }),
-        finalize(() => this.busy.set(false)),
-        takeUntilDestroyed(this.destroy),
-      )
-      .subscribe({
-        next: (value) => {
-          this.watch.next(null);
-          this.selected.set(value);
-          this.runs.set([]);
-          this.result.set(null);
-          this.scenarios.reload();
-        },
-        error: (error) => this.report(error),
-      });
+    if (this.locked() || !this.session.canWrite()) return;
+    void this.router.navigate(['/scenario-studio']);
   }
-  select(id: string) {
-    if (this.busy()) return;
+  select(id: string, runId: string | null = null) {
+    if (this.locked()) return;
     this.busy.set(true);
     this.message.set('');
     this.watch.next(null);
+    this.live.connect(null);
     this.selected.set(null);
     this.runs.set([]);
     this.result.set(null);
@@ -198,53 +207,75 @@ export class Operations {
       .pipe(
         switchMap((value) => {
           this.selected.set(value);
+          this.simulation.remember(value.scenario.id);
+          this.live.connect(value.scenario.id);
           return this.api.get<RunSummary[]>(`scenarios/${id}/runs`);
         }),
         finalize(() => this.busy.set(false)),
         takeUntilDestroyed(this.destroy),
       )
-      .subscribe({ next: (value) => this.runs.set(value), error: (error) => this.report(error) });
+      .subscribe({
+        next: (value) => {
+          this.runs.set(value);
+          if (runId) {
+            if (value.some((run) => run.id === runId)) this.refreshRun(runId);
+            else
+              this.message.set(
+                'Rularea selectată nu aparține scenariului sau nu mai este disponibilă.',
+              );
+          } else if (value[0]) this.refreshRun(value[0].id);
+        },
+        error: (error) => this.report(error),
+      });
   }
   run() {
     const selected = this.selected();
-    if (!selected || this.busy()) return;
+    if (!selected || this.locked()) return;
     this.launch(`scenarios/${selected.scenario.id}/runs`, null);
   }
-  retry() {
-    const result = this.result();
-    if (!result || result.status !== 'failed' || this.busy()) return;
-    this.launch(`runs/${result.id}/retry`, { revision: result.revision });
+  /** Back to the scenario gallery; the live stream and any polling stop with the selection. */
+  browse() {
+    if (this.locked()) return;
+    this.watch.next(null);
+    this.live.connect(null);
+    this.selected.set(null);
+    this.runs.set([]);
+    this.result.set(null);
+    this.message.set('');
   }
-  refreshRun(id: string) {
-    if (id) this.watch.next(id);
+  showPhase(phase: Phase) {
+    if (phase !== this.phase()) this.tab.set(phase === 'prepare' ? 'schedule' : 'runs');
   }
-  metricName(name: string): string {
+  openRun(id: string) {
+    if (id !== this.result()?.id) this.refreshRun(id);
+    this.showPhase('results');
+  }
+  /** Panels are read-only for viewers and while another panel or run is working. */
+  lockedExcept(own: WritableSignal<boolean>) {
     return (
-      (
-        {
-          meanWaitMinutes: 'Așteptare medie',
-          throughputPerMinute: 'Pasageri procesați pe minut',
-          processedPassengers: 'Pasageri procesați',
-        } as Record<string, string>
-      )[name] ?? name
+      !this.session.canWrite() || this.activity.some((working) => working !== own && working())
     );
   }
-  checkpointName(id: string): string {
-    return this.checkpointNames()[id] ?? `Checkpoint ${id.slice(0, 8)}`;
+  moveTab(event: KeyboardEvent) {
+    const tabs = this.tabs();
+    const last = tabs.length - 1;
+    const index = tabs.findIndex((item) => item.id === this.tab());
+    const next = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: last }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    const id = tabs[(next + last + 1) % (last + 1)].id;
+    this.tab.set(id);
+    (event.currentTarget as HTMLElement).parentElement
+      ?.querySelector<HTMLElement>(`#tab-${id}`)
+      ?.focus();
   }
-  snapshotCounts(
-    payload: string,
-  ): { elapsedMinutes: number; queuedPassengers: number; processedPassengers: number } | null {
-    try {
-      const value = JSON.parse(payload);
-      return value &&
-        ['elapsedMinutes', 'queuedPassengers', 'processedPassengers'].every(
-          (key) => typeof value[key] === 'number' && Number.isFinite(value[key]),
-        )
-        ? value
-        : null;
-    } catch {
-      return null;
+  refreshRun(id: string) {
+    if (id) {
+      const scenarioId = this.selected()?.scenario.id;
+      if (scenarioId && this.runs().some((run) => run.id === id))
+        this.simulation.remember(scenarioId, id);
+      this.live.trackRun(id);
+      this.watch.next(id);
     }
   }
   private launch(path: string, body: unknown) {
@@ -260,6 +291,7 @@ export class Operations {
         next: (value) => {
           this.runs.update((items) => [value, ...items]);
           this.result.set(null);
+          this.showPhase('results');
           this.refreshRun(value.id);
         },
         error: (error) => this.report(error),
@@ -267,5 +299,9 @@ export class Operations {
   }
   private report(error: unknown) {
     this.message.set(error instanceof Error ? error.message : 'Operația nu a putut fi finalizată.');
+  }
+  scheduleChanged(value: ScenarioDetails) {
+    this.selected.set(value);
+    this.scenarios.reload();
   }
 }

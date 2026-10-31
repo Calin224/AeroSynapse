@@ -1,0 +1,93 @@
+<section class="panel navigation-panel" aria-labelledby="navigation-title">
+  <header class="panel-heading">
+    <div>
+      <h2 id="navigation-title">Traseele pasagerilor</h2>
+
+    </div>
+  </header>
+  <div class="panel-body">
+  @if (message()) { <p class="notice" role="status">{{ message() }}</p> }
+  @if (loading()) { <p role="status">Se încarcă harta traseelor…</p> }
+  @if (!scenario().inputs.flights.length) { <p>Adaugă un zbor în „Orar zboruri” pentru a configura traseele.</p> }
+  @if (settings(); as settings) {
+    @if (!settings.passengerProfilesActive) { <p class="notice">Profiluri de pasageri neconfigurate.</p> }
+    @if (config; as config) {
+      <p class="route-status"><strong>{{ settings.config ? 'Trasee activate' : 'Trasee neactivate' }}</strong> · {{ settings.config ? 'Harta salvată este folosită în simulările următoare.' : 'Este pregătită o hartă demonstrativă. Activeaz-o pentru a calcula trasee.' }}</p>
+      <h3>1. Alege ce zone sunt închise</h3>
+
+      <div class="zone-list">
+        @for (node of config.graph.nodes; track node.id) {
+          <label class="zone-option">
+            <input type="checkbox" [ngModel]="config.closedZoneIds.includes(node.id)" (ngModelChange)="closeZone(node.id, $event)" [disabled]="blocked()" />
+            <span><strong>Închide {{ node.name }}</strong> <small>{{ nodeType(node.kind) }}{{ node.isActive ? '' : ' · inactivă în hartă' }}</small>
+              <small>{{ connections(node.id) }}</small></span>
+          </label>
+        } @empty { <p>Harta nu conține zone disponibile.</p> }
+      </div>
+      <h3>2. Salvează și verifică traseele</h3>
+
+      <div class="toolbar">
+        <button class="btn-primary" type="button" [disabled]="blocked() || !settings.passengerProfilesActive" (click)="save()">{{ settings.config ? 'Salvează modificările' : 'Activează traseele' }}</button>
+        <button type="button" [disabled]="blocked() || dirty() || !settings.config" (click)="preview()">Verifică traseele posibile</button>
+        <button type="button" [disabled]="blocked() || !run()?.resultsValid" (click)="inspectRun()">Vezi traseele unei simulări selectate</button>
+      </div>
+      @if (!settings.config) { <p class="hint">Pentru verificare, activează mai întâi traseele.</p> }
+      @if (dirty()) { <p class="notice">Ai modificări nesalvate. Salvează-le înainte de a verifica traseele.</p> }
+      @if (!run()?.resultsValid) { <p class="hint">Nicio rulare validă selectată.</p> }
+      <details class="disclosure advanced">
+        <summary>Setări avansate ale hărții</summary>
+        <p>Importul unei alte hărți înlocuiește harta din editor. După import trebuie să asociezi din nou controalele și porțile scenariului cu zonele hărții.</p>
+        <div class="fields"><label>Identificatorul hărții<input [(ngModel)]="airportMapId" [disabled]="blocked()" placeholder="UUID-ul hărții aeroportului" /></label>
+          <button type="button" [disabled]="blocked() || !airportMapId.trim()" (click)="importMap()">Importă harta</button></div>
+        <details class="disclosure"><summary>Asociază controalele și porțile cu zonele hărții</summary>
+
+          <div class="fields">
+            @for (checkpoint of settings.checkpoints; track checkpoint.id) {
+              <label>{{ checkpoint.name }}<select [ngModel]="binding('checkpointBindings', checkpoint.id)" (ngModelChange)="bind('checkpointBindings', checkpoint.id, $event)" [disabled]="blocked()">
+                <option value="">Fără asociere</option>
+                @for (node of config.graph.nodes; track node.id) { <option [value]="node.id">{{ node.name }}</option> }
+              </select></label>
+            }
+            @for (gate of settings.gates; track gate.id) {
+              <label>{{ gate.name }}<select [ngModel]="binding('gateBindings', gate.id)" (ngModelChange)="bind('gateBindings', gate.id, $event)" [disabled]="blocked()">
+                <option value="">Fără asociere</option>
+                @for (node of config.graph.nodes; track node.id) { @if (node.kind === 'Gate') { <option [value]="node.id">{{ node.name }}</option> } }
+              </select></label>
+            }
+          </div>
+        </details>
+        <details class="disclosure"><summary>Editează harta și regulile de acces în JSON</summary>
+
+          <textarea aria-label="Configurația grafului și filtrelor de acces" [(ngModel)]="graphJson" (ngModelChange)="modified()" [disabled]="blocked()" rows="16"></textarea>
+          <button type="button" [disabled]="blocked()" (click)="applyJson()">Aplică JSON în editor</button>
+        </details>
+        <div class="toolbar">
+          @if (settings.config) { <button type="button" [disabled]="blocked()" (click)="save(true)">Dezactivează traseele</button> }
+        </div>
+      </details>
+    }
+  }
+  @if (result(); as result) {
+    <h3>{{ showingRun() ? 'Rezultat capturat al rulării' : 'Plan de trasee' }}</h3>
+    <p>{{ result.routedCount }} pasageri cu traseu valid · {{ result.errorCount }} cu eroare explicită · {{ result.modeledCount }} modelați</p>
+
+    <p class="fingerprint">Graf SHA-256: {{ result.graphFingerprint }} · Populație: {{ result.populationFingerprint }}</p>
+    <div class="table-wrap"><table><caption>Evaluarea până la poarta asociată, în minute simulate</caption><thead><tr><th>Zbor</th><th>Poartă</th><th>Mers mediu</th><th>Coada medie</th><th>La timp</th><th>După închidere</th><th>Etape neterminate</th><th>Fără traseu</th></tr></thead><tbody>
+      @for (flight of result.flights; track flight.flightId) { <tr><td>{{ flightName(flight.flightId) }}</td><td>{{ gateName(flight.gateId) }}</td><td>{{ flight.meanWalkingMinutes === null ? '—' : (flight.meanWalkingMinutes | number:'1.1-2') }}</td><td>{{ flight.meanQueueWaitMinutes === null ? '—' : (flight.meanQueueWaitMinutes | number:'1.3-3') }}</td><td>{{ result.assessed ? flight.safeCount : '—' }}</td><td>{{ result.assessed ? flight.lateCount : '—' }}</td><td>{{ result.assessed ? flight.unservedCount : '—' }}</td><td>{{ flight.errorCount }}</td></tr> }
+    </tbody></table></div>
+    <button type="button" [attr.aria-expanded]="showRoutes()" (click)="toggleRoutes()">{{ showRoutes() ? 'Ascunde traseele 3D/2D' : 'Arată traseele 3D/2D' }}</button>
+    @if (showRoutes()) {
+
+      <app-digital-twin [scene]="renderScene()" />
+    }
+    <div class="table-wrap"><table><caption>Trasee agregate pentru renderer</caption><thead><tr><th>Zbor</th><th>Profil</th><th>Pasageri</th><th>Distanță (m)</th><th>Mers de bază (min)</th><th>Zone / legături</th></tr></thead><tbody>
+      @for (route of result.routes; track route.routeKey) { <tr><td>{{ flightName(route.flightId) }}</td><td>{{ route.groupKind }}</td><td>{{ route.passengerCount }}</td><td>{{ route.distanceMeters | number:'1.1-2' }}</td><td>{{ route.baseWalkingMinutes | number:'1.3-3' }}</td><td>{{ route.zoneIds.length }} / {{ route.edgeIds.length }}</td></tr> }
+    </tbody></table></div>
+    <div class="table-wrap"><table><caption>{{ result.returnedCount }} pasageri returnați de la offset {{ result.offset }}</caption><thead><tr><th>ID demo</th><th>Zbor</th><th>Mers</th><th>Așteptare</th><th>Sosire la poartă</th><th>Boarding închide</th><th>Evaluare</th></tr></thead><tbody>
+      @for (person of result.journeys; track person.id) { <tr><td class="passenger-id" [title]="person.id">{{ person.id }}</td><td>{{ flightName(person.flightId) }}</td><td>{{ person.walkingMinutes | number:'1.3-3' }}</td><td>{{ person.queueWaitMinutes === null ? '—' : (person.queueWaitMinutes | number:'1.3-3') }}</td><td>{{ person.gateArrivalMinute === null ? '—' : (person.gateArrivalMinute | number:'1.3-3') }}</td><td>{{ person.boardingCloseMinute }}</td><td>{{ risk(person.boardingRisk) }} @if (person.error) { <span>{{ person.error.code }}: {{ person.error.message }}</span> }</td></tr> }
+    </tbody></table></div>
+    <div class="toolbar"><button type="button" [disabled]="blocked() || result.offset === 0" (click)="next(result.offset > 100 ? result.offset - 100 : 0)">Anterior</button>
+      <button type="button" [disabled]="blocked() || !result.hasMore" (click)="next(result.offset + result.returnedCount)">Următorii pasageri</button></div>
+  }
+  </div>
+</section>

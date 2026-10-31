@@ -1,0 +1,899 @@
+<app-simulation-journey
+  active="create"
+  [formal]="true"
+  [scenarioId]="saved()?.scenario?.id ?? null"
+/>
+<div class="page-heading">
+  <div>
+    <h1 class="display">{{ draft ? 'Configurare scenariu' : 'Creare scenariu' }}</h1>
+  </div>
+  <a class="btn" routerLink="/scenario"
+    >Catalog de scenarii <i class="pi pi-arrow-up-right" aria-hidden="true"></i
+  ></a>
+</div>
+@if (pending(); as action) {
+  <section class="notice" role="alert">
+    <p>
+      Modificări nesalvate. Operațiune solicitată: {{ action.label }}. Continuarea implică
+      eliminarea modificărilor.
+    </p>
+    <div class="actions">
+      <button type="button" (click)="pending.set(null)">Reluare editare</button>
+      <button type="button" (click)="discardAndContinue()">
+        Eliminare modificări și continuare
+      </button>
+    </div>
+  </section>
+}
+@if (message()) {
+  <p
+    class="notice"
+    [class.success-notice]="completed()"
+    [attr.role]="issues().length ? 'alert' : 'status'"
+  >
+    {{ message() }}
+  </p>
+}
+@if (busy()) {
+  <p class="loading-note" role="status">Procesare date…</p>
+}
+@if (issues().length) {
+  <section class="validation-errors" role="alert" aria-labelledby="errors-title">
+    <h2 id="errors-title">Erori de validare: {{ issues().length }}</h2>
+    <ul>
+      @for (issue of issues(); track $index) {
+        <li>
+          <button class="issue-link" type="button" (click)="showIssue(issue.field)">
+            {{ issue.label }}</button
+          >: {{ issue.message }}
+        </li>
+      }
+    </ul>
+  </section>
+}
+@if (!draft) {
+  <section class="start-panel panel" aria-labelledby="start-title">
+    <div class="start-intro">
+      <span class="step-number">01</span>
+      <div>
+        <h2 id="start-title">Selectare configurație inițială</h2>
+      </div>
+    </div>
+    @let airports = scenes.state();
+    @if (airports.status === 'ready') {
+      <details class="airport-choice">
+        <summary>Aeroport: {{ selectedScene()?.name }}</summary>
+        <label class="airport-field"
+          >Aeroport<select [(ngModel)]="sceneId" [disabled]="busy()">
+            <option value="">{{ defaultScene()?.name }} · implicit</option>
+            @for (scene of airports.data; track scene.id) {
+              <option [value]="scene.id">{{ scene.name }}</option>
+            }
+          </select></label
+        >
+      </details>
+      <div class="preset-grid">
+        @for (preset of presets; track preset.id) {
+          @if (preset.id === 'principal' || showOtherPresets()) {
+            <button
+              type="button"
+              class="preset"
+              [class.principal]="preset.id === 'principal'"
+              (click)="newScenario(preset.id)"
+              [disabled]="busy()"
+            >
+              <span class="preset-top"
+                ><i
+                  [class]="
+                    'pi ' +
+                    (preset.id === 'calm'
+                      ? 'pi-sun'
+                      : preset.id === 'peak'
+                        ? 'pi-chart-line'
+                        : preset.id === 'bottleneck'
+                          ? 'pi-exclamation-triangle'
+                          : 'pi-send')
+                  "
+                  aria-hidden="true"
+                ></i>
+                @if (preset.id === 'principal') {
+                  <small>Configurație standard</small>
+                }
+              </span>
+              <strong>{{
+                preset.id === 'principal'
+                  ? 'Operațiuni standard'
+                  : preset.id === 'bottleneck'
+                    ? 'Congestie la securitate'
+                    : preset.name
+              }}</strong>
+              <span class="preset-purpose">{{
+                preset.id === 'principal'
+                  ? 'Modelarea fluxurilor de pasageri în condiții standard.'
+                  : preset.id === 'calm'
+                    ? 'Evaluarea operațiunilor la un volum redus de pasageri.'
+                    : preset.id === 'peak'
+                      ? 'Evaluarea congestiei în condiții de cerere ridicată.'
+                      : 'Evaluarea impactului alocării de personal asupra cozilor.'
+              }}</span>
+              <span class="preset-facts"
+                >{{ preset.detail }} <i class="pi pi-arrow-right" aria-hidden="true"></i
+              ></span>
+            </button>
+          }
+        }
+      </div>
+      <button
+        type="button"
+        class="other-presets"
+        [attr.aria-expanded]="showOtherPresets()"
+        (click)="showOtherPresets.set(!showOtherPresets())"
+        [disabled]="busy()"
+      >
+        {{ showOtherPresets() ? 'Restrângere configurații' : 'Configurații suplimentare' }}
+        <i
+          [class]="showOtherPresets() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+          aria-hidden="true"
+        ></i>
+      </button>
+      <button class="custom-start" type="button" (click)="newScenario()" [disabled]="busy()">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        <span><strong>Configurație personalizată</strong></span
+        ><i class="pi pi-arrow-right" aria-hidden="true"></i>
+      </button>
+    } @else {
+      <app-data-state
+        [status]="airports.status"
+        label="aeroporturile"
+        [message]="airports.status === 'error' ? airports.message : ''"
+        emptyMessage="Niciun aeroport disponibil. Este necesară configurarea unui aeroport și a traseelor către porți de către administrator."
+        (retry)="scenes.reload()"
+      />
+    }
+  </section>
+} @else {
+  @let value = draft;
+  <nav class="stepper" aria-label="Etape de configurare">
+    <ol>
+      @for (label of steps; track $index; let index = $index) {
+        <li>
+          <button
+            type="button"
+            [class.active]="step() === index + 1"
+            [attr.aria-current]="step() === index + 1 ? 'step' : null"
+            (click)="goStep(index + 1)"
+            [disabled]="busy()"
+          >
+            <span>{{ index + 1 }}</span
+            >{{ label }}
+          </button>
+        </li>
+      }
+    </ol>
+  </nav>
+  <div class="studio-grid">
+    <div class="studio-detail">
+      <header class="step-heading">
+        <p class="eyebrow">ETAPA {{ step() }} DIN 4</p>
+        <h2 id="step-heading" tabindex="-1">
+          {{
+            step() === 1
+              ? 'Identificare și parametri generali'
+              : step() === 2
+                ? 'Zboruri și fluxuri de pasageri'
+                : step() === 3
+                  ? 'Resurse și evenimente operaționale'
+                  : completed()
+                    ? 'Scenariul este salvat'
+                    : 'Validare și salvare'
+          }}
+        </h2>
+      </header>
+      <fieldset class="editor" [disabled]="busy()" (input)="edited()" (change)="edited()">
+        <legend class="sr-only">Parametrii scenariului</legend>
+        <section class="panel panel-body" id="studio-general" [hidden]="step() !== 1">
+          <div class="fields">
+            <label class="wide"
+              >Numele scenariului<input [(ngModel)]="value.name" maxlength="160" required
+            /></label>
+            <label
+              >Durată simulată (minute)<input
+                type="number"
+                min="1"
+                max="10080"
+                [(ngModel)]="value.inputs.durationMinutes"
+                required
+            /></label>
+            <div class="included">
+              <i class="pi pi-check-circle" aria-hidden="true"></i
+              ><span
+                >{{ layout!.layout.scene.name
+                }}<small
+                  >{{ value.inputs.flights.length }} zboruri · {{ totalPassengers() }} pasageri
+                  configurați</small
+                ></span
+              >
+            </div>
+            <label class="wide"
+              >Obiectivul simulării (opțional)<textarea
+                [(ngModel)]="value.description"
+                maxlength="2000"
+                rows="2"
+              ></textarea>
+            </label>
+          </div>
+          <details [open]="advancedGeneral()">
+            <summary>Data, codul și setările de reproducere</summary>
+
+            <div class="fields">
+              <label>Cod<input [(ngModel)]="value.code" maxlength="64" /></label>
+              <label
+                >Început (UTC)<input
+                  type="datetime-local"
+                  step="any"
+                  [ngModel]="value.inputs.startsAtUtc.replace('Z', '')"
+                  (ngModelChange)="setStart($event)"
+              /></label>
+              <label
+                >Fus orar IANA<input
+                  [(ngModel)]="value.inputs.timeZone"
+                  list="studio-timezones" /><datalist id="studio-timezones">
+                  <option value="Europe/Bucharest"></option>
+                  <option value="UTC"></option></datalist
+              ></label>
+              <label
+                >Seed<input type="number" min="0" max="2147483647" [(ngModel)]="value.inputs.seed"
+              /></label>
+              <label
+                >Interval indicatori (minute)<select
+                  [(ngModel)]="value.inputs.snapshotIntervalMinutes"
+                >
+                  <option [ngValue]="null">Implicit</option>
+                  @for (interval of [1, 2, 3, 4, 5]; track interval) {
+                    <option [ngValue]="interval">{{ interval }}</option>
+                  }
+                </select></label
+              >
+            </div>
+          </details>
+        </section>
+        <section class="panel panel-body" id="studio-flights" [hidden]="step() !== 2">
+          <div class="section-heading">
+            <h3>{{ value.inputs.flights.length }} zboruri · {{ totalPassengers() }} pasageri</h3>
+            <button type="button" class="btn-sm" (click)="addFlight()">
+              <i class="pi pi-plus" aria-hidden="true"></i> Adaugă zbor
+            </button>
+          </div>
+          @if (missingPassengerCodes(); as codes) {
+            <p class="notice" role="status" data-testid="flights-without-passengers">
+              Zboruri fără pasageri: {{ codes }}. Alocarea pasagerilor este necesară pentru
+              includerea acestora în fluxurile simulate.
+            </p>
+          }
+          @for (flight of value.inputs.flights; track flight.id; let index = $index) {
+            <article class="flight-row" [attr.aria-label]="'Zbor ' + (index + 1)">
+              <div class="section-heading">
+                <h3><i class="pi pi-send" aria-hidden="true"></i> Zbor {{ index + 1 }}</h3>
+                <button
+                  type="button"
+                  class="btn-sm"
+                  (click)="removeFlightWithPassengers(flight)"
+                  [attr.aria-label]="'Elimină zborul ' + flight.code"
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i> Elimină
+                </button>
+              </div>
+              <div class="fields flight-fields">
+                <label>Indicativ zbor<input [(ngModel)]="flight.code" maxlength="64" /></label>
+                @if (simpleGroup(flight); as group) {
+                  <label
+                    >Pasageri<input
+                      type="number"
+                      min="1"
+                      [ngModel]="group.flow.passengerCount"
+                      (ngModelChange)="setPassengers(flight, $event)"
+                  /></label>
+                  <label
+                    >Plecare după (minute)<input
+                      type="number"
+                      min="1"
+                      [max]="value.inputs.durationMinutes"
+                      [ngModel]="minute(flight.departureAtUtc)"
+                      (ngModelChange)="setDeparture(flight, $event)"
+                  /></label>
+                  <label
+                    >Poartă de îmbarcare<select
+                      [ngModel]="flight.gateId"
+                      (ngModelChange)="setGate(flight, $event)"
+                    >
+                      @for (gate of connectedGates(); track gate.id) {
+                        <option [value]="gate.id">{{ gate.code }} · {{ gate.name }}</option>
+                      }
+                    </select></label
+                  >
+                } @else {
+                  <p class="hint">
+                    {{ passengersFor(flight) }} pasageri · configurație personalizată. Orarul și
+                    fluxurile de pasageri sunt editabile în secțiunile de configurare detaliată.
+                  </p>
+                  @if (!passengersFor(flight)) {
+                    <button type="button" (click)="addPassengers(flight)">
+                      Adaugă pasageri pentru {{ flight.code }}
+                    </button>
+                  }
+                }
+              </div>
+              <details>
+                <summary>Orar detaliat, capacitate și status</summary>
+                <div class="fields">
+                  <label>Număr zbor demo<input [(ngModel)]="flight.code" maxlength="64" /></label
+                  ><label
+                    >Poartă<select [(ngModel)]="flight.gateId">
+                      @for (gate of layout!.layout.gates; track gate.id) {
+                        <option [value]="gate.id">{{ gate.code }} · {{ gate.name }}</option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Capacitate pasageri<input
+                      type="number"
+                      min="1"
+                      [(ngModel)]="flight.passengerCapacity"
+                  /></label>
+                  <label
+                    >Plecare (minut simulat)<input
+                      type="number"
+                      step="any"
+                      [ngModel]="minute(flight.departureAtUtc)"
+                      (ngModelChange)="setMinute(flight, 'departureAtUtc', $event)"
+                  /></label>
+                  <label
+                    >Deschidere îmbarcare (minut)<input
+                      type="number"
+                      step="any"
+                      [ngModel]="minute(flight.boardingOpensAtUtc)"
+                      (ngModelChange)="setMinute(flight, 'boardingOpensAtUtc', $event)"
+                  /></label>
+                  <label
+                    >Închidere îmbarcare (minut)<input
+                      type="number"
+                      step="any"
+                      [ngModel]="minute(flight.boardingClosesAtUtc)"
+                      (ngModelChange)="setMinute(flight, 'boardingClosesAtUtc', $event)"
+                  /></label>
+                  <label
+                    >Întârziere (minute)<input
+                      type="number"
+                      min="0"
+                      max="10080"
+                      [(ngModel)]="flight.delayMinutes"
+                  /></label>
+                  <label
+                    >Status demo<select [(ngModel)]="flight.status">
+                      @for (status of statuses; track status) {
+                        <option [value]="status">{{ statusLabels[status] }}</option>
+                      }
+                    </select></label
+                  >
+                </div>
+              </details>
+            </article>
+          } @empty {
+            <p class="empty-note">Niciun zbor configurat.</p>
+          }
+        </section>
+        <details
+          class="panel panel-body advanced-traffic"
+          [hidden]="step() !== 2"
+          [open]="advancedTraffic()"
+        >
+          <summary>Configurare detaliată: grupuri și trasee de pasageri</summary>
+
+          <section class="panel panel-body" id="studio-populations">
+            <div class="section-heading">
+              <h2>Populații</h2>
+              <button type="button" class="btn-sm" (click)="addPopulation()">
+                Adaugă populație
+              </button>
+            </div>
+            @for (population of value.inputs.populations; track population.id; let index = $index) {
+              <article class="row-card">
+                <h3>Populație {{ index + 1 }}</h3>
+                <div class="fields">
+                  <label>Nume<input [(ngModel)]="population.name" maxlength="160" /></label
+                  ><label
+                    >Pasageri disponibili<input
+                      type="number"
+                      min="1"
+                      [(ngModel)]="population.count"
+                  /></label>
+                </div>
+                <button type="button" class="btn-sm" (click)="removePopulation(population.id)">
+                  Elimină populația {{ population.name }}
+                </button>
+              </article>
+            }
+          </section>
+          <section class="panel panel-body" id="studio-flows">
+            <div class="section-heading">
+              <h2>Fluxuri de pasageri</h2>
+              <button type="button" class="btn-sm" (click)="addFlow()">
+                Adaugă flux{{
+                  flightsWithoutPassengers()[0]
+                    ? ' pentru ' + flightsWithoutPassengers()[0].code
+                    : ''
+                }}
+              </button>
+            </div>
+
+            @for (flow of value.inputs.flows; track flow.id; let index = $index) {
+              <article class="row-card">
+                <h3>Flux {{ index + 1 }}</h3>
+                <div class="fields">
+                  <label
+                    >Populație<select [(ngModel)]="flow.populationId">
+                      <option value="">Selectare populație</option>
+                      @for (population of value.inputs.populations; track population.id) {
+                        <option [value]="population.id">
+                          {{ population.name }} · {{ population.count }} disponibili
+                        </option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Zbor<select [(ngModel)]="flow.flightId">
+                      <option value="">Selectare zbor</option>
+                      @for (flight of value.inputs.flights; track flight.id) {
+                        <option [value]="flight.id">
+                          {{ flight.code }} · {{ flight.passengerCapacity }} locuri
+                        </option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Traseu<select [(ngModel)]="flow.routeId">
+                      <option value="">Selectare traseu</option>
+                      @for (route of routesFor(flow.flightId); track route.id) {
+                        <option [value]="route.id">{{ route.code }}</option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Pasageri alocați<input type="number" min="1" [(ngModel)]="flow.passengerCount"
+                  /></label>
+                  <label
+                    >Început (minut)<input
+                      type="number"
+                      step="any"
+                      [ngModel]="minute(flow.startsAtUtc)"
+                      (ngModelChange)="setMinute(flow, 'startsAtUtc', $event)"
+                  /></label>
+                  <label
+                    >Sfârșit (minut)<input
+                      type="number"
+                      step="any"
+                      [ngModel]="minute(flow.endsAtUtc)"
+                      (ngModelChange)="setMinute(flow, 'endsAtUtc', $event)"
+                  /></label>
+                </div>
+                <button type="button" class="btn-sm" (click)="removeFlow(flow.id)">
+                  Elimină fluxul {{ index + 1 }}
+                </button>
+              </article>
+            }
+          </section>
+        </details>
+        <div [hidden]="step() !== 3" class="stack">
+          <section class="panel panel-body" id="studio-staff">
+            <div class="section-heading">
+              <h3>Echipa de operatori</h3>
+              <span class="pill"
+                >{{ operators('security').length }} securitate ·
+                {{ operators('checkIn').length }} check-in</span
+              >
+            </div>
+            <p class="hint">
+              Adaugă oamenii care lucrează în ziua simulată. Fiecare operator are o singură
+              specializare: control de securitate sau ghișeu de check-in.
+            </p>
+            @if (value.inputs.staffShifts; as plan) {
+              <p class="notice" role="status" data-testid="staff-shifts">
+                Plan de ture activ: {{ plan.shifts.length }} operatori la securitate. Plan aprobat
+                în Flux de decizie. Alocarea fixă este aplicabilă după dezactivarea planului de
+                ture.
+                <button type="button" (click)="useFixedPlan()">Activare alocare fixă</button>
+              </p>
+            }
+            @for (group of operatorGroups; track group.role) {
+              <div class="operator-group">
+                <div class="section-heading">
+                  <h4>{{ group.title }}</h4>
+                  <button
+                    type="button"
+                    class="btn-sm"
+                    [disabled]="!canAdd(group.role)"
+                    (click)="addOperator(group.role)"
+                  >
+                    <i class="pi pi-plus" aria-hidden="true"></i> Adaugă operator
+                  </button>
+                </div>
+                @for (person of operators(group.role); track person.id) {
+                  <div class="operator-row">
+                    <label
+                      >Nume<input
+                        [(ngModel)]="person.name"
+                        maxlength="60"
+                        required
+                        [attr.aria-label]="'Nume ' + group.title"
+                    /></label>
+                    @switch (group.role) {
+                      @case ('security') {
+                        <label
+                          >Control<select
+                            [ngModel]="assignment(person.id)"
+                            (ngModelChange)="allocate(person.id, $event)"
+                          >
+                            <option value="">Nealocat</option>
+                            @for (checkpoint of layout!.layout.checkpoints; track checkpoint.id) {
+                              <option [value]="checkpoint.id">{{ checkpoint.name }}</option>
+                            }
+                          </select></label
+                        >
+                      }
+                      @default {
+                        <span class="hint">Un ghișeu deschis</span>
+                      }
+                    }
+                    <button
+                      type="button"
+                      class="btn-sm"
+                      [attr.aria-label]="'Elimină ' + person.name"
+                      (click)="removeOperator(person)"
+                    >
+                      Elimină
+                    </button>
+                  </div>
+                } @empty {
+                  <p class="hint">{{ group.empty }}</p>
+                }
+                @if (group.role === 'security' && !canAdd('security')) {
+                  <p class="hint">
+                    Toate cele {{ layout!.layout.staff.length }} posturi de securitate ale
+                    aeroportului sunt ocupate.
+                  </p>
+                }
+                @if (group.role === 'checkIn' && checkInArea(); as desks) {
+                  <p class="hint">
+                    {{ operators('checkIn').length }} din {{ desks.deskCount }} ghișee deschise.
+                    Fără operatori, pasagerii merg direct la controlul de securitate.
+                  </p>
+                  @if (value.inputs.checkIn; as checkIn) {
+                    <label class="operator-share"
+                      >Pasageri cu bagaj de cală (%)<input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="5"
+                        [ngModel]="checkIn.holdBaggageShare * 100"
+                        (ngModelChange)="checkIn.holdBaggageShare = $event / 100"
+                        required
+                    /></label>
+                  }
+                }
+              </div>
+            }
+          </section>
+          <section class="panel panel-body" id="studio-events">
+            <div class="section-heading">
+              <h2>Evenimente programate</h2>
+              <div class="actions">
+                <button type="button" class="btn-primary btn-sm" (click)="addIncident()">
+                  Adaugă val de pasageri
+                </button>
+                <button type="button" class="btn-sm" (click)="addEvent()">Adaugă notă demo</button>
+              </div>
+            </div>
+
+            @for (event of value.inputs.events; track event.id; let index = $index) {
+              <article class="row-card">
+                <h3>Eveniment {{ index + 1 }}</h3>
+                @if (isIncident(event)) {
+                  <app-incident-designer
+                    [event]="event"
+                    [inputs]="value.inputs"
+                    [layout]="layout!"
+                    [disabled]="busy()"
+                    (changed)="updateIncident($event)"
+                  />
+                } @else {
+                  <div class="fields">
+                    <label>Tip<input [(ngModel)]="event.type" maxlength="64" /></label
+                    ><label
+                      >Moment (minut)<input
+                        type="number"
+                        step="any"
+                        [ngModel]="minute(event.occurredAtUtc)"
+                        (ngModelChange)="setMinute(event, 'occurredAtUtc', $event)"
+                    /></label>
+                    <label
+                      >Checkpoint<select [(ngModel)]="event.checkpointId">
+                        <option [ngValue]="null">Fără checkpoint</option>
+                        @for (checkpoint of layout!.layout.checkpoints; track checkpoint.id) {
+                          <option [value]="checkpoint.id">{{ checkpoint.code }}</option>
+                        }
+                      </select></label
+                    >
+                    <label
+                      >Poartă<select [(ngModel)]="event.gateId">
+                        <option [ngValue]="null">Fără poartă</option>
+                        @for (gate of layout!.layout.gates; track gate.id) {
+                          <option [value]="gate.id">{{ gate.code }}</option>
+                        }
+                      </select></label
+                    >
+                    <label
+                      >Zbor<select [(ngModel)]="event.flightId">
+                        <option [ngValue]="null">Fără zbor</option>
+                        @for (flight of value.inputs.flights; track flight.id) {
+                          <option [value]="flight.id">{{ flight.code }}</option>
+                        }
+                      </select></label
+                    >
+                  </div>
+                  <details>
+                    <summary>Detalii eveniment · câmpuri tipizate</summary>
+                    <app-object-fields
+                      [value]="payload(event)"
+                      (changed)="setPayload(event, $event)"
+                    />
+                  </details>
+                }
+                <button type="button" class="btn-sm" (click)="removeEvent(event.id)">
+                  Elimină evenimentul {{ index + 1 }}
+                </button>
+              </article>
+            } @empty {
+              <p class="hint">Niciun eveniment programat.</p>
+            }
+          </section>
+
+          <details class="panel panel-body" [open]="advancedConfig()">
+            <summary>Setări avansate de simulare</summary>
+            <section class="panel panel-body" id="studio-advanced">
+              <h2>Profiluri și navigare</h2>
+
+              @if (value.inputs.passengerGeneration; as config) {
+                <details>
+                  <summary>Profiluri de pasageri</summary>
+                  <app-object-fields
+                    [value]="advanced(config)"
+                    (changed)="setAdvanced('passengerGeneration', $event)"
+                  />
+                </details>
+              } @else {
+                <p>Fără profiluri explicite.</p>
+              }
+              @if (value.inputs.navigation; as navigation) {
+                <details>
+                  <summary>Navigare și acces</summary>
+                  <app-object-fields
+                    [value]="advanced(navigation)"
+                    (changed)="setAdvanced('navigation', $event)"
+                  />
+                </details>
+              } @else {
+                <p>Navigare explicită: neconfigurată.</p>
+              }
+            </section>
+          </details>
+        </div>
+        <section class="panel panel-body review" [hidden]="step() !== 4">
+          @if (completed()) {
+            <div class="saved-state" role="status">
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+              <div>
+                <h3>{{ value.name }}</h3>
+                <p>
+                  Salvat · revizia {{ saved()!.scenario.revision }}. Simularea nu a fost pornită.
+                </p>
+              </div>
+            </div>
+          } @else if (isValidated()) {
+            <p class="validation-ok" role="status">
+              <i class="pi pi-check-circle" aria-hidden="true"></i> Configurație validată.
+            </p>
+          }
+          @if (!completed()) {
+            <h3>{{ value.name }}</h3>
+          }
+          <dl class="review-facts">
+            <div>
+              <dt>Aeroport</dt>
+              <dd>{{ layout!.layout.scene.name }}</dd>
+            </div>
+            <div>
+              <dt>Durată</dt>
+              <dd>{{ value.inputs.durationMinutes }} minute</dd>
+            </div>
+            <div>
+              <dt>Pasageri</dt>
+              <dd>{{ totalPassengers() }}</dd>
+            </div>
+            <div>
+              <dt>Operatori</dt>
+              <dd>
+                {{ operators('security').length }} securitate ·
+                {{ operators('checkIn').length }} check-in
+              </dd>
+            </div>
+          </dl>
+          <div class="table-wrap">
+            <table>
+              <caption>
+                Orarul pregătit pentru simulare
+              </caption>
+              <thead>
+                <tr>
+                  <th>Zbor</th>
+                  <th>Pasageri</th>
+                  <th>Plecare</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (flight of value.inputs.flights; track flight.id) {
+                  <tr>
+                    <td>{{ flight.code }}</td>
+                    <td>{{ passengersFor(flight) }}</td>
+                    <td>Minutul {{ minute(flight.departureAtUtc) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (missingPassengerCodes()) {
+            <p class="notice">
+              Zboruri fără pasageri: {{ missingPassengerCodes() }}. Acestea nu vor alimenta cozile.
+            </p>
+          }
+          <p>
+            {{
+              value.inputs.events.length
+                ? value.inputs.events.length + ' evenimente programate.'
+                : 'Niciun incident configurat. Simulare în condiții standard.'
+            }}
+          </p>
+          @if (!completed()) {
+            <button type="button" class="btn-sm" (click)="validate()" [disabled]="busy()">
+              Revalidare
+            </button>
+          }
+        </section>
+      </fieldset>
+      <footer class="wizard-footer">
+        <button
+          type="button"
+          (click)="step() === 1 ? startOver() : goStep(step() - 1)"
+          [disabled]="busy()"
+        >
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          {{ step() === 1 ? 'Configurație inițială' : 'Înapoi' }}
+        </button>
+        @if (step() < 4) {
+          <button
+            class="btn-primary"
+            type="button"
+            (click)="goStep(step() + 1)"
+            [disabled]="busy()"
+          >
+            {{
+              step() === 1
+                ? 'Zboruri și pasageri'
+                : step() === 2
+                  ? 'Resurse și evenimente'
+                  : 'Validare scenariu'
+            }}
+            <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          </button>
+        } @else if (!saved() || dirty()) {
+          <button class="btn-primary" type="button" (click)="save()" [disabled]="busy()">
+            {{ busy() ? 'Se salvează…' : saved() ? 'Salvează modificările' : 'Salvează scenariul' }}
+            <i class="pi pi-check" aria-hidden="true"></i>
+          </button>
+        }
+      </footer>
+    </div>
+    <aside class="scenario-summary" aria-label="Rezumatul scenariului">
+      <h2>{{ value.name || 'Scenariu fără nume' }}</h2>
+      <p>{{ layout!.layout.scene.name }}</p>
+      <dl>
+        <div>
+          <dt>Zboruri</dt>
+          <dd>{{ value.inputs.flights.length }}</dd>
+        </div>
+        <div>
+          <dt>Pasageri</dt>
+          <dd>{{ totalPassengers() }}</dd>
+        </div>
+        <div>
+          <dt>Durată</dt>
+          <dd>{{ value.inputs.durationMinutes }} min</dd>
+        </div>
+      </dl>
+      <p class="save-status">
+        <span class="status-dot" [class.unsaved]="dirty()"></span
+        >{{ dirty() ? 'Configurație nesalvată' : 'Modificări salvate' }}
+      </p>
+
+      <details>
+        <summary>Detalii și acțiuni</summary>
+        <p class="hint">
+          {{
+            !saved() || saved()!.scenario.isSynthetic === true
+              ? 'DEMO · sintetic'
+              : 'Statut sintetic neconfirmat'
+          }}
+          · layout v{{ layout!.version.version }} ·
+          {{ saved() ? 'revizia ' + saved()!.scenario.revision : 'scenariu nou' }}
+        </p>
+        <code>{{ value.code }}</code>
+        @if (saved()) {
+          <div class="stack">
+            <button type="button" (click)="reload()" [disabled]="busy()">
+              Reîncarcă versiunea salvată</button
+            ><button type="button" (click)="beginDuplicate()" [disabled]="busy() || dirty()">
+              Creează o copie
+            </button>
+          </div>
+        }
+      </details>
+      @if (duplicating) {
+        <section class="stack" aria-label="Duplicare scenariu">
+          <h3>Copie independentă</h3>
+          <label
+            >Codul copiei<input
+              [(ngModel)]="duplicateCode"
+              maxlength="64"
+              [disabled]="busy()" /></label
+          ><label
+            >Numele copiei<input
+              [(ngModel)]="duplicateName"
+              maxlength="160"
+              [disabled]="busy()" /></label
+          ><button type="button" (click)="duplicate()" [disabled]="busy()">Salvează copia</button
+          ><button type="button" (click)="duplicating = false" [disabled]="busy()">Anulează</button>
+        </section>
+      }
+    </aside>
+  </div>
+}
+<details class="library panel" [open]="libraryOpen()">
+  <summary>Scenarii salvate</summary>
+  <button type="button" class="btn-sm" (click)="scenarios.reload()" [disabled]="busy()">
+    Actualizează lista
+  </button>
+  @let library = scenarios.state();
+  @if (library.status === 'ready') {
+    <div class="library-list">
+      @for (scenario of library.data; track scenario.id) {
+        <button
+          class="scenario-choice"
+          type="button"
+          [class.selected]="saved()?.scenario?.id === scenario.id"
+          (click)="select(scenario.id)"
+          [disabled]="busy()"
+        >
+          <strong>{{ scenario.name }}</strong
+          ><span>{{ scenario.code }} · revizia {{ scenario.revision }}</span>
+        </button>
+      }
+    </div>
+  } @else {
+    <app-data-state
+      [status]="library.status"
+      label="scenariile"
+      [message]="library.status === 'error' ? library.message : ''"
+      emptyMessage="Niciun scenariu salvat disponibil."
+      (retry)="scenarios.reload()"
+    />
+  }
+</details>

@@ -5,18 +5,6 @@ import { filter } from 'rxjs';
 import { SessionState } from '../auth/session-state';
 import { runtimeConfig } from '../http/runtime-config';
 
-export const CONTROL_TOWER_PAGES = [
-  {
-    id: 'create',
-    label: 'Configurare scenarii',
-    path: '/control-tower/configure',
-    icon: 'file-edit',
-  },
-  { id: 'run', label: 'Scenariile mele', path: '/control-tower', icon: 'send' },
-  { id: 'compare', label: 'Compară personalul', path: '/control-tower/compare', icon: 'clone' },
-  { id: 'repeat', label: 'Teste repetate', path: '/control-tower/batches', icon: 'chart-bar' },
-] as const;
-
 interface WorkspaceDestination {
   path: string;
   label: string;
@@ -25,7 +13,6 @@ interface WorkspaceDestination {
   group: string;
   access?: 'public' | 'write';
   feature?: 'baggageTwinEnabled' | 'airsideTwinEnabled' | 'energyAnalyticsEnabled';
-  children?: typeof CONTROL_TOWER_PAGES;
 }
 
 // Shared by the sidebar and search. Route guards remain authoritative.
@@ -33,11 +20,16 @@ const destinations: WorkspaceDestination[] = [
   {
     path: '/control-tower',
     label: 'Control Tower',
-    description:
-      'Scenarii și rulări, configurare scenarii, Scenariile mele, Compară personalul și Teste repetate',
+    description: 'Terminal 3D, indicatori și situația simulării',
     icon: 'th-large',
     group: 'Operațiuni',
-    children: CONTROL_TOWER_PAGES,
+  },
+  {
+    path: '/operations',
+    label: 'Scenarii și rulări',
+    description: 'Istoricul simulărilor și scenariile salvate',
+    icon: 'sliders-h',
+    group: 'Operațiuni',
   },
   {
     path: '/notifications',
@@ -53,6 +45,38 @@ const destinations: WorkspaceDestination[] = [
     description: 'Incident → simulare → optimizare → decizie',
     icon: 'sitemap',
     group: 'Operațiuni',
+    access: 'write',
+  },
+  {
+    path: '/scenario-studio',
+    label: 'Configurare scenarii',
+    description: 'Configurarea zborurilor, fluxurilor de pasageri și resurselor',
+    icon: 'file-edit',
+    group: 'Simulare',
+    access: 'write',
+  },
+  {
+    path: '/scenario',
+    label: 'Scenariile mele',
+    description: 'Alege un scenariu, pornește simularea și citește rezultatele',
+    icon: 'box',
+    group: 'Simulare',
+    access: 'write',
+  },
+  {
+    path: '/compare',
+    label: 'Compară personalul',
+    description: 'Compară personalul actual cu o variantă modificată · baseline / what-if',
+    icon: 'clone',
+    group: 'Simulare',
+    access: 'write',
+  },
+  {
+    path: '/batches',
+    label: 'Teste repetate',
+    description: 'Vezi cât variază rezultatele între repetări · batch Monte Carlo',
+    icon: 'chart-bar',
+    group: 'Simulare',
     access: 'write',
   },
   {
@@ -148,16 +172,12 @@ export class WorkspaceNavigation {
       items: this.available().filter((item) => item.group === label),
     })),
   );
-  readonly current = computed(() =>
-    this.available().find(
-      (item) => item.path === this.path() || this.path().startsWith(item.path + '/'),
-    ),
-  );
+  readonly current = computed(() => this.available().find((item) => item.path === this.path()));
   readonly recent = computed(() =>
     this.visits()
       .flatMap((path) => {
         const item = this.available().find((item) => item.path === path);
-        return item && path !== this.current()?.path ? [item] : [];
+        return item && path !== this.path() ? [item] : [];
       })
       .slice(0, 4),
   );
@@ -171,12 +191,7 @@ export class WorkspaceNavigation {
       .subscribe((event) => {
         const path = event.urlAfterRedirects.split(/[?#]/)[0];
         this.path.set(path);
-        const destination =
-          this.available().find((item) => item.path === path || path.startsWith(item.path + '/'))
-            ?.path ?? path;
-        this.visits.update((paths) =>
-          [destination, ...paths.filter((item) => item !== destination)].slice(0, 8),
-        );
+        this.visits.update((paths) => [path, ...paths.filter((item) => item !== path)].slice(0, 8));
       });
   }
 

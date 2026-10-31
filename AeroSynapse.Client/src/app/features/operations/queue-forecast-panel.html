@@ -1,0 +1,172 @@
+<section class="panel" aria-labelledby="queue-forecast-title">
+  <header class="panel-heading">
+    <div>
+      <h2 id="queue-forecast-title">Prognoza cozilor</h2>
+
+    </div>
+    <div class="heading-badges">
+      @if (run() && capture()) {
+        @if (isLive()) { <span class="mode live"><i class="pulse" aria-hidden="true"></i>LIVE{{ latestMinute() !== null ? ' · minut ' + latestMinute() : '' }}</span> }
+        @else { <span class="mode">ANALIZĂ ISTORICĂ</span> }
+      }
+      <span class="badge estimate">simulated estimate</span>
+    </div>
+  </header>
+  <div class="panel-body stack">
+    @if (result(); as forecast) {
+      <a routerLink="/notifications" [queryParams]="{scenarioId: run()?.scenarioId, runId: run()?.id, fromMinute: forecast.fromMinute, horizonMinutes: forecast.toMinute - forecast.fromMinute, warningThreshold: forecast.queueThresholdPassengers}">Coordonează alertele acestei prognoze →</a>
+    }
+    @if (message()) { <p class="notice" role="alert">{{ message() }}</p> }
+    @if (!run()) {
+      <div class="empty">
+        <strong>Nicio rulare selectată</strong>
+
+      </div>
+    } @else if (capture(); as captured) {
+      <form class="toolbar" (ngSubmit)="forecast()">
+        <fieldset class="segmented" [disabled]="disabled()">
+          <legend>Orizont</legend>
+          @for (minute of horizons; track minute) {
+            <label [class.on]="horizonMinutes() === minute">
+              <input type="radio" name="horizon" [value]="minute" [checked]="horizonMinutes() === minute" (change)="changeHorizon(minute)" />{{ minute }} min
+            </label>
+          }
+        </fieldset>
+        <div class="threshold-control" [class.armed]="alertsEnabled">
+          <label class="switch">
+            <input type="checkbox" role="switch" name="alerts" [(ngModel)]="alertsEnabled" (ngModelChange)="parametersChanged()" [disabled]="disabled()" />
+            <span>Alerte de coadă</span>
+          </label>
+          <label class="threshold-field">Prag
+            <input type="number" name="threshold" min="0" max="100000" step="1" placeholder="—" [(ngModel)]="threshold" (ngModelChange)="parametersChanged()" [disabled]="disabled() || !alertsEnabled" />
+            <span>pasageri</span>
+          </label>
+        </div>
+        @if (!isLive()) {
+          <label class="origin-field">Origine
+            <select name="origin" [(ngModel)]="fromMinute" (ngModelChange)="parametersChanged()" [disabled]="disabled() || !minutes().length">
+              @for (minute of minutes(); track minute) { <option [ngValue]="minute">minut {{ minute }}</option> }
+            </select>
+          </label>
+        }
+        <button class="btn-primary" type="submit" [disabled]="disabled() || loading() || !options()">
+          {{ loading() ? 'Se estimează…' : isLive() ? 'Actualizează acum' : 'Recalculează' }}
+        </button>
+      </form>
+
+      <app-queue-forecast-timeline [history]="history()" [duration]="captured.duration" [interval]="captured.interval" [live]="isLive()"
+        [latestMinute]="latestMinute()" [windowStart]="windowStart()" [horizon]="horizonMinutes()" [origins]="minutes()" [origin]="fromMinute"
+        [disabled]="disabled()" [state]="historyState()" (originChange)="changeOrigin($event)" />
+
+      @if (!minutes().length) { <p class="notice">Perioada capturată nu permite orizontul ales. Sunt necesare cel puțin 15 minute simulate.</p> }
+      @if (isLive() && latestMinute() !== null && latestMinute()! + horizonMinutes() > captured.duration) {
+        <p class="notice">Orizontul depășește durata rămasă.</p>
+      }
+      @if (alertsEnabled && !validThreshold()) { <p class="notice">Alege un prag calibrat: număr întreg între 0 și 100000 de pasageri.</p> }
+      @if (isLive() && latestMinute() === null) { <p class="monitor-state" role="status">Monitorizare simulată live · aștept prima observație din motorul de simulare.</p> }
+
+      @if (result(); as forecast) {
+        @if (summary(); as total) {
+          <div class="tiles" role="status">
+            <div class="tile" [class.danger]="total.breaches" [class.calm]="forecast.queueThresholdPassengers !== null && !total.breaches">
+              <span>Controale peste prag</span>
+              @if (forecast.queueThresholdPassengers === null) { <strong>—</strong><small>Alertele sunt dezactivate.</small> }
+              @else {
+                <strong>{{ total.breaches }}<em>/{{ total.total }}</em></strong>
+                <small>{{ total.firstBreach !== null ? 'prima depășire la minutul ' + total.firstBreach : 'pragul de ' + forecast.queueThresholdPassengers + ' pasageri nu este depășit' }}</small>
+              }
+            </div>
+            <div class="tile">
+              <span>Vârf estimat</span>
+              <strong>{{ total.peak.peak.queue | number:'1.0-1' }}<em> pax</em></strong>
+              <small>{{ name(total.peak.id) }} · minutul {{ total.peak.peak.minute }}</small>
+            </div>
+            <div class="tile">
+              <span>Sosiri planificate</span>
+              <strong>{{ total.arrivals | number:'1.0-0' }}<em> pax</em></strong>
+              <small>în {{ forecast.toMinute - forecast.fromMinute }} minute · {{ forecast.arrivalSource === 'planned_passenger_profiles' ? 'profiluri de pasageri' : 'rata configurată' }}</small>
+            </div>
+            <div class="tile" [class.action]="total.extraStaff > 0">
+              <span>Intervenție preventivă</span>
+              @if (forecast.queueThresholdPassengers === null) { <strong>—</strong><small>Activează un prag pentru recomandări.</small> }
+              @else if (total.extraStaff > 0) { <strong>+{{ total.extraStaff }}<em> operatori</em></strong><small>minim necesar pentru a rămâne sub prag</small> }
+              @else if (total.unrecoverable) { <strong>!</strong><small>Personalul suplimentar nu este suficient</small> }
+              @else { <strong>0</strong><small>Personalul planificat este suficient</small> }
+            </div>
+            @if (total.backtest; as check) {
+              <div class="tile">
+                <span>Backtest</span>
+                <strong>±{{ check.error | number:'1.0-1' }}<em> pax</em></strong>
+                <small>eroare medie absolută pe {{ check.samples }} snapshots ulterioare</small>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="forecast-period" role="status">
+          <strong>FORECAST · simulated estimate</strong>
+          <span>Minutele simulate {{ forecast.fromMinute }}–{{ forecast.toMinute }} · {{ forecast.periodStartUtc | date:'yyyy-MM-dd HH:mm':'UTC' }}–{{ forecast.periodEndUtc | date:'yyyy-MM-dd HH:mm':'UTC' }} UTC</span>
+          <span>Cozi: pasageri · Sosiri și capacitate: pasageri/minut</span>
+          <span>{{ forecast.observationSource === 'live_simulation' ? 'Sursă: progresul observat al simulării în curs.' : 'Sursă: snapshot istoric al rulării finalizate.' }}</span>
+          <span>{{ forecast.queueThresholdPassengers === null ? 'Alertele sunt dezactivate.' : 'Alertă numai când coada estimată depășește strict ' + forecast.queueThresholdPassengers + ' pasageri.' }}</span>
+        </div>
+
+        @if (prediction() || predictionState() !== 'idle') {
+          <app-queue-prediction-card [prediction]="prediction()" [forecast]="forecast" [names]="captured.names"
+            [selectedId]="selected()?.id ?? null" [state]="predictionState()" />
+        }
+
+        <div class="workspace">
+          <app-queue-forecast-radar [outlooks]="outlooks()" [result]="forecast" [names]="captured.names" [selectedId]="selected()?.id ?? null" (selected)="select($event)" />
+
+          @if (selected(); as view) {
+            <section class="zone" [attr.aria-label]="name(view.id)">
+              <header class="zone-head">
+                <div>
+                  <h3>{{ name(view.id) }}</h3>
+                  <p>{{ view.series.points[0].availableStaff }} operatori × {{ view.series.serviceRatePerStaffMinute | number:'1.0-4' }} pasageri/min/operator = {{ view.series.points[0].capacity | number:'1.0-2' }} pasageri/min la origine</p>
+                </div>
+              </header>
+
+              <app-queue-forecast-chart [view]="view" [result]="forecast" [name]="name(view.id)" />
+
+              <div class="explain">
+                @if (view.series.alert; as alert) {
+                  <p class="notice" role="alert" [title]="'Valoare exactă: ' + alert.queuePassengers">
+                    Alertă predictivă la minutul simulat {{ alert.minute }}: coada estimată depășește pragul {{ alert.thresholdPassengers }} pasageri (≈{{ alert.queuePassengers | number:'1.0-2' }} pasageri).
+                    @if (view.series.mitigation?.extraStaff; as extra) { Intervenție: +{{ extra }} operatori înainte de minutul {{ alert.minute }} mențin vârful la {{ view.series.mitigation!.peakQueuePassengers | number:'1.0-1' }} pasageri. }
+                    @if (view.series.mitigation && view.series.mitigation.extraStaff === null) { Personalul suplimentar nu poate evita depășirea: controlul este închis sau fără personal în interval. }
+                  </p>
+                } @else {
+                  <p class="ok">Fără alertă predictivă{{ forecast.queueThresholdPassengers === null ? ' (alerte dezactivate)' : ': pragul nu este depășit' }}. Vârf estimat {{ view.peak.queue | number:'1.0-2' }} pasageri la minutul {{ view.peak.minute }}.</p>
+                }
+                <p class="assumptions">
+                  {{ view.arrivals | number:'1.0-2' }} sosiri planificate în interval. Rata de serviciu: {{ view.series.serviceRateSource === 'sampled_service_mean' ? 'calculată din media duratelor de serviciu ale profilurilor capturate' : 'rata configurată în scenariul capturat' }}; modificările programate de personal se aplică la minutul lor.
+                  @if (view.backtestError !== null) { Backtest pe {{ view.actual.length }} snapshots ulterioare: eroare medie absolută {{ view.backtestError | number:'1.0-2' }} pasageri. }
+                </p>
+              </div>
+
+              <details><summary>Verifică formula minut cu minut</summary>
+                <div class="table-scroll"><table>
+                  <caption>Forecast — simulated estimate; Q[t+1] = max(0, Q[t] + sosiri − capacitate); intervale (t, t+1], pas de 1 minut; afișare rotunjită la 4 zecimale</caption>
+                  <thead><tr><th>Minut simulat</th><th>Q[t] (pasageri)</th><th>Sosiri (pasageri/min)</th><th>Operatori disponibili</th><th>Capacitate (pasageri/min)</th><th>Q[t+1] estimat (pasageri)</th></tr></thead>
+                  <tbody>@for (point of view.series.points; track point.minute; let index = $index) {
+                    <tr [class.breach]="forecast.queueThresholdPassengers !== null && point.queuePassengers > forecast.queueThresholdPassengers">
+                      <td>{{ point.minute }}</td>
+                      <td>{{ (index ? view.series.points[index - 1].queuePassengers : view.series.initialQueuePassengers) | number:'1.0-4' }}</td>
+                      <td>{{ point.arrivals | number:'1.0-4' }}</td><td>{{ point.availableStaff }}</td>
+                      <td>{{ point.capacity | number:'1.0-4' }}</td><td>{{ point.queuePassengers | number:'1.0-4' }}</td>
+                    </tr>
+                  }</tbody>
+                </table></div>
+              </details>
+            </section>
+          }
+        </div>
+      } @else if (loading()) {
+        <div class="skeleton" role="status"><span></span><span></span><span></span><p>Se estimează cozile din observația de la origine…</p></div>
+      }
+
+    } @else if (!message()) { <p>Nicio observație disponibilă.</p> }
+  </div>
+</section>

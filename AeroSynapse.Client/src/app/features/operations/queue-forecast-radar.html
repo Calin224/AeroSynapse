@@ -1,0 +1,26 @@
+<div class="radar" role="group" aria-label="Controale ordonate după risc">
+  @for (view of outlooks(); track view.id) {
+    <button type="button" class="radar-card" [attr.data-risk]="view.risk" [class.selected]="selectedId() === view.id"
+      [attr.aria-pressed]="selectedId() === view.id" (click)="selected.emit(view.id)">
+      <span class="radar-head"><strong>{{ name(view.id) }}</strong><span class="pill" [attr.data-risk]="view.risk">{{ label(view) }}</span></span>
+      @if (sparks().get(view.id); as spark) {
+        <svg class="spark" [attr.viewBox]="'0 0 ' + spark.box.width + ' ' + spark.box.height" preserveAspectRatio="none" aria-hidden="true">
+          <path class="spark-area" [attr.d]="spark.area" />
+          @if (spark.thresholdY !== null) { <line class="spark-threshold" x1="0" [attr.x2]="spark.box.width" [attr.y1]="spark.thresholdY" [attr.y2]="spark.thresholdY" vector-effect="non-scaling-stroke" /> }
+          <path class="spark-observed" [attr.d]="spark.observed" vector-effect="non-scaling-stroke" />
+          <path class="spark-forecast" [attr.d]="spark.forecast" vector-effect="non-scaling-stroke" />
+        </svg>
+      }
+      <span class="radar-numbers">
+        <span>acum <b>{{ view.series.initialQueuePassengers }}</b></span>
+        <span>vârf <b>{{ view.peak.queue | number:'1.0-1' }}</b></span>
+        <span>final <b>{{ view.end | number:'1.0-1' }}</b></span>
+      </span>
+      @if (view.series.mitigation; as advice) {
+        <span class="radar-advice">
+          {{ advice.extraStaff === null ? 'Control închis/fără personal: redirecționează pasageri' : advice.extraStaff > 0 ? '+' + advice.extraStaff + ' operatori până la minutul ' + view.series.alert?.minute : 'Personal suficient' }}
+        </span>
+      }
+    </button>
+  }
+</div>

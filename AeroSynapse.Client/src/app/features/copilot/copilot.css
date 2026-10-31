@@ -1,0 +1,278 @@
+:host {
+  display: block;
+}
+.run-choice {
+  margin-bottom: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.run-choice > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+.run-choice > summary::-webkit-details-marker {
+  display: none;
+}
+.run-choice[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+.run-choice > app-run-picker {
+  padding: 18px;
+}
+.run-label {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.run-label small {
+  color: var(--text-muted);
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.run-label strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.run-change {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+:host > .notice {
+  margin-bottom: 16px;
+}
+
+/* The composer sticks to the viewport bottom, so the panel must not clip it. */
+.chat {
+  overflow: visible;
+}
+.focus {
+  align-items: end;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.focus strong {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.chat > .notice {
+  margin: 12px 20px 0;
+}
+
+.thread {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-height: 220px;
+  padding: 20px;
+}
+.turn {
+  display: grid;
+  gap: 10px;
+  scroll-margin: 96px 0 200px;
+}
+.you {
+  justify-self: end;
+  max-width: min(80%, 560px);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.you small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.reply {
+  display: grid;
+  gap: 12px;
+  justify-self: start;
+  width: min(100%, 760px);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+}
+.reply .loading-pill {
+  justify-self: start;
+}
+.verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 600;
+}
+.verdict.warn {
+  color: var(--warning);
+}
+.verdict small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.text {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.figures div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.figures dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.figures dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.figures dd small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.bars {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  height: 72px;
+}
+.bars span {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: var(--live);
+  opacity: 0.8;
+}
+.axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -6px;
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+}
+.events {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.events li {
+  display: flex;
+  gap: 10px;
+}
+.events span {
+  min-width: 56px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.sources p {
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.empty strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  gap: 10px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--panel);
+}
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  border-radius: var(--radius);
+}
+.input {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.input textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 160px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  resize: none;
+  field-sizing: content;
+}
+.input button {
+  min-height: 44px;
+  padding-inline: 18px;
+}
+
+
+@media (max-width: 640px) {
+  .focus,
+  .thread,
+  .composer {
+    padding-inline: 16px;
+  }
+  .chat > .notice {
+    margin-inline: 16px;
+  }
+  .you {
+    max-width: 90%;
+  }
+  .suggestions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chip {
+    white-space: nowrap;
+  }
+}

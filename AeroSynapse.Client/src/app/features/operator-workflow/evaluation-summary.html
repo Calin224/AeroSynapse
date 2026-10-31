@@ -1,0 +1,107 @@
+<div class="verdict" [attr.data-tone]="result().recommended ? 'better' : 'neutral'">
+  <div>
+    <p class="eyebrow">
+      {{ result().recommended ? 'VARIANTĂ RECOMANDATĂ' : 'NICIO VARIANTĂ RECOMANDATĂ' }}
+    </p>
+    <h3>{{ result().headline }}</h3>
+    <p class="verdict-line">
+      Așteptare medie de referință: <strong>{{ result().waitBefore }}</strong
+      >. Varianta evaluată: <strong>{{ result().waitAfter }}</strong
+      >.
+    </p>
+  </div>
+  @if (result().outcomes.length) {
+    <strong class="figure">{{ signed(result().outcomes[0].percent) }}</strong>
+  }
+</div>
+
+@if (shiftPlan(); as plan) {
+  <app-shift-plan [plan]="plan" />
+} @else if (result().moves.length) {
+  <div class="staff-plan" role="table" aria-label="Operatori pe fiecare control">
+    <div class="plan-head" role="row">
+      <span role="columnheader">Control</span>
+      <span role="columnheader">Referință</span>
+      <span role="columnheader">{{ result().recommended ? 'Propus' : 'Evaluat' }}</span>
+    </div>
+    @for (move of result().moves; track move.checkpointId) {
+      <div
+        class="plan-row"
+        role="row"
+        [attr.data-change]="
+          move.after > move.before ? 'up' : move.after < move.before ? 'down' : 'same'
+        "
+      >
+        <span class="plan-name" role="rowheader">{{ move.name }}</span>
+        <span class="plan-people now" role="cell">
+          @for (person of move.beforePeople; track person) {
+            <i class="pi pi-user" aria-hidden="true"></i>
+          }
+          <span class="count">{{ move.before }}</span>
+        </span>
+        <span class="plan-people proposed" role="cell">
+          @for (person of move.afterPeople; track person) {
+            <i class="pi pi-user" aria-hidden="true"></i>
+          }
+          <span class="count">{{ move.after }}</span>
+          @if (move.after !== move.before) {
+            <span class="delta"
+              >{{ move.after > move.before ? '+' : '−'
+              }}{{
+                move.after > move.before ? move.after - move.before : move.before - move.after
+              }}</span
+            >
+          }
+        </span>
+      </div>
+    }
+  </div>
+}
+
+@if (result().outcomes.length) {
+  <app-outcome-cards
+    [rows]="result().outcomes"
+    beforeLabel="Referință"
+    [afterLabel]="result().recommended ? 'Propus' : 'Evaluat'"
+    note="la finalul zilei simulate"
+  />
+}
+
+@if (result().candidates.length) {
+  <h3 class="section-title">Variante evaluate</h3>
+  <ul class="candidates" aria-label="Variantele simulate">
+    @for (candidate of result().candidates; track candidate.runId) {
+      <li [attr.data-status]="candidate.status" [class.recommended]="candidate.recommended">
+        <header>
+          <strong>{{ candidate.title }}</strong>
+          @if (candidate.recommended) {
+            <span class="badge">Recomandată</span>
+          } @else {
+            <span class="tag">{{ candidate.label }}</span>
+          }
+        </header>
+        <ul class="config" aria-label="Operatori pe controale">
+          @for (item of candidate.configuration; track item.checkpointId) {
+            <li [class.up]="item.delta > 0" [class.down]="item.delta < 0">
+              {{ item.name }}: {{ item.count }}
+              @if (item.delta) {
+                <small
+                  >({{ item.delta > 0 ? '+' : '−'
+                  }}{{ item.delta > 0 ? item.delta : -item.delta }})</small
+                >
+              }
+            </li>
+          }
+        </ul>
+        <div class="wait">
+          <span>Așteptare medie</span>
+          <span class="wait-bar" aria-hidden="true"
+            ><i [style.width.%]="candidate.waitShare ?? 0"></i
+          ></span>
+          <strong>{{ candidate.wait }}</strong>
+        </div>
+        <small>referință: {{ result().waitBefore }} · cost de realocare {{ candidate.cost }}</small>
+      </li>
+    }
+  </ul>
+}

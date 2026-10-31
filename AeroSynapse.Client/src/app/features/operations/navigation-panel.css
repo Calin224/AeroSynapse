@@ -1,0 +1,34 @@
+:host {
+  display: block;
+}
+textarea {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.zone-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.zone-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.zone-option input { margin-top: 0.25rem; }
+.zone-option small { display: block; color: var(--text-muted); margin-top: 0.3rem; }
+.route-status, .advanced {
+  padding: 1rem;
+  margin: 1rem 0;
+  background: var(--surface-sunken);
+  border-radius: var(--radius);
+}
+summary { cursor: pointer; }
+.hint { color: var(--text-muted); font-size: 0.85rem; }

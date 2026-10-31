@@ -1,0 +1,255 @@
+<div class="page-heading">
+  <div>
+    <h1 class="display">Raport operațional</h1>
+  </div>
+</div>
+<section class="panel panel-body">
+  <h2>Alege simulările</h2>
+
+  <div class="pickers">
+    <div class="picker-column">
+      <h2><span class="step">1</span> Înainte · situația de referință</h2>
+      <app-run-picker
+        label="Alege scenariul și rularea de referință"
+        [selected]="baselineId || null"
+        [preferredScenarioId]="
+          pair()?.baseline?.replay?.data?.captured?.scenario?.scenario?.id ?? null
+        "
+        [autoSelect]="true"
+        (picked)="baselineId = $event.runId; load()"
+      />
+    </div>
+    <div class="picker-column">
+      <h2>
+        <span class="step">2</span> După · varianta de comparat <small>opțional</small>
+        @if (candidateId) {
+          <button type="button" class="btn-sm clear" (click)="candidateId = ''; load()">
+            Fără candidat
+          </button>
+        }
+      </h2>
+      <app-run-picker
+        label="Alege scenariul și rularea de comparat"
+        [selected]="candidateId || null"
+        [preferredScenarioId]="
+          pair()?.candidate?.replay?.data?.captured?.scenario?.scenario?.id ?? null
+        "
+        (picked)="candidateId = $event.runId; load()"
+      />
+    </div>
+  </div>
+  @if (!pair() && !loading()) {
+    <p class="hint">Nicio rulare selectată.</p>
+  }
+  @if (loading()) {
+    <p role="status">Se încarcă datele confirmate de simulare…</p>
+  }
+  @if (message()) {
+    <p role="alert">{{ message() }}</p>
+  }
+</section>
+@if (pair(); as data) {
+  <div
+    [attr.data-baseline-run-id]="data.baseline.id"
+    [attr.data-candidate-run-id]="data.candidate?.id"
+    [attr.data-zone-id]="zoneId()"
+  >
+    @for (run of runs(); track run.id) {
+      @if (run.failureReason || run.message) {
+        <p role="alert">
+          {{ $index === 0 ? 'Înainte' : 'După' }}: {{ run.failureReason || run.message }}
+        </p>
+      }
+    }
+    @if (data.candidate) {
+      <p [attr.role]="comparable() ? 'status' : 'alert'">
+        {{
+          comparable()
+            ? 'Simulările pot fi comparate. Diferențele arată ce s-a schimbat în această pereche.'
+            : 'Nu putem calcula diferența: simulările nu sunt comparabile sau lipsesc date. Poți vedea în continuare rezultatele fiecăreia.'
+        }}
+      </p>
+    }
+    @if (data.comparisonError) {
+      <p role="alert">{{ data.comparisonError }}</p>
+    }
+    @for (issue of data.comparison?.comparability?.issues ?? []; track $index) {
+      <p role="alert">{{ issue.message }} ({{ issue.code }})</p>
+    }
+    @if (zones().length) {
+      <section class="panel panel-body">
+        <div class="toolbar">
+          <label
+            >Punct de control pentru raport<select
+              [ngModel]="zoneId()"
+              (ngModelChange)="zoneId.set($event); filterChanged()"
+            >
+              @for (zone of zones(); track zone.id) {
+                <option [value]="zone.id">{{ zone.label }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Ce vrei să urmărești în grafic<select
+              [ngModel]="metricKey()"
+              (ngModelChange)="metricKey.set($event); filterChanged()"
+            >
+              @for (metric of metrics; track metric.key) {
+                <option [value]="metric.key">{{ metric.label }}</option>
+              }
+            </select></label
+          >
+        </div>
+        <h2>Rezultate la finalul simulării</h2>
+        <div
+          class="table-wrap"
+          tabindex="0"
+          role="region"
+          aria-label="Indicatori pentru punctul de control ales"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Indicator</th>
+                <th>Înainte</th>
+                <th>După</th>
+                <th>Diferență</th>
+                <th>Schimbare relativă</th>
+                <th>Unitate / explicație</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of summary(); track row.metric.key) {
+                <tr [attr.data-summary-metric]="row.metric.key">
+                  <td>{{ row.metric.label }}</td>
+                  <td>
+                    {{
+                      row.before === null ? '—' : (row.before * row.metric.scale | number: '1.0-3')
+                    }}
+                  </td>
+                  <td>
+                    {{
+                      row.after === null ? '—' : (row.after * row.metric.scale | number: '1.0-3')
+                    }}
+                  </td>
+                  <td>
+                    {{
+                      row.delta === null ? '—' : (row.delta * row.metric.scale | number: '1.0-3')
+                    }}
+                  </td>
+                  <td>{{ row.percent === null ? '—' : (row.percent | number: '1.0-3') + '%' }}</td>
+                  <td>
+                    {{ row.metric.unit }}<small>{{ row.reason }}</small>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel panel-body">
+        @if (chart(); as chart) {
+          <h2>{{ metric().label }} · evoluție în minute simulate</h2>
+          <p class="legend">
+            <span class="before">━━ Înainte</span>
+            <span class="after">┄┄ După {{ data.candidate ? '' : '· neselectat' }}</span>
+          </p>
+          <svg
+            viewBox="0 0 740 240"
+            role="img"
+            [attr.aria-label]="
+              metric().label +
+              ' pentru runId ' +
+              data.baseline.id +
+              ' și ' +
+              (data.candidate?.id ?? 'fără candidat')
+            "
+          >
+            <line x1="50" y1="200" x2="690" y2="200" />
+            <line x1="50" y1="30" x2="50" y2="200" />
+            <text x="2" y="22">{{ chart.maximum | number: '1.0-3' }} {{ metric().unit }}</text>
+            <text x="35" y="205">0</text>
+            <text x="50" y="224">0 min</text>
+            <text x="630" y="224">{{ chart.horizon }} min</text>
+            @for (series of chart.series; track series.runId) {
+              <g
+                [class.after]="$index === 1"
+                [class.before]="$index === 0"
+                [attr.data-chart-run-id]="series.runId"
+              >
+                <path [attr.d]="series.path" />
+                <path class="observations" [attr.d]="series.markers" />
+              </g>
+            }
+          </svg>
+          @for (series of chart.series; track series.runId) {
+            <p class="hint">
+              {{ $index === 0 ? 'Înainte' : 'După' }}: {{ series.observed }} valori înregistrate ·
+              {{ series.missing }} momente fără valoare.
+            </p>
+          }
+        }
+      </section>
+      <section class="panel panel-body">
+        <h2>Tabel · {{ metric().label }}</h2>
+        <div
+          class="table-wrap"
+          tabindex="0"
+          role="region"
+          [attr.aria-label]="'Observații temporale · ' + metric().label"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Minut</th>
+                <th>Înainte</th>
+                <th>După</th>
+                <th>Diferență</th>
+                <th>Schimbare relativă</th>
+                <th>Servicii terminate înainte / după</th>
+                <th>Explicație</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of visibleRows(); track row.minute) {
+                <tr [attr.data-minute]="row.minute">
+                  <td>{{ row.minute }}</td>
+                  <td>
+                    {{
+                      row.before === null ? '—' : (row.before * metric().scale | number: '1.0-3')
+                    }}
+                  </td>
+                  <td>
+                    {{ row.after === null ? '—' : (row.after * metric().scale | number: '1.0-3') }}
+                  </td>
+                  <td>
+                    {{ row.delta === null ? '—' : (row.delta * metric().scale | number: '1.0-3') }}
+                  </td>
+                  <td>{{ row.percent === null ? '—' : (row.percent | number: '1.0-3') + '%' }}</td>
+                  <td>{{ row.beforeCohort ?? '—' }} / {{ row.afterCohort ?? '—' }}</td>
+                  <td>{{ row.reason }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="toolbar">
+          <button type="button" [disabled]="page() === 0" (click)="page.set(page() - 1)">
+            Anterioare</button
+          ><span>Pagina {{ page() + 1 }} · {{ rows().length }} observații temporale</span
+          ><button
+            type="button"
+            [disabled]="(page() + 1) * 50 >= rows().length"
+            (click)="page.set(page() + 1)"
+          >
+            Următoarele
+          </button>
+        </div>
+      </section>
+    } @else {
+      <section class="panel panel-body">
+        <p role="status">Niciun indicator disponibil.</p>
+      </section>
+    }
+  </div>
+}

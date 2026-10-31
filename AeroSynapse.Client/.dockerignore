@@ -6,8 +6,7 @@ dist
 .env
 .env.*
 coverage
-docs
-e2e
+tmp
 test-results
 playwright-report
-npm-debug.log*
+docs

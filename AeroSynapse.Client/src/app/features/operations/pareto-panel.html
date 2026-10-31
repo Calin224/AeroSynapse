@@ -1,0 +1,74 @@
+@if (evaluation().pareto; as pareto) {
+  <section aria-labelledby="pareto-title">
+    <h3 id="pareto-title">Optimizare multi-obiectiv · frontieră Pareto aproximativă</h3>
+    <p role="status">{{ status(pareto.status) }}</p>
+
+    <p><code>{{ pareto.formula }}</code></p>
+    <p>Ponderi capturate: timp {{ pareto.options.weights.time }}, cost {{ pareto.options.weights.cost }}, risc {{ pareto.options.weights.risk }}.
+      Referințe: Tref {{ pareto.options.normalization.timeMinutes }} min; Cref {{ pareto.options.normalization.costPoints }} puncte;
+      Rref {{ pareto.options.normalization.riskFraction }} (fracție 0–1). Normalizarea nu este limitată la 1.</p>
+    <p>Buget {{ pareto.options.operationalBudget }} puncte; tarif {{ pareto.options.staffMinuteCost }} puncte/operator/minut;
+      durată {{ pareto.planning.request.durationMinutes }} min; limite: medie {{ pareto.options.maxMeanWaitMinutes }} min,
+      P95 {{ pareto.options.maxP95WaitMinutes }} min, risc {{ pareto.options.maxBoardingRisk * 100 }}%.</p>
+    @if (message()) { <p role="alert">{{ message() }}</p> }
+    <svg viewBox="0 0 720 335" role="img" aria-label="Comparație Pareto: cost operațional pe axa orizontală, așteptare medie pe axa verticală, risc în eticheta fiecărui punct">
+      <line x1="70" y1="280" x2="665" y2="280" /><line x1="70" y1="280" x2="70" y2="30" />
+      <text x="70" y="20">Așteptare medie (min) ↑</text><text x="365" y="325">Cost operațional (puncte) →</text>
+      <text x="52" y="295">0</text>
+      @for (point of plotPoints(); track point.runId) {
+        <circle [attr.cx]="x(point)" [attr.cy]="y(point)" [attr.r]="point.onFrontier ? 7 : 4"
+          [attr.fill]="evaluation().pareto!.points.includes(point) ? '#38bdf8' : '#f59e0b'" [attr.opacity]="point.onFrontier ? 1 : .45">
+          <title>{{ point.runId }}: {{ display(point.timeMinutes) }} min; {{ point.costPoints }} puncte; risc {{ display((point.riskFraction ?? 0) * 100) }}%; {{ point.onFrontier ? 'frontieră' : 'dominat' }}</title>
+        </circle>
+        <text [attr.x]="x(point) + 10" [attr.y]="y(point) - 10">{{ point.position === 0 ? 'B' : 'C' + point.position }} · {{ display((point.riskFraction ?? 0) * 100) }}%</text>
+      }
+    </svg>
+    <p>Albastru: evaluarea curentă. Portocaliu: frontiera comparată. Puncte mari: frontieră; mici: dominate. Valorile exacte și run ID-urile apar în tabel și la punct.</p>
+    <div class="table-wrap"><table>
+      <caption>Metrici SimPy, cost calculat, valori normalizate și fezabilitate</caption>
+      <thead><tr><th>Variantă</th><th>Timp (min)</th><th>Cost (puncte)</th><th>Risc (%)</th><th>T/Tref</th><th>C/Cref</th><th>R/Rref</th><th>Scor</th><th>Frontieră / excludere</th></tr></thead>
+      <tbody>@for (point of pareto.points; track point.runId) {
+        <tr [class.preferred]="point.runId === pareto.preferredRunId"><th scope="row">{{ label(point.runId) }}<br /><small>{{ point.runId }}</small></th>
+          <td>{{ display(point.timeMinutes) }}</td><td>{{ point.costPoints }}</td><td>{{ point.riskFraction === null ? 'indisponibil' : display(point.riskFraction * 100) }}</td>
+          <td>{{ display(point.normalizedTime) }}</td><td>{{ display(point.normalizedCost) }}</td><td>{{ display(point.normalizedRisk) }}</td><td>{{ display(point.weightedScore) }}</td>
+          <td>{{ point.onFrontier ? 'Pe frontieră' : point.feasible ? 'Dominat de: ' + point.dominatedBy.join(', ') : 'Exclus' }}
+            @for (exclusion of point.exclusions; track $index) { <div>{{ reason(exclusion) }}</div> }
+            @if (point.runId === pareto.preferredRunId) { <div>Preferat prin ponderi; necesită decizie umană.</div> }
+          </td></tr>
+      }</tbody>
+    </table></div>
+    <h4>Compromisuri explicite · a doua soluție minus prima</h4>
+    <ul>@for (tradeoff of pareto.tradeoffs; track $index) {
+      <li>{{ label(tradeoff.firstRunId) }} → {{ label(tradeoff.secondRunId) }}: Δ timp {{ display(tradeoff.timeDeltaMinutes) }} min,
+        Δ cost {{ tradeoff.costDeltaPoints }} puncte, Δ risc {{ display(tradeoff.riskDeltaFraction * 100) }} puncte procentuale.</li>
+    }</ul>
+    <h4>Sensibilitatea ponderilor · rezolvări CP-SAT efective</h4>
+
+    <p><code>{{ pareto.planning.formula }}</code></p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Profil / ponderi T,C,R</th><th>Status / rezolvat</th><th>Obiectiv întreg / bound</th><th>Presiune (min-proxy)</th><th>Deficit (fracție)</th><th>Cost (puncte)</th><th>Configurație</th></tr></thead>
+      <tbody>@for (solve of pareto.planning.solves; track $index) {
+        <tr><th scope="row">{{ solve.profile }} · {{ solve.weights.time }},{{ solve.weights.cost }},{{ solve.weights.risk }}</th>
+          <td>{{ solve.solverStatus }} · {{ solve.attempted ? 'da' : 'nu, buget epuizat' }}</td><td>{{ display(solve.scaledObjective) }} / {{ display(solve.bestBound) }}</td>
+          <td>{{ display(solve.proxyTimeMinutes) }}</td><td>{{ display(solve.proxyRisk) }}</td><td>{{ display(solve.operationalCost) }}</td>
+          <td>@for (assignment of solve.assignments; track assignment.checkpointId) { {{ assignment.checkpointId }}: {{ assignment.staffCount }}; }</td></tr>
+      }</tbody>
+    </table></div>
+    <h4>Compară frontiere salvate</h4>
+    <label>Altă evaluare finalizată<select name="paretoComparison" [(ngModel)]="compareId" [disabled]="busy()">
+      <option value="">Selectează o evaluare multi-obiectiv</option>
+      @for (item of alternatives(); track item.id) { <option [value]="item.id">{{ item.name }} · {{ item.id }}</option> }
+    </select></label>
+    <button type="button" (click)="compare()" [disabled]="busy() || !active() || !compareId">Compară frontierele</button>
+    @if (comparison(); as comparison) {
+      @if (!comparison.comparable) { <p role="alert">Frontiere incompatibile: {{ comparison.issues.join(', ') }}.</p> }
+      @else {
+        <p>Frontieră curentă: {{ comparison.left.frontierRunIds.length }} puncte; comparată: {{ comparison.right.frontierRunIds.length }};
+          frontieră comună: {{ comparison.unionFrontierRunIds.length }}. Comparația folosește unitățile originale, nu scoruri cu ponderi diferite.</p>
+        <p>Ponderi comparate: {{ comparison.right.options.weights.time }}, {{ comparison.right.options.weights.cost }}, {{ comparison.right.options.weights.risk }}.</p>
+        <ul>@for (relation of comparison.comparisons; track $index) { <li>{{ relation.leftRunId }} ↔ {{ relation.rightRunId }}: {{ relation.relation }}</li> }</ul>
+      }
+    }
+    <h4>Ipoteze și limite</h4><ul>@for (assumption of pareto.assumptions; track $index) { <li>{{ assumption }}</li> }</ul>
+  </section>
+}

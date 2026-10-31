@@ -1,0 +1,77 @@
+/* Rail panels shared by the control tower and its child panels (component styles do not cross components). */
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title h2 {
+  font-size: 12px;
+  font-weight: 600;
+}
+.panel-title > span {
+  color: var(--text-muted);
+  font: 9px var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.panel-scroll {
+  max-height: clamp(130px, 19vh, 250px);
+  overflow: auto;
+  padding: 0 14px;
+  scrollbar-width: thin;
+}
+.panel-scroll article {
+  border-bottom: 1px solid var(--border);
+  padding: 9px 0;
+}
+.panel-scroll article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panel-scroll article strong {
+  font-size: 12px;
+}
+.panel-scroll article small {
+  color: #866025;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.panel-scroll article p {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.empty,
+.panel-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.empty {
+  padding: 13px 0;
+}
+.panel-note {
+  margin: 0;
+  padding: 8px 14px;
+}
+@media (min-width: 1101px) and (max-height: 820px) {
+  .panel-title {
+    padding: 8px 12px;
+  }
+  .panel-scroll {
+    max-height: 90px;
+  }
+  .panel-note {
+    padding: 4px 14px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+@media (max-width: 550px) {
+  .panel-title {
+    padding: 10px;
+  }
+}

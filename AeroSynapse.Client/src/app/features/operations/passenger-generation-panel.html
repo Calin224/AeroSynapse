@@ -1,0 +1,163 @@
+<section class="panel passenger-panel" aria-labelledby="passenger-title">
+  <header class="panel-heading">
+    <div>
+      <h2 id="passenger-title">Pasageri virtuali reproductibili</h2>
+
+    </div>
+    <button class="btn-sm" type="button" [disabled]="busy() || disabled()" (click)="reload()">Reîncarcă profilurile</button>
+  </header>
+  <div class="panel-body">
+  @if (message()) { <p class="notice" role="status">{{ message() }}</p> }
+  @if (!scenario().inputs.flights.length) { <p>Adaugă zboruri în orarul demo pentru a configura batch-urile de pasageri.</p> }
+  @if (loading()) { <p role="status">Se încarcă profilurile…</p> }
+  @if (settings(); as settings) {
+    @if (config; as config) {
+      <p>Revizia {{ settings.revision }} · {{ settings.config ? 'Profiluri active' : hasIncidents() ? 'Profiluri demo derivate active prin incidente' : 'Profiluri pregătite pentru activare' }}</p>
+
+      <form (ngSubmit)="save()">
+        <label>Seed reproductibil<input type="number" name="passengerSeed" [(ngModel)]="seed" (ngModelChange)="modified()" min="0" max="2147483647" required [disabled]="blocked()" /></label>
+
+        @for (batch of config.batches; track batch.flightId) {
+          @let flight = this.flight(batch.flightId);
+          <fieldset [disabled]="blocked()" (input)="modified()" (change)="modified()">
+            <legend>{{ flight?.code }} · capacitate {{ flight?.capacity }}</legend>
+            @if (flight?.isCancelled) { <p>Zbor anulat: batch-ul modelează 0 pasageri, cu subset explicit.</p> }
+            <div class="fields">
+              <label>Control de securitate<select [name]="'checkpoint-' + batch.flightId" [ngModel]="batch.checkpointMode === 'spread' ? 'spread' : batch.checkpointId" (ngModelChange)="laneChanged(batch, $event)">
+                <option value="spread">Toate controalele deschise spre poartă</option>
+                @for (checkpoint of settings.checkpoints; track checkpoint.id) {
+                  @if (flight?.checkpointIds?.includes(checkpoint.id)) { <option [value]="checkpoint.id">Doar {{ checkpoint.name }}</option> }
+                }
+              </select></label>
+              <label>Acoperire<select [name]="'countMode-' + batch.flightId" [(ngModel)]="batch.countMode" (ngModelChange)="countChanged(batch)" [disabled]="flight?.isCancelled ?? false">
+                <option value="full">Întreaga capacitate a zborului</option><option value="subset">Subset explicit</option></select></label>
+              <label>Pasageri modelați<input type="number" [name]="'count-' + batch.flightId" [(ngModel)]="batch.modeledCount" min="0" [max]="flight?.capacity ?? 100000" required [disabled]="batch.countMode === 'full' || (flight?.isCancelled ?? false)" /></label>
+              <label>Profil grupuri<select [name]="'groups-' + batch.flightId" [ngModel]="batch.groups.length > 1 ? 'mixed' : 'solo'" (ngModelChange)="groupsChanged(batch, $event)">
+                <option value="mixed">Mixt: solo, familii, business</option><option value="solo">Numai individual</option></select></label>
+            </div>
+            <details class="disclosure"><summary>Parametrii profilurilor de grup</summary>
+
+              @for (group of batch.groups; track $index) {
+                <div class="fields">
+                  <label>Tip grup<select [name]="'groupKind-' + batch.flightId + '-' + $index" [(ngModel)]="group.kind"><option value="solo">Individual</option><option value="family">Familie</option><option value="business">Business</option><option value="tour">Grup turistic</option></select></label>
+                  <label>Pondere grupuri<input type="number" [name]="'weight-' + batch.flightId + '-' + $index" [(ngModel)]="group.weight" min="0.000001" max="1" step="any" required /></label>
+                  <label>Mărime minimă<input type="number" [name]="'groupMin-' + batch.flightId + '-' + $index" [(ngModel)]="group.minSize" min="1" max="20" required /></label>
+                  <label>Mărime maximă<input type="number" [name]="'groupMax-' + batch.flightId + '-' + $index" [(ngModel)]="group.maxSize" min="1" max="20" required /></label>
+                  <label>Factor grup serviciu<input type="number" [name]="'groupService-' + batch.flightId + '-' + $index" [(ngModel)]="group.serviceMultiplier" min="0.1" max="10" step="any" required /></label>
+                  <label>Factor grup deplasare<input type="number" [name]="'groupTravel-' + batch.flightId + '-' + $index" [(ngModel)]="group.travelMultiplier" min="0.1" max="10" step="any" required /></label>
+                </div>
+                <button type="button" [disabled]="blocked() || batch.groups.length === 1" (click)="removeGroup(batch, $index)">Elimină profilul {{ group.kind }}</button>
+              }
+              <button type="button" [disabled]="blocked() || batch.groups.length >= 4" (click)="addGroup(batch)">Adaugă profil de grup</button>
+            </details>
+
+            @for (distributionName of ['arrival', 'service', 'travel']; track distributionName) {
+              @let distribution = distributionName === 'arrival' ? batch.arrival : distributionName === 'service' ? batch.service : batch.travel;
+              <h3>{{ distributionName === 'arrival' ? 'Sosire (minute simulate)' : distributionName === 'service' ? 'Durată serviciu (factor)' : 'Deplasare (factor)' }}</h3>
+              <div class="fields">
+                <label>Distribuție<select [name]="distributionName + '-kind-' + batch.flightId" [(ngModel)]="distribution.kind">
+                  @for (kind of kinds; track kind.value) { <option [value]="kind.value">{{ kind.label }}</option> }
+                </select></label>
+                <label>Minim<input type="number" [name]="distributionName + '-min-' + batch.flightId" [(ngModel)]="distribution.minimum" min="0" step="any" required /></label>
+                <label>Maxim<input type="number" [name]="distributionName + '-max-' + batch.flightId" [(ngModel)]="distribution.maximum" min="0" step="any" required /></label>
+                @if (distribution.kind === 'normal' || distribution.kind === 'exponential') {
+                  <label>{{ distribution.kind === 'normal' ? 'Media distribuției' : 'Scală exponențială' }}<input type="number" [name]="distributionName + '-mean-' + batch.flightId" [(ngModel)]="distribution.mean" min="0" step="any" required /></label>
+                }
+                @if (distribution.kind === 'normal') { <label>Deviație standard<input type="number" [name]="distributionName + '-std-' + batch.flightId" [(ngModel)]="distribution.stdDev" min="0" step="any" required /></label> }
+                @if (distribution.kind === 'triangular') { <label>Modul distribuției<input type="number" [name]="distributionName + '-mode-' + batch.flightId" [(ngModel)]="distribution.mode" min="0" step="any" required /></label> }
+              </div>
+            }
+            <label class="toggle"><input type="checkbox" [name]="'surge-' + batch.flightId" [ngModel]="batch.surges.length > 0" (ngModelChange)="surgeChanged(batch, $event)" />Creștere temporară de cerere</label>
+            @for (surge of batch.surges; track $index) {
+              <div class="fields">
+                <label>Început vârf (min)<input type="number" [name]="'surgeStart-' + batch.flightId + '-' + $index" [(ngModel)]="surge.startsMinute" min="0" step="any" required /></label>
+                <label>Sfârșit vârf (min)<input type="number" [name]="'surgeEnd-' + batch.flightId + '-' + $index" [(ngModel)]="surge.endsMinute" min="0" step="any" required /></label>
+                <label>Proporție de grupuri în vârf (0–1)<input type="number" [name]="'surgeShare-' + batch.flightId + '-' + $index" [(ngModel)]="surge.share" min="0.000001" max="1" step="any" required /></label>
+              </div>
+            }
+          </fieldset>
+        }
+        <fieldset [disabled]="blocked()" (input)="modified()" (change)="modified()">
+          <legend>Fluxuri alternative</legend>
+          <label class="toggle"><input type="checkbox" name="flowEnabled" [ngModel]="!!config.flow" (ngModelChange)="flowChanged(config, $event)" />Tipuri de pasageri și etape configurate explicit</label>
+          @if (config.flow; as flow) {
+
+            @for (segment of flow.segments; track segment.kind) {
+              <h3>{{ segmentLabels[segment.kind] }}</h3>
+              <div class="fields">
+                <label>Pondere grupuri<input type="number" [name]="'segmentShare-' + segment.kind" [(ngModel)]="segment.share" min="0.000001" max="1" step="any" required /></label>
+                <label>Control<select [name]="'segmentControl-' + segment.kind" [(ngModel)]="segment.control">
+                  <option value="security">{{ stageLabels['security'] }}</option><option value="assistedSecurity">{{ stageLabels['assistedSecurity'] }}</option>
+                  <option value="transferSecurity">{{ stageLabels['transferSecurity'] }}</option></select></label>
+                <label>Factor serviciu la etape<input type="number" [name]="'segmentService-' + segment.kind" [(ngModel)]="segment.serviceMultiplier" min="0.1" max="10" step="any" required /></label>
+                <label>Factor deplasare spre poartă<input type="number" [name]="'segmentTravel-' + segment.kind" [(ngModel)]="segment.travelMultiplier" min="0.1" max="10" step="any" required /></label>
+                @if (segment.transferMinutes; as transfer) {
+                  <label>Transfer minim (min)<input type="number" [name]="'transferMin-' + segment.kind" [(ngModel)]="transfer.minimum" min="0" max="240" step="any" required /></label>
+                  <label>Transfer maxim (min)<input type="number" [name]="'transferMax-' + segment.kind" [(ngModel)]="transfer.maximum" min="0" max="240" step="any" required /></label>
+                }
+              </div>
+              <label class="toggle"><input type="checkbox" [name]="'segmentBag-' + segment.kind" [(ngModel)]="segment.holdBaggage" />Trece prin predarea bagajului de cală înainte de control</label>
+            }
+            <h3>Etape suplimentare (minute de serviciu per pasager)</h3>
+            @for (stage of flow.stages; track stage.kind) {
+              <div class="fields">
+                <label>{{ stageLabels[stage.kind] }} · personal<input type="number" [name]="'stageStaff-' + stage.kind" [(ngModel)]="stage.staffCount" min="0" max="10000" required /></label>
+                <label>Serviciu minim<input type="number" [name]="'stageMin-' + stage.kind" [(ngModel)]="stage.service.minimum" min="0.01" max="240" step="any" required /></label>
+                <label>Serviciu maxim<input type="number" [name]="'stageMax-' + stage.kind" [(ngModel)]="stage.service.maximum" min="0.01" max="240" step="any" required /></label>
+              </div>
+            }
+            <h3>Blocări de etape</h3>
+
+            @for (closure of flow.closures; track $index) {
+              <div class="fields">
+                <label>Etapă blocată<select [name]="'closureStage-' + $index" [(ngModel)]="closure.stage">
+                  <option value="security">{{ stageLabels['security'] }}</option>
+                  @for (stage of flow.stages; track stage.kind) { <option [value]="stage.kind">{{ stageLabels[stage.kind] }}</option> }
+                </select></label>
+                <label>Început (min)<input type="number" [name]="'closureStart-' + $index" [(ngModel)]="closure.startsMinute" min="0" step="any" required /></label>
+                <label>Sfârșit (min)<input type="number" [name]="'closureEnd-' + $index" [(ngModel)]="closure.endsMinute" min="0" step="any" required /></label>
+              </div>
+              <button type="button" [disabled]="blocked()" (click)="removeClosure(flow, $index)">Elimină blocarea</button>
+            }
+            <button type="button" [disabled]="blocked() || flow.closures.length >= 16" (click)="addClosure(flow)">Adaugă blocare</button>
+          }
+        </fieldset>
+        <div class="toolbar"><button type="submit" [disabled]="blocked()">Salvează populațiile și profilurile demo</button>
+          @if (settings.config) { <button type="button" [disabled]="blocked()" (click)="save(null)">Dezactivează profilurile</button> }
+        </div>
+      </form>
+      <div class="toolbar actions"><button class="btn-primary" type="button" [disabled]="blocked() || dirty() || (!settings.config && !hasIncidents())" (click)="generate()">Generează previzualizarea</button>
+        <button type="button" [disabled]="blocked() || dirty() || !settings.config" (click)="analyzeFlows()">Analizează fluxurile</button></div>
+
+    }
+    @if (flowReport(); as report) {
+      <h3>Fluxuri simulate · statistici agregate</h3>
+      <p>Orizont {{ report.durationMinutes }} minute · {{ report.modeledCount }} pasageri modelați · seed {{ report.seed }}. Statisticile sunt agregate pe etapă și tip, fără ID-uri de pasageri sau grupuri.</p>
+      <div class="table-wrap"><table><caption>Etape; timpii sunt minute simulate</caption><thead><tr><th>Etapă</th><th>Sosiți</th><th>Procesați</th><th>În coadă la final</th><th>Așteptare medie</th><th>Așteptare maximă</th><th>Minute blocate</th></tr></thead><tbody>
+        @for (stage of report.stages; track stage.stage) { <tr><td>{{ stageLabels[stage.stage] }}</td><td>{{ stage.arrivedPassengers }}</td><td>{{ stage.processedPassengers }}</td><td>{{ stage.queuedPassengers }}</td><td>{{ stage.meanWaitMinutes | number:'1.2-2' }}</td><td>{{ stage.maxWaitMinutes | number:'1.2-2' }}</td><td>{{ stage.blockedMinutes | number:'1.0-2' }}</td></tr> }
+      </tbody></table></div>
+      <div class="table-wrap"><table><caption>Tipuri de pasageri; întârzierea compară aceleași călătorii cu și fără blocări</caption><thead><tr><th>Tip</th><th>Pasageri</th><th>Ajunși la poartă</th><th>Îmbarcare ratată</th><th>Traseu mediu</th><th>Traseu maxim</th><th>Coadă medie</th><th>Întârziere din blocări</th></tr></thead><tbody>
+        @for (segment of report.segments; track segment.segment) { <tr><td>{{ segmentLabels[segment.segment] }}</td><td>{{ segment.passengers }}</td><td>{{ segment.reachedGatePassengers }}</td><td>{{ segment.missedBoardingPassengers }}</td><td>{{ segment.meanJourneyMinutes | number:'1.2-2' }}</td><td>{{ segment.maxJourneyMinutes | number:'1.2-2' }}</td><td>{{ segment.meanQueueMinutes | number:'1.2-2' }}</td><td>{{ segment.meanClosureDelayMinutes | number:'1.2-2' }}</td></tr> }
+      </tbody></table></div>
+    }
+    @if (preview(); as preview) {
+      <h3>Populație deterministă</h3>
+      <p>{{ preview.modeledCount }} pasageri modelați din {{ preview.configuredCount }} locuri configurate · seed {{ preview.seed }}</p>
+      @if (preview.hasSubset) { <p class="notice">Este modelat un subset explicit. Pasageri nemodelați: {{ preview.configuredCount - preview.modeledCount }}.</p> }
+      <p class="fingerprint">Fingerprint SHA-256: {{ preview.fingerprint }}</p>
+      <div class="table-wrap"><table><caption>Batch-uri sintetice pe zbor</caption><thead><tr><th>Zbor DEMO</th><th>Configurați</th><th>Modelați</th><th>Nemodelați</th><th>Grupuri</th><th>Pasageri în vârf</th></tr></thead><tbody>
+        @for (batch of preview.batches; track batch.flightId) { <tr><td>{{ flight(batch.flightId)?.code }}</td><td>{{ batch.configuredCount }}</td><td>{{ batch.modeledCount }}</td><td>{{ batch.unmodeledCount }}</td><td>{{ batch.groupCount }}</td><td>{{ batch.surgePassengerCount }}</td></tr> }
+      </tbody></table></div>
+      <div class="table-wrap"><table><caption>Cerere la checkpoint-uri; supraîncărcarea compară vârful într-un minut cu capacitatea estimată</caption><thead><tr><th>Checkpoint</th><th>Pasageri</th><th>Vârf / min</th><th>Capacitate estimată / min</th><th>Stare</th></tr></thead><tbody>
+        @for (demand of preview.checkpointDemand; track demand.checkpointId) { <tr><td>{{ checkpointName(demand.checkpointId) }}</td><td>{{ demand.modeledCount }}</td><td>{{ demand.peakArrivalsPerMinute }}</td><td>{{ demand.estimatedCapacityPerMinute | number:'1.1-2' }}</td><td>{{ demand.overloaded ? 'Supraîncărcare estimată' : 'În limita estimată' }}</td></tr> }
+      </tbody></table></div>
+      <p>Previzualizare: {{ preview.returnedCount }} înregistrări, de la poziția {{ preview.returnedCount ? preview.offset + 1 : 0 }} din {{ preview.modeledCount }}.</p>
+      <div class="table-wrap"><table><caption>Sosiri și durate sintetice, în minute simulate</caption><thead><tr><th>ID demo</th><th>Zbor</th><th>Profil</th><th>Tip</th><th>Sosire</th><th>Serviciu</th><th>Deplasare</th><th>Vârf</th></tr></thead><tbody>
+        @for (passenger of preview.passengers; track passenger.id) { <tr><td class="passenger-id" [title]="passenger.id">{{ passenger.id }}</td><td>{{ flight(passenger.flightId)?.code }}</td><td>{{ passenger.groupKind }}</td><td>{{ passenger.segment ? segmentLabels[passenger.segment] : '—' }}</td><td>{{ passenger.arrivalMinute | number:'1.3-3' }}</td><td>{{ passenger.serviceMinutes | number:'1.3-3' }}</td><td>{{ passenger.travelMinutes | number:'1.3-3' }}</td><td>{{ passenger.inSurge ? 'Da' : 'Nu' }}</td></tr> }
+      </tbody></table></div>
+      <div class="toolbar"><button type="button" [disabled]="blocked() || preview.offset === 0" (click)="generate(preview.offset > 100 ? preview.offset - 100 : 0)">Anterior</button>
+        <button type="button" [disabled]="blocked() || !preview.hasMore" (click)="generate(preview.offset + preview.returnedCount)">Următorii pasageri</button></div>
+    }
+  }
+  </div>
+</section>

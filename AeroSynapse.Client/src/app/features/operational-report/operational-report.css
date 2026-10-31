@@ -1,0 +1,146 @@
+:host {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.8rem;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.pickers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.picker-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+.picker-column + .picker-column {
+  padding-left: 24px;
+  border-left: 1px solid var(--border);
+}
+.picker-column h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.picker-column h2 small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+}
+.clear {
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .pickers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .picker-column + .picker-column {
+    padding: 20px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+.table-wrap {
+  max-height: min(440px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-sunken);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+th,
+td {
+  padding: 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+small {
+  display: block;
+  color: var(--text-muted);
+}
+.hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+h2 {
+  margin: 0.5rem 0;
+}
+p {
+  margin: 0.7rem 0;
+}
+svg {
+  width: 100%;
+  height: auto;
+  max-height: 26rem;
+}
+line {
+  stroke: var(--border-strong);
+}
+text {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.before {
+  color: var(--accent);
+}
+.after {
+  color: var(--warning);
+}
+.after path {
+  stroke-dasharray: 6 4;
+}
+.observations {
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: none !important;
+}
+.legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+[data-baseline-run-id] {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,96 @@
+@let report = diagnosis();
+<section
+  class="diagnosis"
+  aria-labelledby="diagnosis-title"
+  [attr.data-bottlenecks]="report.bottlenecks.length"
+>
+  <header>
+    <h2 id="diagnosis-title">
+      @if (report.bottlenecks.length) {
+        {{ report.bottlenecks.length === 1 ? 'Un blocaj' : report.bottlenecks.length + ' blocaje' }}
+        în această simulare
+      } @else {
+        Niciun blocaj în această simulare
+      }
+    </h2>
+    <p>Așteptare ≥ {{ limit }} min</p>
+  </header>
+
+  @if (!report.bottlenecks.length) {
+    <p class="all-clear">
+      @if (report.worst; as worst) {
+        Cea mai lungă așteptare estimată:
+        <strong>{{ worst.waitMinutes | number: '1.0-1' }} min</strong> la {{ worst.label }}.
+      } @else {
+        Rularea nu are încă serii de coadă din care să se calculeze un diagnostic.
+      }
+    </p>
+  }
+
+  <ol class="findings">
+    @for (item of report.bottlenecks; track item.zoneId + item.fromMinute) {
+      <li [attr.data-zone-id]="item.zoneId">
+        <div class="where">
+          <strong>{{ item.label }}</strong>
+          <span>{{ time(item.fromMinute) }}–{{ time(item.toMinute) }}</span>
+        </div>
+        <div class="body">
+          <p class="what">
+            @if (unstaffed(item.peakWaitMinutes)) {
+              La {{ time(item.peakMinute) }} așteaptă {{ item.peakQueue }} pasageri la un control
+              fără niciun operator.
+            } @else {
+              La {{ time(item.peakMinute) }} coada ajunge la {{ item.peakQueue }} pasageri, adică
+              ~{{ item.peakWaitMinutes | number: '1.0-0' }} min de așteptare.
+            }
+          </p>
+          <p class="why">
+            <span>De ce:</span> sosesc ~{{ item.arrivalsPerMinute | number: '1.0-1' }} pasageri/min,
+            iar {{ operators(item.staff) }} procesează
+            {{ item.capacityPerMinute | number: '1.0-1' }}/min.
+          </p>
+          @if (item.fix; as fix) {
+            <p class="do">
+              <span>Recomandare:</span>
+              <strong>+{{ operators(fix.extraStaff) }} la {{ item.label }}</strong>
+              între {{ time(item.fromMinute) }} și {{ time(item.toMinute) }} → așteptare estimată
+              {{ fix.expectedPeakWaitMinutes | number: '1.0-1' }} min.
+              @if (fix.donors.length) {
+                Îi poți muta de la {{ donors(fix.donors) }}; acolo coada rămâne sub {{ limit }} min.
+              } @else if (!item.closed.length) {
+                Niciun alt control nu are operatori liberi atunci, deci e nevoie de personal
+                suplimentar.
+              }
+            </p>
+          } @else {
+            <p class="do">
+              <span>Recomandare:</span> nici cu 10 operatori în plus coada nu scade sub
+              {{ limit }} min. Împarte fluxul de pasageri cu alt control sau deschide o linie nouă.
+            </p>
+          }
+          @if (item.closed.length) {
+            <p class="do">
+              <span>Alternativ:</span> {{ names(item.closed) }}
+              {{ item.closed.length === 1 ? 'este închis' : 'sunt închise' }} în acest interval.
+              Deschide-{{ item.closed.length === 1 ? 'l' : 'le' }} și împarte fluxul de pasageri
+              între controale.
+            </p>
+          }
+          <a
+            routerLink="."
+            [queryParams]="{ scenarioId: scenarioId(), runId: runId(), zoneId: item.zoneId }"
+            >Arată pe hartă</a
+          >
+        </div>
+      </li>
+    }
+  </ol>
+
+  @if (report.spare.length) {
+    <p class="spare">
+      <span>Personal în plus:</span> {{ names(spareLabels()) }}
+      {{ report.spare.length === 1 ? 'poate' : 'pot' }} lucra fiecare cu un operator mai puțin, fără
+      să depășească {{ limit }} min de așteptare.
+    </p>
+  }
+</section>

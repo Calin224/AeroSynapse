@@ -1,0 +1,270 @@
+<header class="page-heading">
+  <div>
+    <h1 class="display">AI Copilot</h1>
+  </div>
+</header>
+
+<details
+  #chooser
+  class="run-choice"
+  [open]="choosing() || !runId"
+  (toggle)="choosing.set(chooser.open)"
+>
+  <summary>
+    <span class="run-label">
+      <small>Rulare analizată</small>
+      <strong>
+        @if (context(); as c) {
+          @let name = picker.scenarioId() === c.scenarioId ? picker.scenarioName() : '';
+          {{ name || 'Rulare ' + c.runId.slice(0, 8) }} · {{ c.durationMinutes ?? '—' }} minute
+          simulate
+        } @else if (loading()) {
+          Se încarcă rularea…
+        } @else {
+          Alege o rulare
+        }
+      </strong>
+    </span>
+    <span class="run-change">Schimbă</span>
+  </summary>
+  <app-run-picker
+    #picker
+    [selected]="runId || null"
+    [preferredScenarioId]="scenarioId || null"
+    [autoSelect]="true"
+    [disabled]="busy()"
+    (picked)="pick($event)"
+  />
+</details>
+
+@if (message()) {
+  <p class="notice" role="alert">{{ message() }}</p>
+}
+
+<section class="panel chat" aria-label="Conversație cu Copilot">
+  @if (context(); as c) {
+    <div class="focus fields">
+      <label
+        >Zona
+        <select [(ngModel)]="zoneId">
+          @for (zone of c.zones; track zone.id) {
+            <option [value]="zone.id">{{ zone.code }} · {{ zone.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span
+          >Minutul <strong>{{ minute }}</strong> din {{ c.durationMinutes ?? '—' }}</span
+        >
+        <input type="range" [(ngModel)]="minute" min="0" [max]="c.durationMinutes ?? 0" step="1" />
+      </label>
+    </div>
+    @if (c.unavailableReason) {
+      <p class="notice">
+        Nu pot trage concluzii din această rulare:
+        {{
+          c.unavailableReason === 'run_not_completed'
+            ? 'nu are rezultate valide finalizate.'
+            : 'datele de intrare capturate lipsesc sau nu sunt valide.'
+        }}
+      </p>
+    }
+    @if (!c.isSynthetic) {
+      <p class="notice">Statutul sintetic al acestei rulări nu este confirmat.</p>
+    }
+  }
+
+  <div class="thread" aria-live="polite">
+    @for (turn of turns(); track turn.id) {
+      <article class="turn" [attr.data-turn]="turn.id">
+        <p class="you">
+          {{ turn.prompt }}<small>{{ turn.zone }} · minutul {{ turn.scope.minute }}</small>
+        </p>
+        <div class="reply" [attr.aria-busy]="turn.state === 'pending'">
+          @switch (turn.state) {
+            @case ('pending') {
+              <p class="loading-pill" role="status">Analizez datele rulării…</p>
+            }
+            @case ('failed') {
+              <p class="notice" role="alert">{{ turn.error }}</p>
+            }
+            @default {
+              @if (turn.answer; as answer) {
+                <p class="verdict" [class.warn]="answer.status !== 'answered'">
+                  {{ answer.status === 'answered' ? 'Din datele rulării' : 'Date insuficiente' }}
+                  <small>{{ modelLabel(answer.modelStatus) }}</small>
+                </p>
+                <p class="text" data-answer>{{ plain(answer.answer) }}</p>
+                @if (answer.citations.length) {
+                  <dl class="figures">
+                    @for (citation of answer.citations; track citation.id) {
+                      <div [attr.data-citation]="citation.id">
+                        <dt>{{ citation.label }}</dt>
+                        <dd>
+                          {{ citation.value | number: '1.0-2' }} <small>{{ citation.unit }}</small>
+                        </dd>
+                      </div>
+                    }
+                  </dl>
+                }
+              }
+              @if (turn.tool?.forecast; as forecast) {
+                @let outlook = describe(forecast);
+                <p class="verdict">Estimare, nu observație</p>
+                <p class="text">
+                  @if (outlook.peak.queuePassengers < 0.5 && outlook.now < 0.5) {
+                    Nu se estimează coadă între minutele {{ forecast.fromMinute + 1 }} și
+                    {{ forecast.toMinute }}.
+                  } @else {
+                    Acum sunt {{ outlook.now | number: '1.0-0' }} pasageri în coadă. Până la minutul
+                    {{ forecast.toMinute }}, coada estimată {{ outlook.verb }}
+                    <strong>{{ outlook.end | number: '1.0-0' }} pasageri</strong>.
+                    @if (outlook.showPeak) {
+                      Vârful estimat este de
+                      {{ outlook.peak.queuePassengers | number: '1.0-0' }} pasageri, la minutul
+                      {{ outlook.peak.minute }}.
+                    }
+                  }
+                </p>
+                <div class="bars" aria-hidden="true">
+                  @for (point of forecast.zone.points; track point.minute) {
+                    <span
+                      [style.height.%]="bar(point.queuePassengers, outlook.peak.queuePassengers)"
+                    ></span>
+                  }
+                </div>
+                <p class="axis" aria-hidden="true">
+                  <span>min {{ forecast.fromMinute + 1 }}</span
+                  ><span>min {{ forecast.toMinute }}</span>
+                </p>
+              }
+              @if (turn.tool?.investigation; as investigation) {
+                @if (investigation.events.length === 0) {
+                  <p class="text">
+                    Niciun eveniment operațional nu a afectat zona până la minutul
+                    {{ turn.scope.minute }}.
+                  </p>
+                } @else {
+                  <p class="text">
+                    @if (investigation.events.length === 1) {
+                      Un eveniment a afectat
+                    } @else {
+                      {{ investigation.events.length }} evenimente au afectat
+                    }
+                    zona până la minutul {{ turn.scope.minute }}:
+                  </p>
+                  <ol class="events">
+                    @for (event of investigation.events; track event.id) {
+                      <li>
+                        <span>min {{ event.minute | number: '1.0-0' }}</span
+                        >{{ eventLabel(event.type) }}
+                      </li>
+                    }
+                  </ol>
+                }
+              }
+              <details class="disclosure sources">
+                <summary>Surse și detalii</summary>
+                <p>
+                  runId <code>{{ turn.scope.runId }}</code> · zoneId
+                  <code>{{ turn.scope.zoneId }}</code> · minutul {{ turn.scope.minute }}
+                </p>
+                @if (turn.tool?.forecast; as forecast) {
+                  <p>{{ forecast.formula }}</p>
+                  <div class="table-wrap">
+                    <table>
+                      <caption>
+                        Prognoză în
+                        {{
+                          forecast.queueUnit
+                        }}; fluxuri în
+                        {{
+                          forecast.flowUnit
+                        }}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Minut</th>
+                          <th scope="col">Sosiri</th>
+                          <th scope="col">Capacitate</th>
+                          <th scope="col">Coadă</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (point of forecast.zone.points; track point.minute) {
+                          <tr>
+                            <td>{{ point.minute }}</td>
+                            <td>{{ point.arrivals | number: '1.0-1' }}</td>
+                            <td>{{ point.capacity | number: '1.0-1' }}</td>
+                            <td>{{ point.queuePassengers | number: '1.0-1' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+                @if (explanation(turn); as evidence) {
+                  <app-copilot-evidence [explanation]="evidence" />
+                }
+                @if (turn.answer?.sourceHash; as hash) {
+                  <p>
+                    Amprenta sursei <code>{{ hash }}</code>
+                  </p>
+                }
+              </details>
+            }
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="empty">
+        @if (context()) {
+          <strong>Conversație</strong>
+        } @else if (loading()) {
+          <p class="loading-pill" role="status">Se încarcă rularea…</p>
+        } @else {
+          <strong>Nicio rulare selectată.</strong>
+        }
+      </div>
+    }
+  </div>
+
+  <form class="composer" (ngSubmit)="ask()">
+    <div class="suggestions" role="group" aria-label="Sugestii">
+      <button
+        type="button"
+        class="btn-sm chip"
+        [disabled]="!context() || busy() || !canForecast()"
+        (click)="forecast()"
+      >
+        @if (canForecast() || !context()) {
+          Prognoză {{ forecastMinutes }} min
+        } @else if (forecastLimit() >= 0) {
+          Prognoză: alege minutul ≤ {{ forecastLimit() }}
+        } @else {
+          Prognoză indisponibilă
+        }
+      </button>
+      <button
+        type="button"
+        class="btn-sm chip"
+        [disabled]="!context() || busy()"
+        (click)="events()"
+      >
+        Evenimente în zonă
+      </button>
+    </div>
+    <div class="input">
+      <textarea
+        name="question"
+        [(ngModel)]="question"
+        rows="1"
+        maxlength="1000"
+        aria-label="Întrebare despre zona selectată"
+        [disabled]="!context()"
+        (keydown.enter)="enter($event)"
+      ></textarea>
+      <button type="submit" [disabled]="!context() || !question.trim() || busy()">Trimite</button>
+    </div>
+  </form>
+</section>

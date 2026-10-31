@@ -1,0 +1,108 @@
+<section class="panel" [attr.aria-busy]="loading() || busy()">
+  <header class="panel-heading"><h2>Resurse integrate</h2></header>
+  <div class="panel-body">
+
+
+    @if (message()) { <p role="alert">{{ message() }}</p> }
+    @if (busy()) { <p role="status">Se procesează cererea…</p> }
+    @if (loading()) { <p role="status">Se încarcă resursele…</p> }
+    @if (!settings() && !loading()) { <button type="button" class="btn btn-secondary" (click)="load()">Reîncearcă încărcarea</button> }
+    @if (settings(); as settings) {
+      <p>Revizia {{ settings.revision }} · {{ settings.resources ? 'Model integrat activ' : 'Model integrat dezactivat' }}</p>
+      @if (!settings.compatible) { <p role="status">Scenariu incompatibil: {{ settings.incompatibilityReason }}</p> }
+      @if (draft; as draft) {
+      <fieldset [disabled]="blocked() || !settings.compatible">
+        <legend>Disponibilitate și compatibilități declarate</legend>
+
+        <h3>Porți</h3>
+
+        @for (gate of draft.gates; track gate.gateId) {
+          <fieldset><legend>{{ name(gate.gateId) }}</legend>
+            @for (window of gate.availability; track $index; let i = $index) {
+              <div class="window">
+                <label>Disponibil de la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.startMinute" (ngModelChange)="edit()" /></label>
+                <label>Până la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.endMinute" (ngModelChange)="edit()" /></label>
+                <button type="button" class="btn btn-secondary" (click)="removeWindow(gate.availability, i)">Șterge intervalul</button>
+              </div>
+            }
+            <button type="button" class="btn btn-secondary" (click)="addWindow(gate.availability)">Adaugă disponibilitate</button>
+            <button type="button" class="btn btn-secondary" (click)="removeGate(gate.gateId)">Exclude poarta din evaluare</button>
+          </fieldset>
+        }
+        @for (gate of settings.gates; track gate.id) {
+          @if (!hasGate(gate.id)) { <button type="button" class="btn btn-secondary" [disabled]="draft.gates.length >= 50" (click)="includeGate(gate.id)">Include {{ gate.name }}</button> }
+        }
+        <h3>Personal disponibil pentru handling</h3>
+        @for (worker of draft.workers; track worker.staffMemberId) {
+          <fieldset><legend>{{ name(worker.staffMemberId) }}</legend>
+            <label>Competențe <input [ngModel]="worker.skills.join(', ')" (ngModelChange)="worker.skills = skills($event); edit()" /></label>
+            @for (window of worker.shifts; track $index; let i = $index) {
+              <div class="window">
+                <label>Tură de la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.startMinute" (ngModelChange)="edit()" /></label>
+                <label>Până la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.endMinute" (ngModelChange)="edit()" /></label>
+                <button type="button" class="btn btn-secondary" (click)="removeWindow(worker.shifts, i)">Șterge tura</button>
+              </div>
+            }
+            <button type="button" class="btn btn-secondary" (click)="addWindow(worker.shifts)">Adaugă tură</button>
+            <button type="button" class="btn btn-secondary" (click)="removeWorker(worker.staffMemberId)">Exclude persoana din evaluare</button>
+          </fieldset>
+        } @empty {
+          @if (freeStaff().length) {  }
+          @else { <p>Niciun operator disponibil pentru handling.</p> }
+        }
+        @for (worker of freeStaff(); track worker.id) {
+          @if (!hasWorker(worker.id)) { <button type="button" class="btn btn-secondary" [disabled]="draft.workers.length >= 200" (click)="includeWorker(worker.id)">Include {{ worker.name }}</button> }
+        }
+        <h3>Echipe de handling</h3>
+        @for (team of draft.teams; track team.teamId; let i = $index) {
+          <fieldset><legend>Echipă {{ i + 1 }}</legend>
+            <label>Nume <input maxlength="100" [(ngModel)]="team.name" (ngModelChange)="edit()" /></label>
+            <label>Membri (selecție multiplă)
+              <select multiple [(ngModel)]="team.memberIds" (ngModelChange)="edit()">@for (worker of draft.workers; track worker.staffMemberId) { <option [value]="worker.staffMemberId">{{ name(worker.staffMemberId) }}</option> }</select>
+            </label>
+            <label>Porți deservite (selecție multiplă)
+              <select multiple [(ngModel)]="team.gateIds" (ngModelChange)="edit()">@for (gate of draft.gates; track gate.gateId) { <option [value]="gate.gateId">{{ name(gate.gateId) }}</option> }</select>
+            </label>
+            <button type="button" class="btn btn-secondary" (click)="removeTeam(i)">Șterge echipa</button>
+          </fieldset>
+        }
+        <button type="button" class="btn btn-secondary" [disabled]="draft.teams.length >= 50" (click)="addTeam()">Adaugă echipă</button>
+        <h3>Cerințe pe zbor</h3>
+        @for (requirement of draft.requirements; track requirement.flightId) {
+          <fieldset><legend>{{ name(requirement.flightId) }} · {{ interval(requirement.flightId) }}</legend>
+            <label>Porți compatibile (selecție multiplă)
+              <select multiple [(ngModel)]="requirement.compatibleGateIds" (ngModelChange)="edit()">@for (gate of draft.gates; track gate.gateId) { <option [value]="gate.gateId">{{ name(gate.gateId) }}</option> }</select>
+            </label>
+            <label>Competențe necesare <input [ngModel]="requirement.requiredSkills.join(', ')" (ngModelChange)="requirement.requiredSkills = skills($event); edit()" /></label>
+            <label>Membri minimi <input type="number" min="1" max="100" [(ngModel)]="requirement.minimumTeamSize" (ngModelChange)="edit()" /></label>
+          </fieldset>
+        }
+      </fieldset>
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" [disabled]="blocked() || !settings.compatible || !draft.gates.length" (click)="save()">Salvează și activează modelul</button>
+        @if (settings.resources) { <button type="button" class="btn btn-secondary" [disabled]="blocked()" (click)="save(true)">Dezactivează modelul integrat</button> }
+        <label>Limită solver (secunde) <input type="number" min="0" max="30" step="any" [(ngModel)]="timeLimitSeconds" [disabled]="blocked()" /></label>
+        <button type="button" class="btn btn-primary" [disabled]="blocked() || !settings.compatible || !settings.resources || dirty()" (click)="propose()">Propune alocări integrate</button>
+      </div>
+      @if (!draft.gates.length) { <p>Include cel puțin o poartă înainte de activarea modelului.</p> }
+      @if (dirty()) { <p role="status">Salvează modificările pentru a evalua revizia actualizată.</p> }
+      }
+      @if (result(); as result) {
+        <section aria-live="polite">
+          <h3>{{ status(result) }}</h3>
+          <p>Propunere consultativă pentru revizia {{ result.constraints.scenarioRevision }}. Nicio alocare nu a fost aplicată.</p>
+          @if (result.score !== null) { <p>Schimbări de poartă: {{ result.score }} · limită inferioară demonstrată: {{ result.bestBound }}</p> }
+          @if (result.assignments.length) {
+            <div class="scroll"><table><caption>Alocări propuse</caption><thead><tr><th scope="col">Zbor</th><th scope="col">Interval</th><th scope="col">Poartă</th><th scope="col">Echipă handling</th><th scope="col">Membri</th></tr></thead>
+              <tbody>@for (assignment of result.assignments; track assignment.flightId) { <tr><td>{{ name(assignment.flightId) }}</td><td>{{ assignmentInterval(assignment.flightId) }}</td><td>{{ name(assignment.gateId) }}</td><td>{{ name(assignment.teamId) }}</td><td>{{ memberNames(assignment.teamId) }}</td></tr> }</tbody>
+            </table></div>
+          }
+          @if (result.rules.length) {
+
+            <ul>@for (rule of result.rules; track $index) { <li><strong>{{ rule.code }} · {{ name(rule.flightId) }} {{ name(rule.resourceId) }}</strong>: {{ rule.message }}</li> }</ul>
+          }
+        </section>
+      }
+    }
+  </div>
+</section>

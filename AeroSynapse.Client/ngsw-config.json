@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app-shell",
+      "installMode": "prefetch",
+      "resources": { "files": ["/index.html", "/favicon.ico", "/*.css", "/*.js", "/media/**"] }
+    },
+    {
+      "name": "airport-visuals",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": { "files": ["/models/**"] }
+    }
+  ],
+  "navigationUrls": ["/**", "!/**/*.*", "!/api/**"]
+}

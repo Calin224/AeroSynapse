@@ -1,0 +1,470 @@
+@if (requireConfirmation()) {
+  <section class="guided" aria-labelledby="recommendation-review-title">
+    <header class="guided-head">
+      <h3 id="recommendation-review-title">Decizie asupra recomandării</h3>
+      @if (review(); as item) {
+        <span class="status" [attr.data-status]="item.status">{{ status(item.status) }}</span>
+      }
+    </header>
+    @if (!review()) {
+      <button
+        appWriteAccess
+        class="btn-primary prepare"
+        type="button"
+        (click)="open()"
+        [disabled]="disabled() || busy() || !active()"
+      >
+        <i
+          class="pi"
+          [class.pi-spin]="busy()"
+          [class.pi-spinner]="busy()"
+          [class.pi-file-check]="!busy()"
+          aria-hidden="true"
+        ></i>
+        Pregătire decizie
+      </button>
+    }
+    @if (message()) {
+      <p class="hint" role="status" aria-live="polite">{{ message() }}</p>
+    }
+    @if (review(); as item) {
+      <div class="change">
+        <h4>Modificări propuse pentru aprobare</h4>
+        @if (meanWait(item); as wait) {
+          <p class="headline">
+            Așteptarea medie la control: <strong>{{ wait.before }}</strong>
+            <i class="pi pi-arrow-right" aria-hidden="true"></i> <strong>{{ wait.after }}</strong>
+          </p>
+        }
+        @if (schedule(item); as rows) {
+          <p>Planul pe ture înlocuiește alocarea fixă de referință:</p>
+          <ul class="people" aria-label="Alocări de personal: referință și plan pe ture">
+            @for (row of rows; track row.checkpointId) {
+              <li>
+                <i class="pi pi-users" aria-hidden="true"></i>
+                <strong>{{ row.name }}</strong>
+                <span class="from">azi {{ row.before }}</span>
+                <i class="pi pi-arrow-right" aria-hidden="true"></i
+                ><span class="visually-hidden">devine</span>
+                <span class="to"
+                  >pe ture {{ row.after
+                  }}{{ row.peak ? ' · maxim (' + row.most + ') la ' + row.peak : '' }}</span
+                >
+              </li>
+            }
+          </ul>
+        } @else {
+          <ul class="people" aria-label="Operatori mutați">
+            @for (resource of item.explanation.resources; track resource.staffMemberId) {
+              <li>
+                <i class="pi pi-user" aria-hidden="true"></i>
+                <strong>{{ resource.name }}</strong>
+                <span class="from">{{ resource.beforeCheckpoint }}</span>
+                <i class="pi pi-arrow-right" aria-hidden="true"></i
+                ><span class="visually-hidden">se mută la</span>
+                <span class="to">{{ resource.afterCheckpoint }}</span>
+              </li>
+            } @empty {
+              <li>Nicio persoană nu se mută.</li>
+            }
+          </ul>
+        }
+        <p class="hint">
+          {{ item.explanation.reallocatedPeople }}
+          {{ item.explanation.reallocatedPeople === 1 ? 'persoană se mută' : 'persoane se mută' }} ·
+          cost de reorganizare {{ item.explanation.reallocationCost }} puncte (unitate internă de
+          comparație între variante).
+        </p>
+      </div>
+      @if (item.explanation.risks.length) {
+        <div class="note">
+          <h4><i class="pi pi-info-circle" aria-hidden="true"></i> Riscuri și limitări</h4>
+          <ul>
+            @for (risk of item.explanation.risks; track $index) {
+              <li>{{ risk }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (item.status === 'pending') {
+        <div class="decision">
+          <h4>Aprobare sau respingere</h4>
+          @if (approvalProblem()) {
+            <p class="problem" role="alert">{{ approvalProblem() }}</p>
+          }
+          @if (stale()) {
+            <p class="problem" role="alert">
+              Scenariul s-a modificat de la evaluare. Aprobarea necesită o evaluare nouă.
+              Recomandarea poate fi respinsă.
+            </p>
+          }
+          <label
+            >Nume operator<input
+              name="reviewOperator"
+              [(ngModel)]="operator"
+              maxlength="160"
+              required
+              autocomplete="name"
+              [disabled]="busy()"
+          /></label>
+          <label
+            >Motivul deciziei (opțional)<textarea
+              name="reviewReason"
+              [(ngModel)]="reason"
+              maxlength="2000"
+              rows="2"
+              [disabled]="busy()"
+            ></textarea>
+          </label>
+          <label class="check"
+            ><input
+              type="checkbox"
+              name="confirmReview"
+              [(ngModel)]="confirmed"
+              [disabled]="busy()"
+            /><span
+              >Confirm aplicarea realocărilor de personal indicate în scenariul demonstrativ.</span
+            ></label
+          >
+          <div class="actions">
+            <button
+              appWriteAccess
+              class="btn-primary"
+              type="button"
+              (click)="decide('approve')"
+              [disabled]="
+                !online() ||
+                disabled() ||
+                busy() ||
+                !active() ||
+                !!approvalProblem() ||
+                !operator.trim() ||
+                !confirmed
+              "
+            >
+              <i class="pi pi-check" aria-hidden="true"></i> Aprobă și aplică
+            </button>
+            <button
+              appWriteAccess
+              type="button"
+              (click)="decide('reject')"
+              [disabled]="
+                !online() || readOnly() || disabled() || busy() || !active() || !operator.trim()
+              "
+            >
+              Respinge
+            </button>
+          </div>
+        </div>
+      } @else {
+        <p class="outcome" [attr.data-status]="item.status">
+          {{
+            item.status === 'approved'
+              ? 'Schimbarea a fost aplicată în scenariul demo și înregistrată în audit.'
+              : 'Recomandarea a fost respinsă; scenariul a rămas neschimbat.'
+          }}
+        </p>
+      }
+      <details>
+        <summary>Toate estimările din simulator</summary>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Estimări, derulabil">
+          <table>
+            <caption>
+              Δ = după − înainte. Riscul de boarding folosește puncte procentuale pentru Δ.
+            </caption>
+            <thead>
+              <tr>
+                <th>Metrică</th>
+                <th>Înainte</th>
+                <th>După</th>
+                <th>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (estimate of item.explanation.estimates; track $index) {
+                <tr>
+                  <th scope="row">{{ estimate.metric }} ({{ estimate.unit }})</th>
+                  <td>{{ estimate.before | number: '1.0-4' }}</td>
+                  <td>{{ estimate.after | number: '1.0-4' }}</td>
+                  <td>{{ estimate.delta | number: '1.0-4' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <details>
+        <summary>Premise, limite și identificatori</summary>
+        <p>
+          Recomandare {{ item.id }} · revizia evaluată {{ item.scenarioRevision }} · baselineRunId
+          {{ item.baselineRunId }} · candidateRunId {{ item.candidateRunId }}. Autorul auditului
+          este stabilit din sesiunea autentificată pe server.
+        </p>
+        <ul>
+          @for (assumption of item.explanation.assumptions; track $index) {
+            <li>{{ assumption }}</li>
+          }
+        </ul>
+        <ul>
+          @for (
+            constraint of item.explanation.constraints.checkpoints;
+            track constraint.checkpointId
+          ) {
+            <li>
+              {{ checkpointName(constraint.checkpointId) }}: min {{ constraint.minimumStaff }}, max
+              {{ constraint.maximumStaff }}, limită fizică {{ constraint.physicalLimit }},
+              cost/schimbare {{ constraint.changeCost }} puncte.
+            </li>
+          }
+        </ul>
+        <ul>
+          @for (resource of item.explanation.resources; track resource.staffMemberId) {
+            <li>{{ resource.name }}: {{ resource.staffMemberId }}</li>
+          }
+        </ul>
+      </details>
+      <details>
+        <summary>Istoric audit ({{ item.audit.length }})</summary>
+        <ol>
+          @for (entry of item.audit; track entry.id) {
+            <li>
+              {{ entry.recordedAtUtc | date: 'dd.MM.yyyy HH:mm' : 'UTC' }} UTC ·
+              {{ status(entry.action) }} · {{ entry.actor }}
+              @if (entry.reason) {
+                · „{{ entry.reason }}”
+              }
+            </li>
+          }
+        </ol>
+      </details>
+      <button
+        appWriteAccess
+        type="button"
+        class="link-button"
+        (click)="open()"
+        [disabled]="disabled() || busy() || !active()"
+      >
+        Reîncarcă recomandarea și auditul
+      </button>
+    }
+  </section>
+} @else {
+  <section aria-labelledby="recommendation-review-title">
+    <h3 id="recommendation-review-title">Recomandare explicabilă · decizie umană</h3>
+
+    <button
+      appWriteAccess
+      type="button"
+      (click)="open()"
+      [disabled]="disabled() || busy() || !active()"
+    >
+      {{ review() ? 'Reîncarcă recomandarea și auditul' : 'Deschide recomandarea verificabilă' }}
+    </button>
+    @if (message()) {
+      <p role="status" aria-live="polite">{{ message() }}</p>
+    }
+    @if (review(); as item) {
+      <p>
+        <strong>{{ status(item.status) }}</strong> · {{ item.id }} · revizia evaluată
+        {{ item.scenarioRevision }}
+      </p>
+      <p>baselineRunId: {{ item.baselineRunId }}<br />candidateRunId: {{ item.candidateRunId }}</p>
+
+      <p>{{ item.explanation.benefit }}</p>
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Alocări de personal înainte / după
+          </caption>
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>Înainte</th>
+              <th>După</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (checkpoint of item.explanation.checkpoints; track checkpoint.checkpointId) {
+              <tr>
+                <th scope="row">{{ checkpoint.name }}</th>
+                <td>{{ checkpoint.before }}</td>
+                <td>{{ checkpoint.after }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>
+        {{ item.explanation.reallocatedPeople }} persoane realocate · cost
+        {{ item.explanation.reallocationCost }} puncte.
+      </p>
+      <ul>
+        @for (resource of item.explanation.resources; track resource.staffMemberId) {
+          <li>
+            {{ resource.name }} ({{ resource.staffMemberId }}): {{ resource.beforeCheckpoint }} →
+            {{ resource.afterCheckpoint }}
+          </li>
+        }
+      </ul>
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Estimări din simulator; Δ = după − înainte. Riscul de boarding folosește puncte
+            procentuale pentru Δ.
+          </caption>
+          <thead>
+            <tr>
+              <th>Metrică</th>
+              <th>Înainte</th>
+              <th>După</th>
+              <th>Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (estimate of item.explanation.estimates; track $index) {
+              <tr>
+                <th scope="row">{{ estimate.metric }} ({{ estimate.unit }})</th>
+                <td>{{ estimate.before | number: '1.0-4' }}</td>
+                <td>{{ estimate.after | number: '1.0-4' }}</td>
+                <td>{{ estimate.delta | number: '1.0-4' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <h4>Premise</h4>
+      <ul>
+        @for (assumption of item.explanation.assumptions; track $index) {
+          <li>{{ assumption }}</li>
+        }
+      </ul>
+      <h4>Restricții capturate</h4>
+      <p>Buget total {{ item.explanation.constraints.availableStaff }} persoane.</p>
+      <ul>
+        @for (pool of item.explanation.constraints.staffPools; track pool.terminalId) {
+          <li>Terminal {{ pool.terminalId }}: maximum {{ pool.availableStaff }} persoane.</li>
+        }
+      </ul>
+      <ul>
+        @for (
+          constraint of item.explanation.constraints.checkpoints;
+          track constraint.checkpointId
+        ) {
+          <li>
+            {{ checkpointName(constraint.checkpointId) }}: min {{ constraint.minimumStaff }}, max
+            {{ constraint.maximumStaff }}, limită fizică {{ constraint.physicalLimit }}, obligatoriu
+            deschis: {{ constraint.requiredOpen ? 'da' : 'nu' }}, închis:
+            {{ constraint.closed ? 'da' : 'nu' }}, cost/schimbare
+            {{ constraint.changeCost }} puncte.
+          </li>
+        }
+      </ul>
+      <p>
+        Toleranțe: waiting +{{ item.explanation.acceptancePolicy.maxMeanWaitIncreaseMinutes }} min;
+        P95 +{{ item.explanation.acceptancePolicy.maxP95IncreaseMinutes }} min; risc boarding +{{
+          item.explanation.acceptancePolicy.maxBoardingRiskIncrease * 100 | number: '1.0-4'
+        }}
+        puncte procentuale; neprocesați +{{
+          item.explanation.acceptancePolicy.maxUnprocessedIncrease
+        }}; cost maxim {{ item.explanation.acceptancePolicy.maxReallocationCost }} puncte.
+      </p>
+      <h4>Riscuri și compromisuri</h4>
+      <ul>
+        @for (risk of item.explanation.risks; track $index) {
+          <li>{{ risk }}</li>
+        }
+      </ul>
+      @if (item.status === 'pending') {
+        @if (approvalProblem()) {
+          <p role="alert">{{ approvalProblem() }}</p>
+        }
+        @if (stale()) {
+          <p role="alert">
+            Scenariul s-a modificat de la evaluare. Aprobarea necesită o evaluare nouă. Recomandarea
+            poate fi respinsă.
+          </p>
+        }
+        <label
+          >Operator (identitate declarată pentru demo)<input
+            name="reviewOperator"
+            [(ngModel)]="operator"
+            maxlength="160"
+            required
+            [disabled]="busy()"
+        /></label>
+        <label
+          >Motivul deciziei<textarea
+            name="reviewReason"
+            [(ngModel)]="reason"
+            maxlength="2000"
+            [disabled]="busy()"
+          ></textarea>
+        </label>
+        @if (requireConfirmation()) {
+          <label
+            ><span
+              ><input
+                type="checkbox"
+                name="confirmReview"
+                [(ngModel)]="confirmed"
+                [disabled]="busy()"
+              />
+              Am verificat comparația, limitele și riscurile. Confirm aplicarea în scenariul
+              DEMO.</span
+            ></label
+          >
+        }
+        <div class="actions">
+          <button
+            appWriteAccess
+            class="btn-primary"
+            type="button"
+            (click)="decide('approve')"
+            [disabled]="
+              !online() ||
+              disabled() ||
+              busy() ||
+              !active() ||
+              !!approvalProblem() ||
+              !operator.trim() ||
+              (requireConfirmation() && !confirmed)
+            "
+          >
+            Approve · Aplică în DEMO
+          </button>
+          <button
+            appWriteAccess
+            type="button"
+            (click)="decide('reject')"
+            [disabled]="
+              !online() || readOnly() || disabled() || busy() || !active() || !operator.trim()
+            "
+          >
+            Reject · Respinge
+          </button>
+        </div>
+      }
+      <h4>Audit</h4>
+      <ol>
+        @for (entry of item.audit; track entry.id) {
+          <li>
+            {{ entry.recordedAtUtc | date: 'dd.MM.yyyy HH:mm:ss' : 'UTC' }} UTC ·
+            {{ status(entry.action) }} · {{ entry.actor }} · revizia
+            {{ entry.scenarioRevisionBefore }} → {{ entry.scenarioRevisionAfter }}
+            @if (entry.reason) {
+              · {{ entry.reason }}
+            }
+            <details>
+              <summary>Identificator și intrări auditate</summary>
+              <p>commandId: {{ entry.commandId }}</p>
+              <p>Înainte</p>
+              <pre>{{ entry.beforeJson }}</pre>
+              <p>După</p>
+              <pre>{{ entry.afterJson }}</pre>
+            </details>
+          </li>
+        }
+      </ol>
+    }
+  </section>
+}

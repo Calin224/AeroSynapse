@@ -1,92 +1,320 @@
-<div class="page-heading">
+<header class="tower-heading">
   <div>
-    <p class="eyebrow">AIRPORT INTELLIGENCE</p>
     <h1>Control Tower</h1>
-    <p class="page-description">O perspectivă comună asupra operațiunilor aeroportuare.</p>
   </div>
-  <p-button
-    label="Actualizează"
-    icon="pi pi-refresh"
-    [outlined]="true"
-    [disabled]="resource.state().status === 'loading'"
-    (onClick)="resource.reload()"
-  />
-</div>
-@let state = resource.state();
-@if (state.status === 'ready') {
-  @if (state.data; as snapshot) {
-    <div class="metrics">
-      @for (metric of snapshot.metrics; track metric.label) {
-        <article class="panel metric">
-          <div class="metric-label">
-            {{ metric.label }}<i [class]="'pi ' + metric.icon" aria-hidden="true"></i>
-          </div>
-          <strong>{{ metric.value }}</strong
-          ><span>{{ metric.detail }}</span>
-        </article>
+</header>
+
+<section
+  class="selection panel"
+  aria-label="Context operațional"
+  [attr.aria-busy]="store.loading()"
+>
+  <label for="tower-scenario"
+    >Scenariu
+    <select
+      id="tower-scenario"
+      [value]="store.selected()?.scenario?.id ?? ''"
+      [disabled]="store.loading() || store.busy()"
+      (change)="selectScenario($event)"
+    >
+      <option value="" disabled>Selectează un scenariu</option>
+      @for (scenario of store.scenarios(); track scenario.id) {
+        <option [value]="scenario.id">{{ scenario.name }} · {{ scenario.code }}</option>
       }
-    </div>
-    <div class="dashboard-grid">
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Digital Twin · {{ snapshot.airport }}</h2>
-            <p>{{ snapshot.code }} / Model aeroportuar demonstrativ</p>
-          </div>
-          <span class="pill">SCENĂ DEMO</span>
-        </div>
-        <app-digital-twin [scene]="snapshot.scene" />
-        <div class="twin-footer">
-          <span><span class="status-dot"></span> Vizualizare 3D interactivă</span
-          ><span>Trage pentru rotire · Scroll pentru zoom</span>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Mișcări aeronave</h2>
-            <p>Planificare ilustrativă · date locale</p>
-          </div>
-          <i class="pi pi-arrows-v" aria-hidden="true"></i>
-        </div>
-        @if (snapshot.flights.length) {
-          <div class="flight-list">
-            @for (flight of snapshot.flights; track flight.id) {
-              <article class="flight">
-                <div class="flight-icon"><i class="pi pi-send" aria-hidden="true"></i></div>
-                <div>
-                  <strong>{{ flight.id }}</strong
-                  ><span>{{ flight.destination }} · {{ flight.gate }}</span>
-                </div>
-                <span class="flight-status">{{ flight.status }}</span>
-              </article>
-            }
-          </div>
-        } @else {
-          <app-data-state
-            status="empty"
-            emptyMessage="Nu există mișcări de aeronave planificate."
-            (retry)="resource.reload()"
-          />
-        }
-        <div class="demo-note">
-          <i class="pi pi-info-circle" aria-hidden="true"></i>
-          <p>
-            Acest mediu demonstrează infrastructura Digital Twin. Datele nu reflectă operațiuni
-            reale.
-          </p>
-        </div>
-      </section>
-    </div>
-  }
-} @else {
-  <div class="panel">
-    <app-data-state
-      [status]="state.status"
-      label="operațiunile aeroportului"
-      [message]="state.status === 'error' ? state.message : ''"
-      emptyMessage="Nu există un aeroport configurat."
-      (retry)="resource.reload()"
-    />
+    </select>
+  </label>
+  <label for="tower-run"
+    >Rulare {{ store.runs().length }}
+    <select
+      id="tower-run"
+      [value]="store.selectedRunId() ?? ''"
+      [disabled]="!store.selected() || store.loading() || store.busy() || !store.runs().length"
+      (change)="selectRun($event)"
+    >
+      <option value="" disabled>
+        {{ store.runLoading() ? 'Se încarcă rularea…' : 'Nicio rulare selectată' }}
+      </option>
+      @for (run of store.runs(); track run.id) {
+        <option [value]="run.id">
+          {{ run.id.slice(0, 8) }} · {{ statusLabel(run.status) }} · rev.
+          {{ run.scenarioRevision }} · seed {{ run.seed }}
+        </option>
+      }
+    </select>
+  </label>
+  <p-button
+    appWriteAccess
+    label="Pornește simularea"
+    ariaLabel="Pornește simularea"
+    icon="pi pi-play"
+    [disabled]="!store.canLaunch()"
+    [loading]="store.busy()"
+    (onClick)="store.launch()"
+  />
+</section>
+
+@if (store.message()) {
+  <div class="notice" role="alert">
+    {{ store.message() }} <button type="button" (click)="store.reload()">Reîncearcă</button>
   </div>
+}
+@if (store.actionError()) {
+  <div class="notice" role="alert">
+    {{ store.actionError() }}
+    @if (store.retryCommand()) {
+      <button type="button" [disabled]="store.busy()" (click)="store.resumeLaunch()">
+        Reverifică aceeași comandă
+      </button>
+    }
+  </div>
+}
+@if (store.retryCommand() && !store.actionError()) {
+  <p class="notice" role="status">
+    O comandă de simulare așteaptă confirmarea.
+    <button type="button" [disabled]="store.busy()" (click)="store.resumeLaunch()">
+      Reverifică aceeași comandă
+    </button>
+  </p>
+}
+@if (store.pendingScenarioId() && !store.retryCommand() && !store.loading()) {
+  <p class="notice" role="status">
+    O comandă din alt scenariu așteaptă confirmarea.
+    <button type="button" [disabled]="store.busy()" (click)="store.resumeLaunch()">
+      Reverifică aceeași comandă
+    </button>
+    <button type="button" (click)="store.returnToCommand()">Revino la scenariul comenzii</button>
+  </p>
+}
+@if (store.loading() || store.runLoading()) {
+  <p class="loading" role="status">Se încarcă…</p>
+} @else if (store.context(); as context) {
+  <section
+    class="run-strip"
+    [attr.data-connection]="store.live.status()"
+    aria-label="Status simulare"
+    aria-live="polite"
+    [attr.data-scenario-id]="context.scenario.scenario.id"
+    [attr.data-run-id]="store.run()?.id"
+  >
+    <div class="run-state" [attr.data-state]="store.status()">
+      <span class="status-dot"></span
+      ><strong>{{
+        store.runLoading()
+          ? 'Se încarcă rularea…'
+          : store.status()
+            ? statusLabel(store.status())
+            : 'Scenariu pregătit'
+      }}</strong>
+    </div>
+    <div>
+      <span>Timp virtual</span><strong data-testid="tower-clock">{{ store.clock() ?? '—' }}</strong
+      ><small>{{ context.scenario.inputs.timeZone }}</small>
+    </div>
+    <div>
+      <span>Minut simulat</span
+      ><strong
+        >{{ store.minute() === null ? '—' : (store.minute() | number: '1.0-1') }} /
+        {{ context.scenario.inputs.durationMinutes }}</strong
+      >
+    </div>
+    @if (store.run(); as run) {
+      <div
+        class="progress-track"
+        role="progressbar"
+        aria-label="Progres în timpul simulat"
+        [attr.aria-valuenow]="store.minute()"
+        aria-valuemin="0"
+        [attr.aria-valuemax]="context.scenario.inputs.durationMinutes"
+      >
+        <span
+          [style.width.%]="
+            store.minute() === null
+              ? 0
+              : (100 * store.minute()!) / context.scenario.inputs.durationMinutes
+          "
+        ></span>
+      </div>
+    }
+  </section>
+  @if (store.runError()) {
+    <p class="notice" role="alert">
+      {{ store.runError() }} Ultima observație confirmată rămâne afișată.
+    </p>
+  }
+  @if (store.live.error()) {
+    <p class="notice" role="status">{{ store.live.error() }}</p>
+  }
+  @if (store.run()?.failureReason || store.run()?.error) {
+    <p class="notice" role="alert">
+      {{ store.run()?.failureReason ?? store.run()?.error?.message }}
+    </p>
+  }
+  @if (store.run()?.status === 'completed' && !store.run()?.resultsValid) {
+    <p class="notice" role="alert">
+      Rezultatele rulării sunt invalide. KPI-urile nu sunt prezentate ca rezultate confirmate.
+    </p>
+  }
+  @if (store.run() && context.scenario.scenario.revision !== store.selected()?.scenario?.revision) {
+    <p class="capture-note">
+      Captură istorică · revizia {{ context.scenario.scenario.revision }}. Scenariul curent este la
+      revizia {{ store.selected()?.scenario?.revision }}; o simulare nouă folosește configurația
+      curentă.
+    </p>
+  }
+
+  @if (store.run(); as run) {
+    @if (run.status === 'completed' && run.resultsValid) {
+      <app-bottleneck-diagnosis
+        [heatmap]="store.heatmap()"
+        [inputs]="context.scenario.inputs"
+        [scenarioId]="context.scenario.scenario.id"
+        [runId]="run.id"
+      />
+    }
+  }
+
+  @if (focusedZone(); as zone) {
+    <p class="notice" role="status" [attr.data-focused-zone]="zone.id">
+      Zona afectată: <strong>{{ zone.name }}</strong> · {{ zone.code }}. Resursele și KPI-urile de
+      mai jos aparțin run-ului selectat.
+    </p>
+  } @else if (focusedZoneId()) {
+    <p class="notice" role="alert">
+      Zona solicitată nu se află în captura acestui run. Verifică legătura din alertă.
+    </p>
+  }
+  <dl class="kpi-grid" aria-label="Indicatori terminal" [attr.data-run-id]="store.run()?.id">
+    <div>
+      <dt>Procesați cumulat<i class="pi pi-check-circle" aria-hidden="true"></i></dt>
+      <dd data-testid="tower-processed">
+        {{
+          store.metrics().processed === null ? '—' : (store.metrics().processed | number: '1.0-0')
+        }}
+      </dd>
+    </div>
+    <div>
+      <dt>În coadă<i class="pi pi-users" aria-hidden="true"></i></dt>
+      <dd data-testid="tower-queue">
+        {{ store.metrics().queued === null ? '—' : (store.metrics().queued | number: '1.0-0') }}
+      </dd>
+    </div>
+    <div>
+      <dt>Așteptare medie<i class="pi pi-clock" aria-hidden="true"></i></dt>
+      <dd>
+        {{ store.metrics().meanWait === null ? '—' : (store.metrics().meanWait | number: '1.0-2')
+        }}<span> min</span>
+      </dd>
+    </div>
+    <div>
+      <dt>P95 maxim pe control<i class="pi pi-chart-line" aria-hidden="true"></i></dt>
+      <dd>
+        {{ store.metrics().maxP95 === null ? '—' : (store.metrics().maxP95 | number: '1.0-2')
+        }}<span> min</span>
+      </dd>
+    </div>
+  </dl>
+
+  <div
+    class="workspace-grid"
+    [attr.data-scenario-id]="context.scenario.scenario.id"
+    [attr.data-run-id]="store.run()?.id"
+  >
+    <section class="viewport-panel panel" aria-labelledby="twin-heading">
+      <header class="panel-title">
+        <h2 id="twin-heading">Terminal Digital Twin</h2>
+      </header>
+      @if (!store.runLoading()) {
+        <app-digital-twin [scene]="store.scene()" [dashboardMode]="true" />
+      } @else {
+        <p class="loading" role="status">Se citește captura rulării…</p>
+      }
+    </section>
+    <aside class="rail" aria-label="Incidente și resurse">
+      <app-agent-panel
+        [scenario]="store.selected()"
+        [controls]="context.layout.layout.checkpoints.length"
+        [runId]="store.run()?.id ?? null"
+        [tracked]="!!context.scenario.inputs.agent"
+        [running]="active(store.status())"
+        (changed)="store.reload()"
+      />
+      <section class="panel incidents" aria-labelledby="incidents-title">
+        <header class="panel-title">
+          <h2 id="incidents-title">Incidente / evenimente</h2>
+          <span>{{ store.incidents().length }}</span>
+        </header>
+        <div class="panel-scroll" tabindex="0" aria-label="Lista incidentelor">
+          @for (incident of store.incidents(); track incident.id) {
+            <article [attr.data-phase]="incident.phase">
+              <div>
+                <strong>{{ incident.label }}</strong
+                ><small>{{ incident.phase }}</small>
+              </div>
+              <p>{{ incident.target }} · min {{ incident.minute | number: '1.0-1' }}</p>
+              <p>{{ incident.detail }}</p>
+            </article>
+          } @empty {
+            <p class="empty">Scenariul selectat nu conține incidente programate.</p>
+          }
+        </div>
+      </section>
+      <section class="panel resource-panel" aria-labelledby="resources-title">
+        <header class="panel-title">
+          <h2 id="resources-title">Resurse</h2>
+          <span>{{ context.layout.layout.gates.length }} porți</span>
+        </header>
+        <div class="panel-scroll" tabindex="0" aria-label="Resursele scenariului">
+          <table>
+            <caption>
+              Alocare nominală
+              {{
+                store.run() ? 'capturată în run' : 'din scenariu'
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th>Control</th>
+                <th>Operatori</th>
+                <th>Rată / operator</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (resource of resources(); track resource.id) {
+                <tr [class.focused-zone]="resource.id === focusedZoneId()">
+                  <th scope="row">{{ resource.code }}</th>
+                  <td [title]="resource.people">{{ resource.staff }}</td>
+                  <td>{{ resource.capacityPerMinute | number: '1.0-2' }} pax/min</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (context.scenario.inputs.integratedResources; as integrated) {
+            <p class="panel-note">
+              {{ integrated.teams.length }} echipe handling ·
+              {{ integrated.workers.length }} lucrători ·
+              {{ integrated.requirements.length }} cerințe de zbor
+            </p>
+          }
+        </div>
+      </section>
+    </aside>
+    <section class="panel trends" aria-label="Grafice operaționale">
+      <app-tower-trends
+        [points]="store.metrics().points"
+        [contextKey]="store.run()?.id ?? ''"
+        [source]="
+          store.heatmap()?.source === 'live-preview' ? 'Simulare în curs' : 'Evoluția simulării'
+        "
+      />
+    </section>
+  </div>
+} @else if (!store.message()) {
+  <section class="panel empty-state">
+    <span class="empty-illustration"><i class="pi pi-compass" aria-hidden="true"></i></span>
+    <h2>Niciun scenariu disponibil</h2>
+
+    <div class="empty-actions">
+      <a appWriteAccess routerLink="/scenario-studio">Deschide Scenario Studio</a>
+    </div>
+  </section>
 }

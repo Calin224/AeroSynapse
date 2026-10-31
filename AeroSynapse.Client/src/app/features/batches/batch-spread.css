@@ -1,0 +1,237 @@
+:host {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.legend,
+.often ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.key-dot,
+.often i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--c, var(--text-muted));
+}
+.key-band {
+  width: 1.4rem;
+  height: 0.7rem;
+  border-radius: var(--radius);
+  background: var(--surface-hover);
+}
+.key-median {
+  width: 2px;
+  height: 0.9rem;
+  background: var(--text);
+}
+.plot {
+  display: grid;
+  gap: 0.25rem;
+}
+.lane,
+.axis {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+.lane-label {
+  display: grid;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.lane-label strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag {
+  color: var(--c);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  filter: brightness(0.8);
+}
+.track {
+  position: relative;
+  border-radius: var(--radius);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--border) 0 25%),
+    var(--surface-sunken);
+  transition: none;
+}
+.band,
+.median,
+.limit {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.band {
+  height: 1.6rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  transition: none;
+}
+.median {
+  width: 2px;
+  height: 2rem;
+  margin-left: -1px;
+  background: var(--text);
+  transition: none;
+}
+.limit {
+  top: -0.25rem;
+  bottom: -0.25rem;
+  width: 0;
+  transform: none;
+  border-left: 2px dashed var(--danger);
+}
+.dot {
+  position: absolute;
+  top: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--c);
+  opacity: 0.45;
+  transform: translate(-50%, calc(-50% + var(--y)));
+  transition: none;
+  animation: drop 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+  animation-delay: calc(var(--i) * 45ms);
+}
+.dot::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem;
+}
+.dot.past {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--danger);
+}
+.dot:hover,
+.dot.on,
+.dot:focus-visible {
+  z-index: 2;
+  opacity: 1;
+  background: var(--c);
+  transform: translate(-50%, calc(-50% + var(--y))) scale(1.45);
+}
+.dot.on::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: 140%;
+  left: 50%;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--panel);
+  font-size: 0.55rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -260%);
+  }
+}
+.waiting {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.axis {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.axis span {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  width: max-content;
+  transform: translateX(-50%);
+}
+.caption {
+  min-height: 2.6rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  font-size: 0.88rem;
+}
+.often {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--warning-line);
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+}
+.often label {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.often input {
+  width: 100%;
+  accent-color: var(--danger);
+}
+.often ul {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--text);
+}
+.often li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.often li span {
+  color: var(--text-muted);
+}
+td {
+  white-space: normal !important;
+}
+.cell {
+  display: inline-block;
+  margin-right: 0.9rem;
+}
+@media (max-width: 650px) {
+  .lane,
+  .axis {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+  .axis span {
+    grid-column: 1;
+  }
+  .lane + .lane {
+    margin-top: 0.5rem;
+  }
+}

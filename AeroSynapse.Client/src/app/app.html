@@ -1,14 +1,5 @@
 <a class="skip-link" href="#main-content" (click)="skipToContent($event)">Sari la conținut</a>
-<div class="app-shell">
-  <app-sidebar />
-  <div class="workspace">
-    <header class="topbar">
-      <span class="crumbs"
-        >Operațiuni aeroportuare <span class="header-divider">/</span>
-        <strong>Digital Twin</strong></span
-      ><span class="environment"><span class="status-dot"></span>DEMO</span>
-    </header>
-    <main #mainContent id="main-content" tabindex="-1"><router-outlet /></main>
-    <footer class="workspace-footer"><span>AeroSynapse AI</span><app-service-status /></footer>
-  </div>
-</div>
+<app-header />
+<main #mainContent id="main-content" tabindex="-1">
+  <app-response-status /><router-outlet (activate)="routeActivated()" />
+</main>

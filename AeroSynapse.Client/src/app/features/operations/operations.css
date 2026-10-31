@@ -1,44 +1,551 @@
 :host {
   display: block;
+  --ease: 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.management-grid {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.4fr);
-  gap: 24px;
-  align-items: start;
-  margin-bottom: 24px;
+.page-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.page-heading > :first-child,
+.page-heading > :not(:first-child) {
+  grid-column: auto;
+}
+.page-actions {
+  justify-content: flex-end;
 }
 .page-heading + .notice {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
-.numbers {
+
+/* Hero: what this scenario is (left) and what to do with it (right). */
+.hero {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  border: var(--dp-border-rule) solid var(--text);
+  background: var(--panel);
+  animation: rise 320ms var(--ease) both;
 }
-.configuration {
+.hero-main {
   display: grid;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 20px;
+  align-content: start;
+  gap: 6px;
+  padding: 24px 26px;
+}
+.hero h2 {
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: var(--dp-typography-display);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.hero-description {
+  max-width: 62ch;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
   border-top: 1px solid var(--border);
 }
-.configuration p {
+.facts button {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding: 14px 12px 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+  transition: color var(--ease);
+}
+.facts button span {
+  color: var(--text-muted);
+  font-size: var(--dp-typography-label);
+  letter-spacing: var(--dp-typography-label-tracking);
+  text-transform: uppercase;
+}
+.facts strong {
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: var(--dp-typography-display);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.facts button:hover,
+.facts button:focus-visible {
+  background: none;
+  color: var(--signal);
+}
+.facts button:hover span {
+  color: var(--signal);
+}
+
+/* Run deck: inverted block, the one place to start and follow a run. */
+.deck {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 24px;
+  background: var(--text);
+  color: var(--on-accent);
+}
+.deck p {
+  margin: 0;
+}
+.deck-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.deck-status .when {
+  opacity: 0.7;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+[data-status='completed'] > .dot {
+  background: #3ddc84;
+  opacity: 1;
+}
+[data-status='failed'] > .dot {
+  background: var(--signal);
+  opacity: 1;
+}
+[data-status='pending'] > .dot,
+[data-status='planned'] > .dot,
+[data-status='running'] > .dot {
+  background: var(--signal);
+  opacity: 1;
+  animation: pulse 1s ease-in-out infinite;
+}
+.meter {
+  height: 8px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.18);
+}
+.meter span {
+  display: block;
+  height: 100%;
+  min-width: 4%;
+  background: repeating-linear-gradient(
+      -45deg,
+      transparent 0 8px,
+      rgb(255 255 255 / 0.25) 8px 16px
+    )
+    var(--signal);
+  background-size: 22px 100%;
+  transition: width 600ms var(--ease);
+  animation: stripes 700ms linear infinite;
+}
+.meter-label {
+  margin-top: -6px !important;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.deck .run {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  border: var(--dp-border-rule) solid var(--on-accent);
+  background: var(--on-accent);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: var(--dp-typography-strong);
+  transition:
+    background var(--ease),
+    color var(--ease),
+    border-color var(--ease);
+}
+.deck .run:hover:not(:disabled) {
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--on-accent);
+}
+.deck .run:disabled {
+  opacity: 0.75;
+}
+.history {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+}
+.history-label {
+  font-size: var(--dp-typography-label);
+  letter-spacing: var(--dp-typography-label-tracking);
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.history-runs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.history-runs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  background: transparent;
+  color: var(--on-accent);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+  transition:
+    background var(--ease),
+    border-color var(--ease);
+}
+.history-runs button:hover {
+  border-color: var(--on-accent);
+  background: rgb(255 255 255 / 0.1);
+}
+.history-runs button.selected {
+  border-color: var(--on-accent);
+  background: var(--on-accent);
+  color: var(--text);
+}
+.deck-error {
+  color: #ff8a8a;
   font-size: 13px;
 }
-.configuration .btn-primary {
-  justify-self: start;
+
+/* Two steps instead of ten equal tabs. */
+.phases {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  margin-top: 20px;
+  border: var(--dp-border-rule) solid var(--text);
 }
-.run-status {
-  margin-top: 24px;
+.phases button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 76px;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+  transition:
+    background var(--ease),
+    color var(--ease);
 }
-@media (max-width: 1100px) {
-  .management-grid {
+.phases button:hover:not([aria-current]) {
+  background: var(--surface-hover);
+}
+.phases button[aria-current] {
+  background: var(--text);
+  color: var(--on-accent);
+}
+.phases .step {
+  font-size: 32px;
+  font-weight: var(--dp-typography-display);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.phases button[aria-current] .step {
+  color: var(--signal);
+}
+.phases strong {
+  display: block;
+  font-size: 16px;
+}
+.phases small {
+  display: block;
+  margin-top: 2px;
+  color: inherit;
+  font-size: 13px;
+  opacity: 0.7;
+}
+.phase-arrow {
+  display: grid;
+  place-items: center;
+  padding-inline: 14px;
+  border-inline: var(--dp-border-rule) solid var(--text);
+  background: var(--panel);
+  color: var(--signal);
+}
+.live-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: var(--signal);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: var(--dp-typography-strong);
+  letter-spacing: var(--dp-typography-label-tracking);
+  text-transform: uppercase;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* Sections of the active step. */
+.tabs {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 10px 0 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  scrollbar-width: thin;
+}
+.tabs button {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--text-muted);
+  box-shadow: none;
+  white-space: nowrap;
+  transition:
+    color var(--ease),
+    border-color var(--ease);
+}
+.tabs button:hover {
+  background: none;
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+.tabs button[aria-selected='true'] {
+  color: var(--text);
+  font-weight: var(--dp-typography-strong);
+  border-bottom-color: var(--signal);
+}
+.tabs button > i {
+  font-size: 14px;
+}
+.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.detail > [role='tabpanel']:not([hidden]) {
+  animation: rise 220ms var(--ease) both;
+}
+.empty-results {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-results > i {
+  font-size: 40px;
+  color: var(--text);
+}
+
+/* Gallery: scenarios are visible at a glance instead of hidden in a menu. */
+.gallery {
+  display: grid;
+  gap: 20px;
+}
+.gallery-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.gallery-head h2 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.gallery-head p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.search {
+  position: relative;
+  width: min(340px, 100%);
+}
+.search i {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.search input {
+  width: 100%;
+  min-height: 44px;
+  padding-left: 36px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: 12px;
+}
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  gap: 8px;
+  min-width: 0;
+  min-height: 168px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  animation: rise 300ms var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 30ms);
+  transition:
+    border-color var(--ease),
+    box-shadow var(--ease),
+    transform var(--ease);
+}
+.card:hover:not(:disabled),
+.card:focus-visible {
+  border-color: var(--text);
+  background: var(--panel);
+  box-shadow: 6px 6px 0 var(--text);
+  transform: translate(-3px, -3px);
+}
+.card.recent {
+  border: var(--dp-border-rule) solid var(--text);
+}
+.card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.card-top .mono {
+  flex: 1 1 12ch;
+  min-width: 0;
+  white-space: normal;
+}
+.card strong {
+  font-size: 19px;
+  font-weight: var(--dp-typography-strong);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.card-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.card-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: var(--dp-typography-strong);
+}
+.card-go i {
+  transition: transform var(--ease);
+}
+.card:hover .card-go {
+  color: var(--signal);
+}
+.card:hover .card-go i {
+  transform: translateX(4px);
+}
+.tag {
+  padding: 2px 8px;
+  background: var(--signal);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: var(--dp-typography-strong);
+}
+.no-match {
+  grid-column: 1 / -1;
+  padding: 24px;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes stripes {
+  to {
+    background-position: 22px 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 480px) {
-  .numbers {
-    grid-template-columns: 1fr;
+@media (max-width: 650px) {
+  .page-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .page-actions {
+    justify-content: flex-start;
+  }
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .phases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .phase-arrow {
+    display: none;
+  }
+  .phases button + .phase-arrow + button {
+    border-top: var(--dp-border-rule) solid var(--text);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .card,
+  .card-go i,
+  .meter span,
+  .dot,
+  .live-badge,
+  .detail > [role='tabpanel']:not([hidden]) {
+    animation: none !important;
+    transition: none !important;
   }
 }

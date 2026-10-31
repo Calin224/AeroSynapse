@@ -1,0 +1,28 @@
+@if (line(); as line) {
+  <div class="timeline" [class.live]="live()">
+    <div class="timeline-head">
+      <span>Context rulare · coadă totală observată
+        @if (!live()) { · origine <b>minut {{ scrub() ?? origin() }}</b> }
+      </span>
+      <span class="mono">0–{{ duration() }} min simulate</span>
+    </div>
+    <div class="timeline-track">
+      <svg [attr.viewBox]="'0 0 ' + line.box.width + ' ' + line.box.height" preserveAspectRatio="none" aria-hidden="true">
+        @if (live()) { <rect class="window" [attr.x]="line.x(windowStart())" y="0" [attr.width]="line.x(windowStart() + horizon()) - line.x(windowStart())" [attr.height]="line.box.height" /> }
+        <path class="timeline-area" [attr.d]="line.area" />
+        <path class="timeline-line" [attr.d]="line.line" vector-effect="non-scaling-stroke" />
+        @if (live() && latestMinute() !== null) {
+          <line class="timeline-now" [attr.x1]="line.x(latestMinute()!)" [attr.x2]="line.x(latestMinute()!)" y1="0" [attr.y2]="line.box.height" vector-effect="non-scaling-stroke" />
+        }
+      </svg>
+      @if (!live() && origins().length > 1) {
+        <input class="scrubber" type="range" name="scrub" min="0" [max]="origins().at(-1)!" [step]="interval()" [value]="origin()"
+          [disabled]="disabled()" aria-label="Originea prognozei (minut simulat)"
+          (input)="scrub.set(+$any($event.target).value)" (change)="commit(+$any($event.target).value)"
+          [style.--thumb]="1 - origins().at(-1)! / duration()" />
+      }
+    </div>
+    @if (state() === 'loading') { <p role="status">Se încarcă…</p> }
+    @else if (state() === 'failed') { <p role="status">Istoric KPI indisponibil.</p> }
+  </div>
+}

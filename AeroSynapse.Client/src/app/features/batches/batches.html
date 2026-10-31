@@ -1,0 +1,428 @@
+<app-simulation-journey active="repeat" [scenarioId]="baselineId || null" />
+<header class="hero">
+  <div>
+    <h1 class="display">Teste repetate</h1>
+  </div>
+</header>
+@if (message()) {
+  <p class="notice" role="alert">{{ message() }}</p>
+}
+<section class="panel setup" aria-labelledby="setup-title">
+  <h2 id="setup-title"><span class="step">1</span>Pregătește testul</h2>
+  @let options = scenarios.state();
+  @if (options.status === 'ready') {
+    <form (ngSubmit)="create()">
+      <fieldset class="simple-setup" [disabled]="busy()">
+        <legend class="sr-only">Configurarea testelor repetate</legend>
+        <label
+          >Ce scenariu testezi?<select
+            name="baseline"
+            [ngModel]="baselineId"
+            (ngModelChange)="chooseBaseline($event)"
+            required
+          >
+            <option value="">Alege scenariul</option>
+            @for (scenario of options.data; track scenario.id) {
+              <option [value]="scenario.id">{{ scenario.name }}</option>
+            }
+          </select></label
+        >
+        <fieldset class="days">
+          <legend>Câte zile simulăm?</legend>
+          @for (preset of presets; track preset.count) {
+            <label class="day-choice"
+              ><input
+                type="radio"
+                name="repetitions"
+                [value]="preset.count"
+                [ngModel]="repeatCount()"
+                (ngModelChange)="setRepetitions($event)"
+              /><strong>{{ preset.count }} zile</strong></label
+            >
+          }
+          @if (!isPreset()) {
+            <label class="day-choice"
+              ><input type="radio" name="custom-repetitions" checked /><strong
+                >{{ repeatCount() }} zile</strong
+              ><span>listă proprie</span></label
+            >
+          }
+        </fieldset>
+        <p class="calendar" aria-hidden="true">
+          @for (day of dayPreview(); track day) {
+            <i [style.--i]="day"></i>
+          }
+        </p>
+        <details>
+          <summary>Setări avansate: nume, reproducere și limită de calcul</summary>
+          <div class="setup-fields">
+            <label
+              >Numele testului<input
+                name="batchName"
+                [(ngModel)]="name"
+                maxlength="160"
+                required /></label
+            ><label
+              >Oprește calculul după (secunde)<input
+                name="limit"
+                type="number"
+                [(ngModel)]="timeLimitSeconds"
+                min="1"
+                max="3600"
+                required
+            /></label>
+          </div>
+          <label
+            >Seed-uri pentru reproducere<textarea
+              name="seeds"
+              [(ngModel)]="seedText"
+              rows="2"
+              required
+            ></textarea>
+          </label>
+        </details>
+        <div class="launch-summary">
+          <div>
+            <strong>{{ repeatCount() }} simulări în total</strong>
+            <p>{{ repeatCount() }} zile. Scenariul original rămâne neschimbat.</p>
+          </div>
+          <button type="submit" class="btn-primary" [disabled]="busy() || !baselineId">
+            {{ busy() ? 'Se pornesc testele…' : 'Pornește testele' }}
+            <i class="pi pi-play" aria-hidden="true"></i>
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  } @else {
+    <app-data-state
+      [status]="options.status"
+      label="scenariile"
+      [message]="options.status === 'error' ? options.message : ''"
+      emptyMessage="Ai nevoie de un scenariu salvat pentru a repeta simularea."
+      (retry)="scenarios.reload()"
+    />
+    @if (options.status === 'empty') {
+      <a class="task-link btn-primary" routerLink="/scenario-studio">Creează primul scenariu →</a>
+    }
+  }
+</section>
+@if (pollingError()) {
+  <p class="notice" role="alert">{{ pollingError() }}</p>
+}
+@if (detail(); as report) {
+  <section class="panel results" aria-labelledby="results-title">
+    <div class="results-head">
+      <h2 id="results-title"><span class="step">2</span>{{ report.batch.name }}</h2>
+      <span class="state" [attr.data-status]="report.batch.status">{{
+        status(report.batch.status)
+      }}</span>
+    </div>
+    @let run = progress();
+    @if (report.batch.status === 'pending' || report.batch.status === 'running') {
+      <div class="running" role="status">
+        <progress [value]="run.done" [max]="run.total"></progress>
+        <span
+          >{{ run.done }} din {{ run.total }} simulări gata. Punctele apar pe grafic pe măsură ce se
+          termină zilele.</span
+        >
+      </div>
+    }
+    @if (setbacks()) {
+      <p class="notice">{{ setbacks() }} Ele nu intră în calcul și nu sunt tratate ca zero.</p>
+    }
+    @if (report.batch.cancellationRequested) {
+      <p role="status">Anulare solicitată. Zilele deja simulate sunt păstrate.</p>
+    }
+    @if (report.batch.failureReason) {
+      <p class="notice" role="alert">{{ report.batch.failureReason }}</p>
+    }
+    @if (verdict(); as v) {
+      <article class="verdict" [attr.data-tone]="v.tone">
+        <div>
+          <p class="eyebrow">{{ v.eyebrow }}</p>
+          <h3>{{ v.headline }}</h3>
+          <p>{{ v.detail }}</p>
+          <span class="badge">{{ v.badge }}</span>
+        </div>
+        <p class="figure">
+          <strong
+            >{{ v.sign }}<app-count-up [value]="v.figure" /><small>{{ v.unit }}</small></strong
+          ><span>{{ v.caption }}</span>
+        </p>
+      </article>
+    } @else {
+      <p class="waiting">Nicio repetare finalizată.</p>
+    }
+    @if (metric(); as chosen) {
+      <div class="pickers">
+        <div class="chips" role="group" aria-label="Ce urmărești?">
+          @for (option of metricOptions(); track option.name) {
+            <button
+              type="button"
+              [attr.aria-pressed]="option.name === chosen.name"
+              (click)="metricName.set(option.name)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+        @if (zones().length > 1) {
+          <label class="zone"
+            >Zona<select [ngModel]="zoneId()" (ngModelChange)="zoneChoice.set($event)">
+              @for (zone of zones(); track zone) {
+                <option [value]="zone">{{ zoneLabel(zone) }}</option>
+              }
+            </select></label
+          >
+        }
+      </div>
+      <app-batch-spread [lanes]="lanes()" [metric]="chosen" [unit]="unit()" />
+      @if (hiddenDays()) {
+        <p class="hint">
+          {{
+            hiddenDays() === 1
+              ? 'O zi reușită nu are valori individuale disponibile; ea rămâne'
+              : hiddenDays() + ' zile reușite nu au valori individuale disponibile; ele rămân'
+          }}
+          în statisticile din Detalii.
+        </p>
+      }
+      @if (duels().length) {
+        <section class="duels" aria-labelledby="duel-title">
+          <h3 id="duel-title">Zi cu zi: cine câștigă?</h3>
+
+          @for (row of duels(); track row.id) {
+            <div class="duel">
+              <p>
+                <strong>Varianta {{ row.position }} · {{ row.name }}</strong>
+                <span>{{
+                  row.paired
+                    ? 'mai bună în ' + row.wins + ' din ' + row.paired + ' zile'
+                    : 'încă nu există zile comparabile'
+                }}</span>
+              </p>
+              <ol [attr.aria-label]="'Rezultatul pe zile pentru varianta ' + row.position">
+                @for (day of row.days; track day.day) {
+                  <li
+                    [attr.data-outcome]="day.outcome"
+                    [title]="'Ziua ' + day.day + ': ' + outcomeLabel(day.outcome)"
+                  >
+                    <span class="sr-only">Ziua {{ day.day }}: {{ outcomeLabel(day.outcome) }}</span>
+                  </li>
+                }
+              </ol>
+            </div>
+          }
+        </section>
+      }
+    }
+    <div class="actions">
+      @if (report.batch.status === 'pending' || report.batch.status === 'running') {
+        <button
+          type="button"
+          class="btn-danger"
+          (click)="cancel()"
+          [disabled]="busy() || report.batch.cancellationRequested"
+        >
+          Oprește testele
+        </button>
+      }
+      <button type="button" (click)="replay()" [disabled]="busy()">
+        <i class="pi pi-replay" aria-hidden="true"></i> Rulează din nou aceleași zile
+      </button>
+      <button type="button" (click)="select(report.batch.id)">
+        <i class="pi pi-refresh" aria-hidden="true"></i> Actualizează rezultatele
+      </button>
+    </div>
+    <details class="disclosure tech">
+      <summary>Detalii tehnice: seed-uri, versiuni și statistici complete</summary>
+      <p>
+        {{ counts()['completed'] ?? 0 }} din {{ report.replications.length }} simulări finalizate.
+        Un <em>seed</em> este numărul care descrie o zi: același seed dă aceleași sosiri de
+        pasageri, deci zilele pot fi reproduse și comparate corect. Seed-uri:
+        {{ report.seeds.join(', ') }} · limită {{ report.batch.timeLimitSeconds }} secunde.
+      </p>
+      @if (report.batch.engineBuild) {
+        <p>
+          Build fixat pentru rezultate: <code>{{ report.batch.engineBuild }}</code>
+        </p>
+      }
+
+      @if (report.metricsTruncated) {
+        <p class="notice">
+          Sunt afișate primele 100 de chei de metrică și zonă. Toate replicațiile rămân listate.
+        </p>
+      }
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Variația între replicații · ultima valoare salvată pe metrică și zonă
+          </caption>
+          <thead>
+            <tr>
+              <th>Variantă / metrică / zonă</th>
+              <th>n valid / lipsă</th>
+              <th>Medie</th>
+              <th>Deviație standard</th>
+              <th>Min–max</th>
+              <th>Mediană</th>
+              <th>P05–P95</th>
+              <th>Unitate</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.metrics; track $index) {
+              <tr>
+                <td>{{ variant(row.variantId) }}<br />{{ row.name }} / {{ row.zoneId }}</td>
+                <td>{{ row.values.count }} / {{ row.missingOrUnsuccessfulCount }}</td>
+                <td>{{ row.values.mean === null ? '—' : (row.values.mean | number: '1.0-6') }}</td>
+                <td>
+                  {{
+                    row.values.standardDeviation === null
+                      ? '—'
+                      : (row.values.standardDeviation | number: '1.0-6')
+                  }}
+                </td>
+                <td>{{ row.values.minimum ?? '—' }} – {{ row.values.maximum ?? '—' }}</td>
+                <td>{{ row.values.median ?? '—' }}</td>
+                <td>{{ row.values.p05 ?? '—' }} – {{ row.values.p95 ?? '—' }}</td>
+                <td>{{ row.unit }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8">
+                  Nu există încă metrici valide. Eșecurile și replicațiile neexecutate nu sunt
+                  transformate în valori zero.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Diferențe pereche: candidat − baseline, pentru același seed și build
+          </caption>
+          <thead>
+            <tr>
+              <th>Candidat / metrică / zonă</th>
+              <th>n perechi</th>
+              <th>Medie Δ</th>
+              <th>Deviație standard Δ</th>
+              <th>Min–max Δ</th>
+              <th>P05–P95 Δ</th>
+              <th>Seed-uri incluse / excluse</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.comparisons; track $index) {
+              <tr>
+                <td>
+                  {{ variant(row.candidateVariantId) }}<br />{{ row.name }} / {{ row.zoneId }} ({{
+                    row.unit
+                  }})
+                </td>
+                <td>{{ row.differences.count }}</td>
+                <td>
+                  {{
+                    row.differences.mean === null ? '—' : (row.differences.mean | number: '1.0-6')
+                  }}
+                </td>
+                <td>
+                  {{
+                    row.differences.standardDeviation === null
+                      ? '—'
+                      : (row.differences.standardDeviation | number: '1.0-6')
+                  }}
+                </td>
+                <td>{{ row.differences.minimum ?? '—' }} – {{ row.differences.maximum ?? '—' }}</td>
+                <td>{{ row.differences.p05 ?? '—' }} – {{ row.differences.p95 ?? '—' }}</td>
+                <td>
+                  Incluse: {{ row.includedSeeds.join(', ') || 'niciunul' }}
+                  @for (excluded of row.excludedSeeds; track excluded.seed) {
+                    <div>{{ excluded.seed }}: {{ excluded.reason }}</div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  Alege candidați pentru comparații pereche; perechile valide apar după finalizarea
+                  replicațiilor.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Toate replicațiile, inclusiv eșecurile
+          </caption>
+          <thead>
+            <tr>
+              <th>Variantă / revizie</th>
+              <th>Seed</th>
+              <th>Status</th>
+              <th>Run / input hash</th>
+              <th>Diagnostic</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.replications; track row.id) {
+              <tr [class.failed]="row.status === 'failed' || row.status === 'timed_out'">
+                <td>{{ variant(row.variantId) }}</td>
+                <td>{{ row.seed }}</td>
+                <td>{{ status(row.status) }}</td>
+                <td>
+                  <code>{{ row.runId }}</code
+                  ><br /><code>{{ row.provenance.inputHash }}</code>
+                </td>
+                <td>
+                  {{ row.failureReason ?? '—' }}
+                  @if (row.remoteCancellationPending) {
+                    <p>Oprire în curs…</p>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>Versiuni capturate:</p>
+      @for (variant of report.variants; track variant.id) {
+        <p>
+          {{ variant.name }} · scenariu {{ variant.scenarioId }} revizia
+          {{ variant.scenarioRevision }} · layout {{ variant.layoutVersionId }} ·
+          {{ variant.engineVersion }}
+        </p>
+      }
+    </details>
+  </section>
+}
+<details class="panel saved-tests">
+  <summary>Teste salvate</summary>
+  <button type="button" (click)="history.reload()">Actualizează lista</button>
+  @let batches = history.state();
+  @if (batches.status === 'ready') {
+    @for (batch of batches.data; track batch.id) {
+      <button class="history" type="button" (click)="select(batch.id, true)" [disabled]="busy()">
+        <strong>{{ batch.name }}</strong
+        ><span
+          >{{ status(batch.status) }} · {{ batch.createdAtUtc | date: 'dd.MM.yyyy, HH:mm' }}</span
+        >
+      </button>
+    }
+  } @else {
+    <app-data-state
+      [status]="batches.status"
+      label="testele salvate"
+      [message]="batches.status === 'error' ? batches.message : ''"
+      emptyMessage="Testele lansate vor apărea aici."
+      (retry)="history.reload()"
+    />
+  }
+</details>

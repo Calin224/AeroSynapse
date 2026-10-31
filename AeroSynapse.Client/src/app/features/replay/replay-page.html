@@ -1,0 +1,50 @@
+<header class="replay-heading">
+  <div class="heading-title">
+    <span class="heading-icon"><i class="pi pi-history" aria-hidden="true"></i></span>
+    <div>
+      <h1>Time Travel</h1>
+    </div>
+  </div>
+</header>
+<details class="run-selection" [open]="!prepared()">
+  <summary>
+    <span class="selection-icon"><i class="pi pi-play-circle" aria-hidden="true"></i></span
+    ><span class="selection-title"
+      ><small>RULARE SELECTATĂ</small
+      ><strong>{{
+        prepared()?.data?.captured?.scenario?.scenario?.name ?? 'Alege o rulare pentru replay'
+      }}</strong></span
+    ><span class="selection-action"
+      >Schimbă rularea <i class="pi pi-chevron-down" aria-hidden="true"></i
+    ></span>
+  </summary>
+  <div class="selection-content">
+    <app-run-picker
+      [selected]="runId || null"
+      [preferredScenarioId]="prepared()?.data?.captured?.scenario?.scenario?.id ?? null"
+      [autoSelect]="true"
+      [disabled]="busy()"
+      (picked)="open($event.runId)"
+    />
+  </div>
+</details>
+@if (busy()) {
+  <p class="feedback" role="status">
+    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Se pregătește replay-ul…
+  </p>
+}
+@if (message()) {
+  <div class="notice" role="alert">
+    <p>{{ message() }}</p>
+    <button type="button" [disabled]="busy()" (click)="open(runId)">Reîncearcă</button>
+  </div>
+}
+@if (prepared(); as replay) {
+  <app-replay-player [replay]="replay" />
+} @else if (!busy()) {
+  <div class="replay-empty">
+    <i class="pi pi-history" aria-hidden="true"></i>
+    <h2>Fiecare rulare are o poveste.</h2>
+    <p>Nicio rulare selectată.</p>
+  </div>
+}

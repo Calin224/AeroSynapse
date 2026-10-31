@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+.table-wrap {
+  max-height: min(440px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-sunken);
+}

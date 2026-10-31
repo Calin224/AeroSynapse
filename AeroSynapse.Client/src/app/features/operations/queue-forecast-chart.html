@@ -1,0 +1,84 @@
+<ul class="legend" aria-label="Legendă">
+  <li class="observed">Observație / snapshot la minutul {{ result().fromMinute }}: {{ view().series.initialQueuePassengers }} pasageri în coadă</li>
+  <li class="forecast">Forecast · simulated estimate</li>
+  @if (result().queueThresholdPassengers !== null) { <li class="limit">Prag {{ result().queueThresholdPassengers }} pasageri</li> }
+  @if (view().mitigated) { <li class="mitigated">Cu +{{ view().series.mitigation!.extraStaff }} operatori</li> }
+  @if (view().actual.length) { <li class="actual">Observat ulterior · doar pentru evaluare</li> }
+</ul>
+
+@if (chart(); as c) {
+  <div class="chart-frame">
+    <svg class="queue-chart" [attr.viewBox]="'0 0 ' + c.box.width + ' ' + c.box.height" role="img"
+      [attr.aria-label]="'Coada observată până la minutul ' + c.from + ' și prognoza până la minutul ' + c.to + ' pentru ' + name() + '; vârf estimat ' + (view().peak.queue | number:'1.0-1') + ' pasageri la minutul ' + view().peak.minute">
+      <defs>
+        <linearGradient [attr.id]="uid + '-fc'" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="stop-forecast" stop-opacity=".28" /><stop offset="1" class="stop-forecast" stop-opacity="0" /></linearGradient>
+        <linearGradient [attr.id]="uid + '-ob'" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="stop-observed" stop-opacity=".16" /><stop offset="1" class="stop-observed" stop-opacity="0" /></linearGradient>
+        @if (c.thresholdY !== null) {
+          <clipPath [attr.id]="uid + '-over'"><rect [attr.x]="c.nowX" [attr.y]="0" [attr.width]="c.endX - c.nowX" [attr.height]="c.thresholdY" /></clipPath>
+        }
+      </defs>
+      <rect class="forecast-zone" [attr.x]="c.nowX" [attr.y]="c.top - 22" [attr.width]="c.endX - c.nowX" [attr.height]="c.bottom - c.top + 22" />
+      @for (tick of c.yTicks; track tick.label) {
+        <line class="grid" [attr.x1]="c.left" [attr.x2]="c.right" [attr.y1]="tick.position" [attr.y2]="tick.position" />
+        <text class="tick" [attr.x]="c.left - 8" [attr.y]="tick.position + 4" text-anchor="end">{{ tick.label }}</text>
+      }
+      @for (tick of c.xTicks; track tick.label) {
+        <text class="tick" [attr.x]="tick.position" [attr.y]="c.bottom + 18" text-anchor="middle">{{ tick.label }}</text>
+      }
+      <text class="zone-label" [attr.x]="c.nowX - 8" [attr.y]="c.top - 10" text-anchor="end">OBSERVAT</text>
+      <text class="zone-label forecast" [attr.x]="c.nowX + 8" [attr.y]="c.top - 10">FORECAST · SIMULATED ESTIMATE</text>
+
+      <path [attr.d]="c.observedArea" [attr.fill]="'url(#' + uid + '-ob)'" />
+      <path [attr.d]="c.forecastArea" [attr.fill]="'url(#' + uid + '-fc)'" />
+      @if (c.thresholdY !== null) {
+        <path class="over-threshold" [attr.d]="c.forecastArea" [attr.clip-path]="'url(#' + uid + '-over)'" />
+        <line class="threshold" [attr.x1]="c.left" [attr.x2]="c.right" [attr.y1]="c.thresholdY" [attr.y2]="c.thresholdY" />
+        <text class="threshold-label" [attr.x]="c.right" [attr.y]="c.thresholdY - 6" text-anchor="end">prag {{ result().queueThresholdPassengers }}</text>
+      }
+      <path class="observed-line" [attr.d]="c.observedLine" />
+      @if (c.mitigatedLine) { <path class="mitigated-line" [attr.d]="c.mitigatedLine" /> }
+      <path class="forecast-line" [attr.d]="c.forecastLine" />
+      @for (dot of c.actual; track dot.minute) { <circle class="actual" [attr.cx]="dot.x" [attr.cy]="dot.y" r="4" /> }
+      <line class="now" [attr.x1]="c.nowX" [attr.x2]="c.nowX" [attr.y1]="c.top - 22" [attr.y2]="c.bottom" />
+      <circle class="observed" [attr.cx]="c.origin.x" [attr.cy]="c.origin.y" r="5" />
+      @if (c.alert; as alert) {
+        <circle class="alert-ring" [attr.cx]="alert.x" [attr.cy]="alert.y" r="9" />
+        <circle class="alert-dot" [attr.cx]="alert.x" [attr.cy]="alert.y" r="4" />
+      } @else {
+        <circle class="peak" [attr.cx]="c.peak.x" [attr.cy]="c.peak.y" r="3.5" />
+      }
+      @if (hover(); as h) {
+        <line class="crosshair" [attr.x1]="c.x(h.minute)" [attr.x2]="c.x(h.minute)" [attr.y1]="c.top" [attr.y2]="c.bottom" />
+      }
+      <rect class="hit" [attr.x]="c.left" [attr.y]="c.top - 22" [attr.width]="c.right - c.left" [attr.height]="c.bottom - c.top + 22"
+        (pointermove)="pointer($event)" (pointerleave)="hoverMinute.set(null)" />
+    </svg>
+    @if (hover(); as h) {
+      <div class="tooltip" [style.left.%]="h.x" [class.flip]="h.x > 70">
+        <strong>Minutul {{ h.minute }}</strong>
+        @if (h.observed) { <span class="observed">Observat <b>{{ h.observed.queue | number:'1.0-1' }} pax</b></span> }
+        @if (h.point) {
+          <span class="forecast">Estimat <b>{{ h.point.queuePassengers | number:'1.0-1' }} pax</b></span>
+          <span>Sosiri <b>{{ h.point.arrivals | number:'1.0-2' }}/min</b></span>
+          <span>Capacitate <b>{{ h.point.capacity | number:'1.0-2' }}/min</b> · {{ h.point.availableStaff }} op.</span>
+        }
+        @if (h.mitigated) { <span class="mitigated">Cu intervenție <b>{{ h.mitigated.queue | number:'1.0-1' }} pax</b></span> }
+        @if (h.actual) { <span class="actual">Observat ulterior <b>{{ h.actual.queue | number:'1.0-1' }} pax</b></span> }
+      </div>
+    }
+  </div>
+}
+
+@if (flow(); as f) {
+  <div class="flow">
+    <span class="flow-title">Flux pe minut · <i class="swatch arrivals"></i>sosiri planificate <i class="swatch capacity"></i>capacitate</span>
+    <svg [attr.viewBox]="'0 0 ' + f.box.width + ' ' + f.box.height" aria-hidden="true">
+      <line class="grid" [attr.x1]="f.box.left" [attr.x2]="f.box.width - f.box.right" [attr.y1]="f.baseline" [attr.y2]="f.baseline" />
+      <text class="tick" [attr.x]="f.box.left - 8" [attr.y]="f.top + 4" text-anchor="end">{{ f.max | number:'1.0-1' }}</text>
+      @for (bar of f.bars; track bar.minute) {
+        <rect class="bar" [class.surplus]="bar.surplus" [class.hovered]="hoverMinute() === bar.minute" [attr.x]="bar.x" [attr.y]="bar.y" [attr.width]="bar.width" [attr.height]="bar.height" rx="1.5" />
+      }
+      <path class="capacity-step" [attr.d]="f.capacity" />
+    </svg>
+  </div>
+}

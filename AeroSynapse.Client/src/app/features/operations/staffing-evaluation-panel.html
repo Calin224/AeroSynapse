@@ -1,0 +1,637 @@
+<section aria-labelledby="staffing-evaluation-title" [class.guided]="!!workflowStage()">
+  @if (message()) {
+    <p class="notice" role="alert">{{ message() }}</p>
+  }
+  @if (pendingCommand()) {
+    <p role="status">Comandă neconfirmată. Parametrii inițiali sunt păstrați pentru retry.</p>
+    <button type="button" (click)="retry()" [disabled]="readOnly() || busy() || disabled()">
+      Reîncearcă aceeași optimizare
+    </button>
+  }
+  @if (workflowStage() === 'compare' || workflowStage() === 'review') {
+    @if (evaluation(); as evaluation) {
+      @if (evaluation.recommendedRunId && workflowStage() === 'review') {
+        <app-recommendation-review-panel
+          [evaluationId]="evaluation.batch.batch.id"
+          [scenario]="scenario()"
+          [evaluation]="evaluation"
+          [readOnly]="readOnly()"
+          [requireConfirmation]="!!workflowStage()"
+          [active]="active()"
+          [disabled]="disabled() || busy()"
+          (changed)="approved($event)"
+          (working)="working.emit($event)"
+        />
+      }
+    }
+    <details class="all-details">
+      <summary>Detalii evaluare, istoric și indicatori</summary>
+      <ng-container *ngTemplateOutlet="body" />
+    </details>
+  } @else {
+    <ng-container *ngTemplateOutlet="body" />
+  }
+  <ng-template #body>
+    <h3 id="staffing-evaluation-title">
+      {{ workflowStage() ? 'Variante simulate' : 'Validare în simulator' }}
+    </h3>
+
+    @if (!readOnly() && (!workflowStage() || workflowStage() === 'optimize')) {
+      @if (!proposal()) {
+        <p>Activarea evaluării necesită configurarea restricțiilor și a limitelor fizice.</p>
+      }
+      <form (ngSubmit)="start()">
+        <ng-template #parameters>
+          <label
+            ><span
+              ><input
+                type="checkbox"
+                name="multiObjectiveEnabled"
+                [(ngModel)]="multiObjectiveEnabled"
+                [disabled]="busy()"
+              />
+              Optimizare multi-obiectiv</span
+            ></label
+          >
+          @if (multiObjectiveEnabled) {
+            <div class="evaluation-controls">
+              <label
+                >Pondere timp<input
+                  type="number"
+                  name="timeWeight"
+                  [(ngModel)]="multiObjective.weights.time"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Pondere cost<input
+                  type="number"
+                  name="costWeight"
+                  [(ngModel)]="multiObjective.weights.cost"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Pondere risc<input
+                  type="number"
+                  name="riskWeight"
+                  [(ngModel)]="multiObjective.weights.risk"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Tref · minute<input
+                  type="number"
+                  name="timeReference"
+                  [(ngModel)]="multiObjective.normalization.timeMinutes"
+                  min="0.01"
+                  max="10080"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Cref · puncte<input
+                  type="number"
+                  name="costReference"
+                  [(ngModel)]="multiObjective.normalization.costPoints"
+                  min="1"
+                  max="1000000000000"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Rref · fracție 0.001–1<input
+                  type="number"
+                  name="riskReference"
+                  [(ngModel)]="multiObjective.normalization.riskFraction"
+                  min="0.001"
+                  max="1"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Buget operațional · puncte<input
+                  type="number"
+                  name="operationalBudget"
+                  [(ngModel)]="multiObjective.operationalBudget"
+                  min="0"
+                  max="100000000000000"
+                  step="1"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Cost · puncte/operator/minut<input
+                  type="number"
+                  name="staffMinuteCost"
+                  [(ngModel)]="multiObjective.staffMinuteCost"
+                  min="1"
+                  max="1000000"
+                  step="1"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Așteptare medie maximă · min<input
+                  type="number"
+                  name="maxMeanWait"
+                  [(ngModel)]="multiObjective.maxMeanWaitMinutes"
+                  min="0"
+                  max="10080"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >P95 maxim · min<input
+                  type="number"
+                  name="maxP95Wait"
+                  [(ngModel)]="multiObjective.maxP95WaitMinutes"
+                  min="0"
+                  max="10080"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+              <label
+                >Risc boarding maxim · fracție 0–1<input
+                  type="number"
+                  name="maxRisk"
+                  [(ngModel)]="multiObjective.maxBoardingRisk"
+                  min="0"
+                  max="1"
+                  step="any"
+                  [disabled]="busy()"
+              /></label>
+            </div>
+          }
+          <div class="evaluation-controls">
+            <label
+              >Nume evaluare<input
+                name="evaluationName"
+                [(ngModel)]="name"
+                maxlength="160"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Candidați<input
+                type="number"
+                name="candidateCount"
+                [(ngModel)]="candidateCount"
+                min="1"
+                max="4"
+                step="1"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Timeout simulări, cu așteptarea în coadă (s)<input
+                type="number"
+                name="evaluationLimit"
+                [(ngModel)]="timeLimitSeconds"
+                min="1"
+                max="3600"
+                step="1"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Creștere maximă waiting (min)<input
+                type="number"
+                name="meanTolerance"
+                [(ngModel)]="policy.maxMeanWaitIncreaseMinutes"
+                min="0"
+                max="10080"
+                step="any"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Creștere maximă P95 (min)<input
+                type="number"
+                name="p95Tolerance"
+                [(ngModel)]="policy.maxP95IncreaseMinutes"
+                min="0"
+                max="10080"
+                step="any"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Creștere maximă risc boarding (fracție 0–1)<input
+                type="number"
+                name="riskTolerance"
+                [(ngModel)]="policy.maxBoardingRiskIncrease"
+                min="0"
+                max="1"
+                step="any"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Creștere maximă neprocesați<input
+                type="number"
+                name="unprocessedTolerance"
+                [(ngModel)]="policy.maxUnprocessedIncrease"
+                min="0"
+                max="100000"
+                step="1"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Cost maxim realocare (puncte)<input
+                type="number"
+                name="reallocationLimit"
+                [(ngModel)]="policy.maxReallocationCost"
+                min="0"
+                max="100000000000000"
+                step="1"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              ><span
+                ><input
+                  type="checkbox"
+                  name="checkpointTradeoffs"
+                  [(ngModel)]="policy.checkpointTradeoffs"
+                  [disabled]="busy()"
+                />
+                Permite compromisuri între controale</span
+              ></label
+            >
+          </div>
+        </ng-template>
+        @if (workflowStage()) {
+          <fieldset class="plan-choice">
+            <legend>Tip de plan</legend>
+            <label class="choice" [class.selected]="plan === 'fixed'">
+              <input
+                type="radio"
+                name="plan"
+                value="fixed"
+                [(ngModel)]="plan"
+                [disabled]="busy()"
+              />
+              <span>
+                <strong>Plan cu alocare fixă</strong>
+                <small
+                  >Același număr de operatori la fiecare control, de la început până la
+                  final.</small
+                >
+              </span>
+            </label>
+            <label class="choice" [class.selected]="plan === 'shifts'">
+              <input
+                type="radio"
+                name="plan"
+                value="shifts"
+                [(ngModel)]="plan"
+                [disabled]="busy() || !shiftsAllowed()"
+              />
+              <span>
+                <strong>Plan pe ture · la 15 minute</strong>
+                <small>{{
+                  shiftsAllowed()
+                    ? 'Alocări individuale pe intervale, cu pauze și transferuri între controale.'
+                    : 'Planificarea turelor necesită un scenariu de minimum 2 ore. Configurație disponibilă: zi de lucru de 8 ore.'
+                }}</small>
+              </span>
+            </label>
+          </fieldset>
+          @if (plan === 'shifts' && shiftsAllowed()) {
+            <details class="advanced">
+              <summary>Reguli pentru ture</summary>
+
+              <div class="evaluation-controls">
+                <label
+                  >Tura minimă · ore<input
+                    type="number"
+                    name="minShiftHours"
+                    [(ngModel)]="shiftForm.minShiftHours"
+                    min="0.25"
+                    max="24"
+                    step="0.25"
+                    [disabled]="busy()"
+                /></label>
+                <label
+                  >Tura maximă · ore<input
+                    type="number"
+                    name="maxShiftHours"
+                    [(ngModel)]="shiftForm.maxShiftHours"
+                    min="0.25"
+                    max="24"
+                    step="0.25"
+                    [disabled]="busy()"
+                /></label>
+                <label
+                  >Pauză după cel mult · minute<input
+                    type="number"
+                    name="breakAfterMinutes"
+                    [(ngModel)]="shiftForm.breakAfterMinutes"
+                    min="15"
+                    max="1440"
+                    step="15"
+                    [disabled]="busy()"
+                /></label>
+                <label
+                  >Mutare între controale · minute<input
+                    type="number"
+                    name="transferMinutes"
+                    [(ngModel)]="shiftForm.transferMinutes"
+                    min="0"
+                    max="14"
+                    step="1"
+                    [disabled]="busy()"
+                /></label>
+                <label
+                  >Mutări pe oră · cel mult<input
+                    type="number"
+                    name="maxMovesPerHour"
+                    [(ngModel)]="shiftForm.maxMovesPerHour"
+                    min="0"
+                    max="100"
+                    step="1"
+                    [disabled]="busy()"
+                /></label>
+                <label
+                  >Încărcare țintă a operatorilor · %<input
+                    type="number"
+                    name="targetUtilizationPercent"
+                    [(ngModel)]="shiftForm.targetUtilizationPercent"
+                    min="1"
+                    max="100"
+                    step="1"
+                    [disabled]="busy()"
+                /></label>
+              </div>
+            </details>
+          }
+          <details class="advanced">
+            <summary>Setări avansate · criterii de acceptare și număr de variante</summary>
+
+            <ng-container *ngTemplateOutlet="parameters" />
+          </details>
+        } @else {
+          <ng-container *ngTemplateOutlet="parameters" />
+        }
+        <div class="actions">
+          <button
+            class="btn-primary"
+            [class.start]="!!workflowStage()"
+            type="submit"
+            [disabled]="
+              !online() || disabled() || busy() || running() || pendingCommand() || !proposal()
+            "
+          >
+            @if (workflowStage()) {
+              <i
+                class="pi"
+                [class.pi-spin]="busy() || running()"
+                [class.pi-spinner]="busy() || running()"
+                [class.pi-search]="!busy() && !running()"
+                aria-hidden="true"
+              ></i>
+            }
+            {{
+              busy()
+                ? 'Se pregătește…'
+                : multiObjectiveEnabled
+                  ? 'Recalculează CP-SAT + SimPy'
+                  : workflowStage()
+                    ? running()
+                      ? 'Se simulează variantele…'
+                      : evaluation()
+                        ? 'Reluare optimizare'
+                        : 'Lansare optimizare'
+                    : 'Generează și evaluează în SimPy'
+            }}
+          </button>
+        </div>
+      </form>
+    }
+    <details>
+      <summary>Evaluări salvate ({{ history().length }})</summary>
+      <button type="button" (click)="loadHistory()" [disabled]="busy()">
+        Actualizează istoricul
+      </button>
+      <ul>
+        @for (item of history(); track item.id) {
+          <li>
+            <button type="button" (click)="load(item.id)" [disabled]="busy()">
+              {{ item.name }} · {{ item.status }}
+            </button>
+            · {{ item.id }}
+          </li>
+        }
+      </ul>
+    </details>
+    @if (evaluation(); as evaluation) {
+      @if (progress().total) {
+        <p role="status">
+          @if (workflowStage()) {
+            Simulăm aceeași zi cu fiecare variantă de personal: {{ progress().finished }} din
+            {{ progress().total }} simulări gata.
+          } @else {
+            Progres: {{ progress().finished }} / {{ progress().total }} rulări încheiate.
+          }
+        </p>
+        <progress
+          [value]="progress().finished"
+          [max]="progress().total"
+          aria-label="Progres evaluare"
+        ></progress>
+      }
+      @if (evaluation.pareto) {
+        <app-pareto-panel [evaluation]="evaluation" [history]="history()" [active]="active()" />
+      }
+      <ng-template #technical>
+        <p role="status">
+          Evaluare {{ evaluation.batch.batch.id }} · {{ evaluation.batch.batch.status }} · revizia
+          {{ evaluation.planning.request.constraints.scenarioRevision }} · seed
+          {{ evaluation.batch.seeds.join(', ') }}.
+        </p>
+        <p>
+          Generare: {{ evaluation.planning.status }} · {{ evaluation.planning.candidates.length }} /
+          {{ evaluation.planning.request.candidateCount }} candidați distincți · buget comun
+          {{ evaluation.planning.request.constraints.timeLimitSeconds }} s.
+        </p>
+        <p>
+          Toleranțe capturate: waiting {{ evaluation.policy.maxMeanWaitIncreaseMinutes }} min; P95
+          {{ evaluation.policy.maxP95IncreaseMinutes }} min; risc
+          {{ percent(evaluation.policy.maxBoardingRiskIncrease) }}; neprocesați +{{
+            evaluation.policy.maxUnprocessedIncrease
+          }}; cost maxim {{ evaluation.policy.maxReallocationCost }} puncte{{
+            evaluation.policy.checkpointTradeoffs
+              ? '; un control mai lent este acceptat ca compromis'
+              : ''
+          }}.
+        </p>
+        @if (evaluation.recommendedRunId) {
+          <p role="status">
+            Recomandare dintre candidații simulați: {{ evaluation.recommendedRunId }}. Consultă
+            compromisurile și costul de mai jos.
+          </p>
+        }
+      </ng-template>
+      @if (workflowStage()) {
+        <details>
+          <summary>Detalii tehnice ale evaluării</summary>
+          <ng-container *ngTemplateOutlet="technical" />
+        </details>
+      } @else {
+        <ng-container *ngTemplateOutlet="technical" />
+      }
+      @if (evaluation.planning.status === 'timeout') {
+        <p role="alert">
+          Generarea a atins timeout-ul. Sunt simulate doar configurațiile fezabile găsite efectiv.
+        </p>
+      }
+      @if (evaluation.planning.status === 'exhausted') {
+        <p>Nicio altă alocare fezabilă.</p>
+      }
+      <div class="actions">
+        <button type="button" (click)="load(evaluation.batch.batch.id)" [disabled]="busy()">
+          Actualizează evaluarea
+        </button>
+        @if (running()) {
+          <button
+            type="button"
+            (click)="cancel()"
+            [disabled]="readOnly() || busy() || evaluation.batch.batch.cancellationRequested"
+          >
+            Anulează simulările
+          </button>
+        }
+      </div>
+      @if (!evaluation.recommendedRunId) {
+        @if (running()) {
+          <p role="status">
+            Simulările sunt în desfășurare. Recomandarea va fi calculată după încheierea evaluării.
+          </p>
+        } @else if (
+          evaluation.batch.batch.status === 'cancelled' ||
+          evaluation.batch.batch.status === 'timed_out'
+        ) {
+          <p>Evaluarea a fost anulată sau a expirat. Rezultatele parțiale nu produc recomandări.</p>
+        } @else {
+          <p>Nu există candidat superior validat față de baseline conform ordinii declarate.</p>
+        }
+      }
+      @if (evaluation.recommendedRunId && !workflowStage()) {
+        <app-recommendation-review-panel
+          [evaluationId]="evaluation.batch.batch.id"
+          [scenario]="scenario()"
+          [evaluation]="evaluation"
+          [readOnly]="readOnly()"
+          [requireConfirmation]="!!workflowStage()"
+          [active]="active()"
+          [disabled]="disabled() || busy()"
+          (changed)="approved($event)"
+          (working)="working.emit($event)"
+        />
+      }
+      @if (!workflowStage() || workflowStage() === 'compare' || workflowStage() === 'review') {
+        <ng-template #figures>
+          <div class="table-wrap">
+            <table>
+              <caption>
+                Metrici din snapshot-urile SimPy persistate. Valorile lipsă sunt indisponibile.
+              </caption>
+              <thead>
+                <tr>
+                  <th>Variantă / evaluare</th>
+                  <th>Waiting (min)</th>
+                  <th>P95 (min)</th>
+                  <th>Risc boarding</th>
+                  <th>Procesați / populație</th>
+                  <th>Neprocesați</th>
+                  <th>Persoane realocate</th>
+                  <th>Cost (puncte)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (variant of evaluation.variants; track variant.runId) {
+                  <tr>
+                    <th scope="row">
+                      {{ variant.position === 0 ? 'Baseline' : 'Candidat ' + variant.position }} ·
+                      {{ assessment(variant.assessment.status) }}
+                    </th>
+                    <td>{{ display(variant.metrics?.meanWaitMinutes) }}</td>
+                    <td>{{ display(variant.metrics?.p95WaitMinutes) }}</td>
+                    <td>{{ percent(variant.metrics?.boardingRisk) }}</td>
+                    <td>
+                      {{ display(variant.metrics?.processedCount) }} /
+                      {{ display(variant.metrics?.populationCount) }}
+                    </td>
+                    <td>{{ display(variant.metrics?.unprocessedCount) }}</td>
+                    <td>{{ variant.reallocatedPeople }}</td>
+                    <td>{{ variant.reallocationCost }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @for (variant of evaluation.variants; track variant.runId) {
+            <details>
+              <summary>
+                {{ variant.position === 0 ? 'Baseline' : 'Candidat ' + variant.position }} ·
+                {{ variant.runStatus }} · {{ variant.runId }}
+              </summary>
+              <p>
+                variantId {{ variant.variantId }} · scenarioId {{ variant.scenarioId }} · runId
+                {{ variant.runId }}.
+              </p>
+              <p>
+                Configurație capturată:
+                @for (checkpoint of variant.configuration; track checkpoint.checkpointId) {
+                  {{ checkpoint.name }}: {{ checkpoint.staffCount }};
+                }
+              </p>
+              <ul>
+                @for (reasonCode of variant.assessment.reasons; track $index) {
+                  <li>{{ reason(reasonCode) }}</li>
+                }
+              </ul>
+              @if (variant.metrics; as metrics) {
+                <p>
+                  Observații waiting: {{ metrics.waitSampleCount }} servicii terminate. Un waiting
+                  mai mic se interpretează împreună cu populația procesată și riscul.
+                </p>
+                <p>
+                  Boarding la risc: {{ metrics.boardingAtRiskCount }} /
+                  {{ metrics.boardingRiskPopulationCount }} pasageri cu termen de boarding.
+                </p>
+                <ul>
+                  @for (checkpoint of metrics.checkpoints; track checkpoint.checkpointId) {
+                    <li>
+                      {{ checkpoint.checkpointId }}: waiting
+                      {{ display(checkpoint.meanWaitMinutes) }} min, P95
+                      {{ display(checkpoint.p95WaitMinutes) }} min, eșantion
+                      {{ checkpoint.waitSampleCount }}, procesați {{ checkpoint.processedCount }} /
+                      {{ checkpoint.populationCount }}, boarding la risc
+                      {{ checkpoint.boardingAtRiskCount }} /
+                      {{ checkpoint.boardingRiskPopulationCount }}.
+                    </li>
+                  }
+                </ul>
+              }
+            </details>
+          }
+        </ng-template>
+        @if (workflowStage()) {
+          <details>
+            <summary>Toate cifrele și fiecare variantă</summary>
+            <ng-container *ngTemplateOutlet="figures" />
+          </details>
+        } @else {
+          <ng-container *ngTemplateOutlet="figures" />
+        }
+      }
+    }
+  </ng-template>
+</section>

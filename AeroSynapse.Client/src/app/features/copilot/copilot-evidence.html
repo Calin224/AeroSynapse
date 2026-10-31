@@ -1,0 +1,117 @@
+@let evidence = explanation();
+<section class="evidence" aria-label="Explicație verificabilă">
+  <p class="disclosure">{{ evidence.disclosure }}</p>
+  <p>{{ evidence.summary }}</p>
+  <h3>Rulări citate</h3>
+  <ul>
+    @for (run of evidence.runs; track run.runId) {
+      <li>
+        {{ run.role }} · <code>{{ run.runId }}</code>
+        <a routerLink="/replay" [queryParams]="{ runId: run.runId }">Deschide replay</a>
+        <a routerLink="/operational-report" [queryParams]="{ baselineRunId: run.runId }"
+          >Raport KPI</a
+        >
+      </li>
+    }
+  </ul>
+  @if (evidence.comparisons.length) {
+    <div class="table-scroll">
+      <table>
+        <caption>
+          Înainte / după, din rulări independente
+        </caption>
+        <thead>
+          <tr>
+            <th>Indicator / surse</th>
+            <th>Baseline</th>
+            <th>Candidat</th>
+            <th>Diferență</th>
+            <th>Diferență procentuală</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of evidence.comparisons; track $index) {
+            <tr>
+              <th>
+                {{ metricLabels[row.metric] || row.metric }} ({{ row.unit }})
+                <a
+                  routerLink="/operational-report"
+                  [queryParams]="{
+                    baselineRunId: row.baselineRunId,
+                    candidateRunId: row.candidateRunId,
+                  }"
+                  >Compară {{ row.candidateRunId }}</a
+                >
+                <small>{{ row.beforeSource }} → {{ row.afterSource }}</small>
+              </th>
+              <td>{{ row.before === null ? 'Lipsă' : (row.before | number: '1.0-10') }}</td>
+              <td>{{ row.after === null ? 'Lipsă' : (row.after | number: '1.0-10') }}</td>
+              <td>{{ row.delta === null ? 'Indisponibil' : (row.delta | number: '1.0-10') }}</td>
+              <td>
+                {{ row.percent === null ? 'Indisponibil' : (row.percent | number: '1.0-10') + '%' }}
+                @if (row.percent === null) {
+                  <small>{{
+                    row.percentUnavailableReason === 'nonpositive_baseline'
+                      ? 'Baseline zero sau negativ.'
+                      : 'Date insuficiente pentru un procent valid.'
+                  }}</small>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  @for (outcome of evidence.outcomes; track outcome.runId) {
+    <div class="outcome">
+      <strong>{{ outcome.status }} · {{ outcome.runId }}</strong>
+      <ul>
+        @for (reason of outcome.reasons; track $index) {
+          <li>{{ reason }}</li>
+        }
+      </ul>
+    </div>
+  }
+  <h3>Limitări</h3>
+  <ul>
+    @for (limit of evidence.limitations; track $index) {
+      <li>{{ limit }}</li>
+    }
+  </ul>
+  <details>
+    <summary>Valori și căi către surse</summary>
+    <p>
+      Amprenta outputului: <code>{{ evidence.outputHash }}</code>
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Indicator</th>
+            <th>Valoare</th>
+            <th>Sursă</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fact of evidence.facts; track $index) {
+            <tr>
+              <th>{{ fact.label }}</th>
+              <td>
+                {{ fact.value === null ? 'Lipsă' : (fact.value | number: '1.0-10') }}
+                {{ fact.unit }}
+              </td>
+              <td>
+                <code>{{ fact.runId }}</code>
+                @if (fact.zoneId) {
+                  <code>zoneId {{ fact.zoneId }}</code>
+                }
+                <code>{{ fact.sourcePath }}</code>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>

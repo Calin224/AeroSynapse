@@ -1,0 +1,452 @@
+<header class="heading">
+  <div>
+    <h1>Flux de decizie operațională</h1>
+  </div>
+  <a
+    routerLink="/control-tower"
+    [queryParams]="{ scenarioId: tower.selected()?.scenario?.id, runId: tower.run()?.id }"
+    >Control Tower</a
+  >
+</header>
+
+<section class="context" aria-label="Contextul fluxului" [attr.aria-busy]="tower.loading()">
+  <label for="workflow-scenario"
+    >Scenariu<select
+      id="workflow-scenario"
+      [value]="tower.selected()?.scenario?.id ?? ''"
+      [disabled]="tower.loading() || locked() || eventUncertain()"
+      (change)="selectScenario($event)"
+    >
+      <option value="" disabled>Selectare scenariu</option>
+      @for (item of tower.scenarios(); track item.id) {
+        <option [value]="item.id">{{ item.name }} · {{ item.code }}</option>
+      }
+    </select></label
+  >
+  <div class="context-actions">
+    <button
+      type="button"
+      (click)="tower.demo()"
+      [disabled]="!tower.online() || locked() || tower.loading() || !!draft() || eventUncertain()"
+    >
+      Încărcare scenariu demonstrativ
+    </button>
+    <button
+      type="button"
+      (click)="tower.demo('workday')"
+      [disabled]="!tower.online() || locked() || tower.loading() || !!draft() || eventUncertain()"
+    >
+      Zi de lucru · 8 ore
+    </button>
+    <button type="button" (click)="tower.reload()" [disabled]="locked() || tower.loading()">
+      Actualizare context
+    </button>
+    <button
+      type="button"
+      class="link-button"
+      (click)="openHistory()"
+      [disabled]="!tower.selected() || locked() || !!draft() || eventUncertain()"
+    >
+      Istoric evaluări și audit · numai citire
+    </button>
+  </div>
+  @if (tower.selected(); as scenario) {
+    <details class="technical">
+      <summary>Detalii tehnice ale scenariului</summary>
+      <p class="identity">
+        scenarioId <code>{{ scenario.scenario.id }}</code> · revizia
+        {{ scenario.scenario.revision }} · seed {{ scenario.inputs.seed }}
+      </p>
+    </details>
+  }
+</section>
+
+@if (historyOnly()) {
+  <p class="notice" role="status">
+    Istoric · numai citire. Se afișează capturile originale; crearea evaluărilor și deciziile sunt
+    blocate.
+  </p>
+}
+
+<nav class="stepper" aria-label="Etapele deciziei">
+  <ol>
+    @for (item of steps; track item.id; let index = $index) {
+      <li>
+        <button
+          type="button"
+          [class.done]="index < stageIndex()"
+          [disabled]="!allowed(item.id) || eventBusy() || childBusy() || tower.busy()"
+          [attr.aria-current]="stage() === item.id ? 'step' : null"
+          (click)="go(item.id)"
+        >
+          <span class="dot" aria-hidden="true">
+            @if (index < stageIndex()) {
+              <i class="pi pi-check"></i>
+            } @else {
+              {{ index + 1 }}
+            }
+          </span>
+          <span class="step-text"
+            ><strong>{{ item.label }}</strong></span
+          >
+        </button>
+      </li>
+    }
+  </ol>
+</nav>
+
+@if (message()) {
+  <p class="notice" role="status">{{ message() }}</p>
+}
+@if (tower.message()) {
+  <p class="notice error" role="alert">
+    {{ tower.message() }}
+    <button type="button" (click)="tower.reload()">Reluare încărcare</button>
+  </p>
+}
+@if (tower.actionError()) {
+  <p class="notice error" role="alert">{{ tower.actionError() }}</p>
+}
+@if (tower.pendingScenarioId()) {
+  <p class="notice" role="status">
+    O comandă de simulare așteaptă confirmarea.
+    <button type="button" [disabled]="tower.busy()" (click)="tower.resumeLaunch()">
+      Verificare comandă de simulare
+    </button>
+  </p>
+}
+@if (eventUncertain()) {
+  <p class="notice error" role="alert">
+    Salvarea incidentului nu este confirmată. Formularul este păstrat.<button
+      type="button"
+      [disabled]="eventBusy()"
+      (click)="reconcileEvent()"
+    >
+      Verificare status salvare incident
+    </button>
+  </p>
+}
+@if (tower.loading()) {
+  <p role="status">Se încarcă scenariul din API…</p>
+}
+
+@if (tower.selected(); as scenario) {
+  @if (stage() === 'event') {
+    <section class="card" aria-labelledby="event-title">
+      <header class="card-heading">
+        <div>
+          <h2 id="event-title" data-workflow-title tabindex="-1">1. Configurare incident</h2>
+        </div>
+      </header>
+
+      @if (timeline(); as line) {
+        <app-flight-timeline
+          [line]="line"
+          [selected]="surge()?.flightId ?? null"
+          [disabled]="locked() || eventUncertain()"
+          (pick)="pickFlight($event)"
+        />
+      }
+
+      @if (draft(); as event) {
+        <div class="draft">
+          <h3>Parametri incident</h3>
+          @if (tower.selectedLayout(); as layout) {
+            <app-incident-designer
+              [event]="event"
+              [inputs]="scenario.inputs"
+              [layout]="layout"
+              [disabled]="eventBusy() || eventUncertain()"
+              (changed)="draft.set($event)"
+            />
+          }
+          <div class="actions">
+            <button
+              class="btn-primary start"
+              type="button"
+              (click)="saveEvent()"
+              [disabled]="
+                !tower.online() || locked() || eventUncertain() || !!draftProblems().length
+              "
+            >
+              <i class="pi pi-check" aria-hidden="true"></i>
+              {{ eventBusy() ? 'Se salvează…' : 'Confirmă și salvează incidentul' }}
+            </button>
+            <button
+              type="button"
+              (click)="draft.set(null)"
+              [disabled]="eventBusy() || eventUncertain()"
+            >
+              Anulare modificări
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="actions">
+          <button
+            type="button"
+            (click)="addEvent()"
+            [disabled]="locked() || eventUncertain() || !!draft()"
+          >
+            <i class="pi pi-plus" aria-hidden="true"></i> Adăugare incident de concentrare a
+            sosirilor
+          </button>
+        </div>
+      }
+
+      @if (events().length) {
+        <h3>Incidente salvate</h3>
+        <ul class="event-list">
+          @for (event of events(); track event.id) {
+            <li [class.current]="event.id === savedEventId()">
+              <span
+                ><strong>{{ describe(event) }}</strong></span
+              ><button
+                type="button"
+                [disabled]="locked() || !!draft() || eventUncertain()"
+                (click)="useEvent(event.id)"
+              >
+                Selectare incident
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  @if (stage() === 'simulate') {
+    <section class="card" aria-labelledby="simulate-title">
+      <header class="card-heading">
+        <div>
+          <h2 id="simulate-title" data-workflow-title tabindex="-1">
+            2. Simulare impact operațional
+          </h2>
+          @if (surge(); as event) {
+            <p class="chosen">
+              <i class="pi pi-users" aria-hidden="true"></i> {{ describe(event) }}
+            </p>
+          }
+        </div>
+      </header>
+      <div class="actions">
+        <button
+          class="btn-primary start"
+          type="button"
+          (click)="simulate()"
+          [disabled]="!allowed('simulate') || !tower.canLaunch() || locked()"
+        >
+          <i
+            class="pi"
+            [class.pi-spin]="tower.busy()"
+            [class.pi-spinner]="tower.busy()"
+            [class.pi-play]="!tower.busy()"
+            aria-hidden="true"
+          ></i>
+          {{ tower.busy() ? 'Se confirmă comanda…' : 'Confirmă și pornește simularea' }}
+        </button>
+      </div>
+      @if (tower.runLoading()) {
+        <p role="status">Se citește captura rulării…</p>
+      }
+      @if (tower.run(); as run) {
+        <div class="run-state">
+          <p role="status">
+            <strong>{{ statusLabel(tower.status()) }}</strong> · minutul
+            {{ tower.minute() ?? '—' }} din
+            {{ tower.context()?.scenario?.inputs?.durationMinutes }} · ora simulată
+            {{ tower.clock() ?? '—' }}
+          </p>
+          <div
+            class="meter"
+            role="progressbar"
+            aria-label="Progresul simulării"
+            [attr.aria-valuenow]="runProgress() | number: '1.0-0'"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <i [style.width.%]="runProgress()"></i>
+          </div>
+        </div>
+        <dl class="metrics">
+          <div>
+            <dt>Pasageri procesați</dt>
+            <dd>{{ tower.metrics().processed ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Pasageri în coadă</dt>
+            <dd>{{ tower.metrics().queued ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>Așteptare medie</dt>
+            <dd>
+              {{
+                tower.metrics().meanWait === null
+                  ? '—'
+                  : (tower.metrics().meanWait | number: '1.0-1')
+              }}
+              <small>min</small>
+            </dd>
+          </div>
+        </dl>
+        @if (run.failureReason || run.error) {
+          <p class="notice error" role="alert">
+            {{ run.failureReason ?? run.error?.message }} Reluarea simulării necesită remedierea
+            cauzei.
+          </p>
+        }
+        @if (runReady()) {
+          <div class="next">
+            <button class="btn-primary" type="button" (click)="go('optimize')">
+              Optimizare alocări <i class="pi pi-arrow-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        } @else {
+          <p class="hint">Este necesară o rulare validă pentru revizia curentă.</p>
+        }
+      }
+      @if (tower.runError()) {
+        <p class="notice error" role="alert">
+          {{ tower.runError() }}
+          <button type="button" [disabled]="locked()" (click)="tower.reload()">
+            Reluare verificare rezultate
+          </button>
+        </p>
+      }
+      <details class="technical">
+        <summary>Selectare rulare și detalii de execuție</summary>
+        <label for="workflow-run"
+          >Rulare<select
+            id="workflow-run"
+            [value]="tower.selectedRunId() ?? ''"
+            [disabled]="locked() || tower.runLoading() || !tower.runs().length"
+            (change)="selectRun($event)"
+          >
+            <option value="" disabled>Nicio rulare</option>
+            @for (run of tower.runs(); track run.id) {
+              <option [value]="run.id">
+                {{ run.id.slice(0, 8) }} · {{ statusLabel(run.status) }} · revizia
+                {{ run.scenarioRevision }}
+              </option>
+            }
+          </select></label
+        >
+        @if (tower.run(); as run) {
+          <p>
+            runId <code>{{ run.id }}</code> · revizia capturată {{ run.scenarioRevision }} ·
+            rezultate {{ run.resultsValid ? 'validate' : 'nevalidate' }} · flux
+            {{ tower.live.status() }} · incident <code>{{ savedEventId() }}</code>
+          </p>
+        }
+      </details>
+    </section>
+  }
+
+  @if (runReady() || approved() || historyOnly()) {
+    <section
+      class="card evaluation-workspace"
+      aria-labelledby="evaluation-title"
+      [hidden]="stage() === 'event' || stage() === 'simulate'"
+    >
+      <header class="card-heading">
+        <div>
+          <h2 id="evaluation-title" data-workflow-title tabindex="-1">
+            {{
+              stage() === 'optimize'
+                ? '3. Optimizare alocări de personal'
+                : stage() === 'compare'
+                  ? '4. Comparație rezultate'
+                  : '5. Decizie și audit'
+            }}
+          </h2>
+          @if (surge(); as event) {
+            <p class="chosen">
+              <i class="pi pi-users" aria-hidden="true"></i> {{ describe(event) }}
+            </p>
+          }
+        </div>
+      </header>
+
+      @if (stage() !== 'optimize') {
+        @if (summary(); as result) {
+          <app-evaluation-summary [result]="result" [shiftPlan]="shiftPlan()" />
+        }
+      }
+
+      <app-staffing-panel
+        [scenario]="scenario"
+        [active]="stage() === 'optimize' || stage() === 'compare' || stage() === 'review'"
+        [workflowStage]="evaluationStage()"
+        [disabled]="!runReady() && !approved() && !historyOnly()"
+        [readOnly]="historyOnly()"
+        (working)="childBusy.set($event)"
+        (evaluated)="evaluated($event)"
+        (changed)="approvedScenario($event)"
+      />
+
+      <details class="technical">
+        <summary>Detalii tehnice ale comparației</summary>
+        <p class="provenance">
+          Run diagnostic: <code>{{ tower.run()?.id }}</code
+          >. Evaluarea creează o pereche nouă baseline / candidat, cu același seed, incident și
+          intrări, pentru comparație verificabilă.
+        </p>
+      </details>
+
+      @if (stage() === 'optimize') {
+        <div class="next">
+          <p>
+            {{
+              canCompare()
+                ? 'Simulări finalizate. Rezultatele variantelor sunt disponibile pentru comparație.'
+                : 'Comparația devine disponibilă după finalizarea simulărilor asociate.'
+            }}
+          </p>
+          <button
+            class="btn-primary"
+            type="button"
+            [disabled]="!canCompare() || childBusy()"
+            (click)="go('compare')"
+          >
+            Comparație rezultate <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+      @if (stage() === 'compare') {
+        @if (reviewProblem()) {
+          <p class="notice" role="status">
+            {{ reviewProblem() }} Rezultatele pot fi analizate, iar restricțiile ajustate înaintea
+            unei noi evaluări.
+          </p>
+        }
+        <div class="next">
+          <p>Comparație neconfirmată.</p>
+          <button
+            class="btn-primary"
+            type="button"
+            [disabled]="(!historyOnly() && !!reviewProblem()) || !canCompare() || childBusy()"
+            (click)="confirmComparison()"
+          >
+            Confirmare verificare și acces la decizie
+            <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+    </section>
+  } @else if (stage() === 'optimize' || stage() === 'compare' || stage() === 'review') {
+    <p class="notice" role="alert">
+      Context modificat. Optimizarea și aprobarea necesită simularea reviziei curente.<button
+        type="button"
+        (click)="go('simulate')"
+      >
+        Reluare etapă de simulare
+      </button>
+    </p>
+  }
+} @else if (!tower.loading() && !tower.message()) {
+  <section class="card">
+    <h2>Niciun scenariu disponibil</h2>
+    <p>Niciun scenariu selectat.</p>
+    <a routerLink="/scenario-studio">Scenario Studio</a>
+  </section>
+}

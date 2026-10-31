@@ -1,0 +1,227 @@
+<app-simulation-journey active="compare" [scenarioId]="scenarioId || null" />
+<div class="page-heading">
+  <div>
+    <h1 class="display">Compară personalul</h1>
+  </div>
+</div>
+@if (message()) {
+  <p class="notice" role="alert">{{ message() }}</p>
+}
+@if (pendingCommand()) {
+  <p class="notice" role="status">
+    Confirmarea pornirii nu a ajuns. Verifică simulările deja solicitate înainte de a începe altele.
+    <button type="button" [disabled]="busy()" (click)="retry()">
+      Verifică simulările solicitate
+    </button>
+  </p>
+}
+<section class="panel panel-body">
+  <div class="task-step">
+    <span>1</span>
+    <div>
+      <h2>Alege scenariul de pornire</h2>
+    </div>
+  </div>
+  @let library = scenarios.state();
+  @if (library.status === 'ready') {
+    <label
+      >Scenariu<select
+        [(ngModel)]="scenarioId"
+        (ngModelChange)="select()"
+        [disabled]="busy() || pendingCommand()"
+      >
+        <option value="">Alege un scenariu salvat</option>
+        @for (item of library.data; track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select></label
+    >
+    @if (!scenarioId) {
+      <p class="hint"><a routerLink="/scenario-studio">Scenario Studio</a></p>
+    }
+  } @else {
+    <app-data-state
+      [status]="library.status"
+      label="scenariile"
+      [message]="library.status === 'error' ? library.message : ''"
+      emptyMessage="Ai nevoie de un scenariu salvat pentru a compara personalul."
+      (retry)="scenarios.reload()"
+    />
+    @if (library.status === 'empty') {
+      <a class="btn-primary task-link" routerLink="/scenario-studio">Creează primul scenariu →</a>
+    }
+  }
+  @if (busy()) {
+    <p role="status">Se pregătesc datele…</p>
+  }
+  @if (source(); as value) {
+    <form (ngSubmit)="create()">
+      <fieldset [disabled]="busy() || pendingCommand()">
+        <legend class="sr-only">Modificarea personalului</legend>
+        <div class="task-step">
+          <span>2</span>
+          <div>
+            <h2>Alege ce modifici</h2>
+          </div>
+        </div>
+        <label
+          >Post<select
+            name="checkpoint"
+            [(ngModel)]="checkpointId"
+            (ngModelChange)="checkpointChanged()"
+          >
+            @for (checkpoint of value.layout.layout.checkpoints; track checkpoint.id) {
+              <option [value]="checkpoint.id">Securitate · {{ checkpoint.name }}</option>
+            }
+            @if (checkInPost(); as desks) {
+              <option [value]="desks.id">Check-in · {{ desks.name }}</option>
+            }
+          </select></label
+        >
+        <div class="staff-comparison">
+          <div>
+            <p>Configurația actuală</p>
+            <strong>{{ currentCount() }}</strong
+            ><span>{{ isCheckIn() ? 'ghișee deschise' : 'persoane' }}</span>
+            @if (team().length) {
+              <ul class="team">
+                @for (name of team(); track $index) {
+                  <li>{{ name }}</li>
+                }
+              </ul>
+            }
+          </div>
+          <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          <div>
+            <label
+              >Persoane în varianta nouă<input
+                name="staff"
+                type="number"
+                [min]="isCheckIn() ? 1 : 0"
+                [max]="availableCount()"
+                [(ngModel)]="staffCount"
+                required /></label
+            ><span
+              >Maximum {{ availableCount() }}
+              {{ isCheckIn() ? 'ghișee în aeroport' : 'disponibili' }}</span
+            >
+          </div>
+        </div>
+        @if (staffCount === currentCount()) {
+          <p class="notice">Alocare neschimbată.</p>
+        }
+        @if (
+          staffCount >= currentCount() &&
+          availableCount() > 0 &&
+          availableCount() === currentCount()
+        ) {
+          <p class="hint">
+            Toată echipa e alocată. Adaugă operatori în
+            <a routerLink="/scenario-studio" [queryParams]="{ scenarioId: scenarioId }"
+              >scenariul de pornire</a
+            >.
+          </p>
+        }
+        @if (!availableCount()) {
+          <p class="notice">Niciun operator disponibil.</p>
+        }
+        <details>
+          <summary>Numele comparației și limita de calcul</summary>
+          <div class="fields">
+            <label
+              >Numele comparației<input
+                name="name"
+                [(ngModel)]="name"
+                maxlength="160"
+                required /></label
+            ><label
+              >Oprește calculul după (secunde)<input
+                name="timeout"
+                type="number"
+                min="1"
+                max="3600"
+                [(ngModel)]="timeLimitSeconds"
+                required
+            /></label>
+          </div>
+        </details>
+        <div class="task-step">
+          <span>3</span>
+          <div>
+            <h2>Rulează și compară</h2>
+          </div>
+        </div>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="busy() || pendingCommand() || !checkpointId"
+        >
+          {{ busy() ? 'Se pornește…' : 'Pornește comparația' }}
+          <i class="pi pi-play" aria-hidden="true"></i>
+        </button>
+      </fieldset>
+    </form>
+  }
+</section>
+@if (pollingError()) {
+  <p class="notice" role="alert">{{ pollingError() }}</p>
+}
+@if (detail(); as value) {
+  <section class="panel panel-body" aria-label="Perechea de rulări capturate">
+    <h2>{{ value.batch.name }} · {{ status(value.batch.status) }}</h2>
+    <details>
+      <summary>Detalii de reproducere</summary>
+      <p>
+        ID experiment: <code>{{ value.batch.id }}</code> · seed-uri: {{ value.seeds.join(', ') }} ·
+        limită {{ value.batch.timeLimitSeconds }} secunde
+      </p>
+    </details>
+    @if (value.batch.failureReason) {
+      <p role="alert">{{ value.batch.failureReason }}</p>
+    }
+    @if (paired(value)) {
+      <div class="roles">
+        @for (row of roles(); track row.replica.runId) {
+          <article>
+            <h3>{{ row.role }} · {{ status(row.replica.runStatus) }}</h3>
+            <details>
+              <summary>Detalii despre rulare</summary>
+              <p>
+                runId: <code>{{ row.replica.runId }}</code>
+              </p>
+              <p>
+                {{ row.variant.name }} · scenariu <code>{{ row.variant.scenarioId }}</code> ·
+                revizia
+                {{ row.variant.scenarioRevision }}
+              </p>
+              <p>
+                Seed {{ row.replica.seed }} ·
+                {{ row.replica.resultsValid ? 'Rezultate valide' : 'Fără rezultate validate' }}
+              </p>
+            </details>
+            @if (row.replica.failureReason) {
+              <p role="alert">{{ row.replica.failureReason }}</p>
+            }
+            @if (row.replica.remoteCancellationPending) {
+              <p role="status">Se așteaptă confirmarea anulării în motor.</p>
+            }
+          </article>
+        }
+      </div>
+      <button type="button" [disabled]="comparing()" (click)="compare()">
+        {{ comparing() ? 'Se compară…' : 'Reîncarcă rezultatele' }}
+      </button>
+    }
+    @if (value.batch.status === 'pending' || value.batch.status === 'running') {
+      <p role="status">Comparație în curs…</p>
+      <button type="button" [disabled]="busy() || pendingCommand()" (click)="cancel()">
+        Oprește comparația
+      </button>
+    }
+  </section>
+}
+@if (report(); as comparison) {
+  <section class="panel panel-body">
+    <app-run-comparison-report [report]="comparison" [simple]="true" [zoneNames]="zoneNames()" />
+  </section>
+}

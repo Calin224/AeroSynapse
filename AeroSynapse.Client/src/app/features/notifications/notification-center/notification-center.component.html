@@ -1,0 +1,379 @@
+<header class="page-heading">
+  <div>
+    <h1 class="display">Centru de alerte</h1>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn-icon" title="Actualizează" aria-label="Actualizează alertele"
+      (click)="store.refresh()" [disabled]="store.loading()">
+      <i class="pi pi-refresh" [class.pi-spin]="store.loading()" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="btn-primary" (click)="publisher.open = !publisher.open">
+      <i class="pi pi-bolt" aria-hidden="true"></i> Generează alerte
+    </button>
+  </div>
+</header>
+
+@if (store.catalogError()) {
+  <p class="notice" role="alert">
+    {{ store.catalogError() }}
+    <button type="button" (click)="store.loadCatalog()">Reîncarcă scenariile</button>
+  </p>
+}
+@if (store.error()) {
+  <p class="notice" role="alert">
+    {{ store.error() }} <button type="button" (click)="store.refresh()">Reîncearcă citirea</button>
+  </p>
+}
+@if (store.commandError()) {
+  <p class="notice" role="alert">{{ store.commandError() }}</p>
+}
+@if (store.message()) {
+  <p class="notice" role="status">{{ store.message() }}</p>
+}
+@if (store.pending(); as pending) {
+  <p class="notice" role="status">
+    O comandă așteaptă confirmarea serverului:
+    {{ pending.kind === 'publish' ? 'generarea alertelor' : actionLabel(pending.body.action) }}.
+    Este posibil să fi fost deja salvată.
+    <button type="button" (click)="store.retry()" [disabled]="store.working()">
+      Reîncearcă aceeași comandă
+    </button>
+  </p>
+}
+
+<!-- Where the alerts come from: scenario and run. -->
+<section class="context" aria-label="Filtre notificări">
+  <label>
+    <span>Scenariu</span>
+    <select [ngModel]="store.selection().scenarioId ?? ''" (ngModelChange)="scenarioChanged($event)"
+      [disabled]="store.catalogLoading()">
+      <option value="">Toate scenariile</option>
+      @for (scenario of store.scenarioOptions(); track scenario.id) {
+        <option [value]="scenario.id">{{ scenario.name }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    <span>Rulare</span>
+    <select [ngModel]="store.selection().runId ?? ''" (ngModelChange)="runChanged($event)"
+      [disabled]="!store.selection().scenarioId || store.contextLoading()">
+      <option value="">{{ store.selection().scenarioId ? 'Toate rulările' : 'Alege întâi un scenariu' }}</option>
+      @for (run of store.runs(); track run.id) {
+        <option [value]="run.id">
+          {{ run.id.slice(0, 8) }} · {{ statusLabel(run.status) }}{{ run.finishedAtUtc ? ' · ' + fromNow(run.finishedAtUtc) : '' }}
+        </option>
+      }
+    </select>
+  </label>
+  <details class="more-filters">
+    <summary><i class="pi pi-sliders-h" aria-hidden="true"></i> Perioadă</summary>
+    <div class="dates">
+      <label>
+        <span>De la · ora locală</span>
+        <input type="datetime-local" [(ngModel)]="fromDate" (ngModelChange)="filter()" />
+      </label>
+      <label>
+        <span>Până la · ora locală</span>
+        <input type="datetime-local" [(ngModel)]="toDate" (ngModelChange)="filter()" />
+      </label>
+    </div>
+  </details>
+</section>
+
+<!-- Generate alerts from a run's queue forecast. -->
+<details class="publisher" #publisher [open]="!store.alerts().total && !!store.selection().scenarioId">
+  <summary>
+    <span class="publisher-title"><i class="pi pi-bolt" aria-hidden="true"></i> Generează alerte din prognoza cozilor</span>
+    <span class="publisher-hint">Alege pragurile; aplicația calculează alertele pentru fiecare zonă.</span>
+  </summary>
+  <div class="publisher-body">
+    @if (store.contextError()) {
+      <p role="alert">{{ store.contextError() }}</p>
+    }
+    @if (!store.selection().runId) {
+      <p class="hint"><i class="pi pi-info-circle" aria-hidden="true"></i> Alege mai sus un scenariu și o rulare.</p>
+    } @else if (store.contextLoading()) {
+      <p role="status">Se citește rularea…</p>
+    } @else if (!store.capture()) {
+      <p class="hint">Rularea aleasă nu poate genera alerte. Alege o rulare finalizată a unui scenariu sintetic.</p>
+    } @else {
+      <form (ngSubmit)="publish()" class="publish-form">
+        <label class="field-warning">
+          <span>Avertizare peste</span>
+          <span class="with-unit">
+            <input name="warning" type="number" min="0" max="99999" step="1" [(ngModel)]="warningThreshold"
+              required [disabled]="!!store.pending() || store.working()" />
+            <small>pasageri</small>
+          </span>
+        </label>
+        <label class="field-critical">
+          <span>Critic peste</span>
+          <span class="with-unit">
+            <input name="critical" type="number" min="1" max="100000" step="1" [(ngModel)]="criticalThreshold"
+              required [disabled]="!!store.pending() || store.working()" />
+            <small>pasageri</small>
+          </span>
+        </label>
+        <label>
+          <span>Privește înainte</span>
+          <span class="with-unit">
+            <input name="horizon" type="number" min="15" max="30" step="1" [(ngModel)]="horizonMinutes"
+              required [disabled]="!!store.pending() || store.working()" />
+            <small>min (15–30)</small>
+          </span>
+        </label>
+        @if (store.run()?.status !== 'running') {
+          <label>
+            <span>Începând cu minutul</span>
+            <input name="origin" type="number" inputmode="numeric" min="0" [max]="origins().at(-1) ?? 0"
+              [step]="store.capture()?.interval ?? 1" [(ngModel)]="fromMinute" required
+              [disabled]="!!store.pending() || store.working()" />
+          </label>
+        }
+        <button type="submit" class="btn-primary" [disabled]="!canPublish()">
+          <i class="pi" [class.pi-bolt]="!store.working()" [class.pi-spinner]="store.working()"
+            [class.pi-spin]="store.working()" aria-hidden="true"></i>
+          {{ store.working() ? 'Se calculează…' : 'Generează' }}
+        </button>
+        @if (warningThreshold !== null && criticalThreshold !== null && criticalThreshold <= warningThreshold) {
+          <p class="form-error" role="alert">Pragul critic trebuie să fie mai mare decât avertizarea.</p>
+        }
+      </form>
+    }
+  </div>
+</details>
+
+<!-- Quick filters. -->
+<div class="toolbar">
+  <div class="levels" role="group" aria-label="Nivel">
+    @for (item of levels; track item.id) {
+      <button type="button" [attr.data-level]="item.id || null" [attr.aria-pressed]="level === item.id"
+        (click)="setLevel(item.id)">
+        @if (item.id) {
+          <span class="swatch" aria-hidden="true"></span>
+        }
+        {{ item.label }}
+      </button>
+    }
+  </div>
+  <button type="button" class="toggle" [attr.aria-pressed]="acknowledged === 'false'" (click)="toggleUnacknowledged()">
+    <i class="pi" [class.pi-check-square]="acknowledged === 'false'" [class.pi-stop]="acknowledged !== 'false'" aria-hidden="true"></i>
+    Doar neconfirmate
+  </button>
+  <p class="feed-status" aria-live="polite">
+    <strong>{{ store.alerts().total }}</strong> {{ store.alerts().total === 1 ? 'alertă' : 'alerte' }}
+    @if (counts().critical) {
+      <span class="critical-count">· {{ counts().critical }} critice pe această pagină</span>
+    }
+    @if (store.loading()) {
+      <span>· Se actualizează…</span>
+    }
+  </p>
+</div>
+
+<div class="workspace">
+  <section class="alert-list" aria-label="Alerte filtrate" [attr.aria-busy]="store.loading()">
+    <div class="alert-items">
+      @for (alert of store.alerts().items; track alert.id; let i = $index) {
+        <button type="button" class="alert-row" [attr.data-level]="alert.level"
+          [class.selected]="store.selection().alertId === alert.id"
+          [attr.aria-pressed]="store.selection().alertId === alert.id"
+          (click)="selectAlert(alert.id)" (keydown)="moveAlert($event, i)">
+          <span class="row-top">
+            <span class="level" [attr.data-level]="alert.level">{{ levelLabel(alert.level) }}</span>
+            <span class="when">{{ fromNow(alert.lastObservedAtUtc) }}</span>
+          </span>
+          <strong class="zone">{{ alert.zoneName }}</strong>
+          <span class="peak"><b>{{ alert.evidence.peakQueuePassengers | number: '1.0-0' }}</b> pasageri la coadă</span>
+          <span class="row-meta">
+            @if (alert.acknowledgedAtUtc) {
+              <span class="chip ok"><i class="pi pi-check" aria-hidden="true"></i> Confirmată</span>
+            } @else if (alert.level !== 'resolved') {
+              <span class="chip todo">Neconfirmată</span>
+            }
+            @if (alert.assignee) {
+              <span class="chip"><i class="pi pi-user" aria-hidden="true"></i> {{ alert.assignee }}</span>
+            }
+          </span>
+          <span class="scenario">{{ alert.scenarioName }}</span>
+        </button>
+      } @empty {
+        <p class="empty" role="status">
+          {{
+            store.loading()
+              ? 'Se citesc alertele…'
+              : 'Nicio alertă pentru filtrele selectate. Alege o rulare și apasă „Generează alerte”.'
+          }}
+        </p>
+      }
+    </div>
+    @if (store.alerts().total > 25) {
+      <nav class="pagination" aria-label="Paginarea alertelor">
+        <button type="button" class="btn-icon" aria-label="Pagina anterioară" (click)="page(-1)"
+          [disabled]="!store.filters().offset || store.loading()">
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <span>{{ store.filters().offset + 1 }}–{{ store.filters().offset + store.alerts().items.length }} din {{ store.alerts().total }}</span>
+        <button type="button" class="btn-icon" aria-label="Pagina următoare" (click)="page(1)"
+          [disabled]="store.filters().offset + 25 >= store.alerts().total || store.loading()">
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </nav>
+    }
+  </section>
+
+  <section class="alert-detail" aria-label="Detalii și coordonare">
+    @if (store.detail(); as detail) {
+      @let alert = detail.alert;
+      @let g = gauge(alert);
+      <header class="detail-head" [attr.data-level]="alert.level">
+        <span class="level" [attr.data-level]="alert.level">{{ levelLabel(alert.level) }}</span>
+        <h2>{{ alert.zoneName }}</h2>
+        <p>{{ alert.scenarioName }} · minutele {{ alert.evidence.fromMinute }}–{{ alert.evidence.toMinute }} ale simulării</p>
+      </header>
+
+      <div class="gauge-block">
+        <p class="gauge-value">
+          <strong>{{ alert.evidence.peakQueuePassengers | number: '1.0-0' }}</strong>
+          <span>pasageri la coadă, vârful prognozat</span>
+        </p>
+        <div class="gauge" [attr.data-level]="alert.level" role="img"
+          [attr.aria-label]="'Vârf ' + (alert.evidence.peakQueuePassengers | number: '1.0-0') + ' pasageri; avertizare peste ' + alert.warningThreshold + ', critic peste ' + alert.criticalThreshold">
+          <span class="fill" [style.width.%]="g.peak"></span>
+          <span class="mark" [style.left.%]="g.warning"><small>{{ alert.warningThreshold }}</small></span>
+          <span class="mark critical" [style.left.%]="g.critical"><small>{{ alert.criticalThreshold }}</small></span>
+        </div>
+        <p class="gauge-legend"><span>Avertizare peste {{ alert.warningThreshold }}</span><span>Critic peste {{ alert.criticalThreshold }}</span></p>
+      </div>
+
+      <nav class="context-links" aria-label="Contextul afectat">
+        <a routerLink="/control-tower" [queryParams]="links(alert)"><i class="pi pi-map-marker" aria-hidden="true"></i> Vezi zona în Control Tower</a>
+        <a routerLink="/operations" [queryParams]="{ scenarioId: alert.scenarioId, runId: alert.runId }"><i class="pi pi-play-circle" aria-hidden="true"></i> Deschide simularea</a>
+      </nav>
+
+      <div class="coordination">
+        <label class="actor">
+          <span>Numele tău</span>
+          <input id="notification-actor" [ngModel]="actor" (ngModelChange)="rememberActor($event)"
+            maxlength="160" autocomplete="name" placeholder="ex. Ana Pop, supervizor" />
+        </label>
+        @if (!actor.trim()) {
+          <p class="hint">Scrie-ți numele o singură dată; apare în istoric la fiecare acțiune.</p>
+        }
+
+        <button type="button" class="acknowledge" (click)="store.act('acknowledge', actor)"
+          [disabled]="!actor.trim() || !store.fresh() || !!store.pending() || store.working() || !!alert.acknowledgedAtUtc || alert.level === 'resolved'">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <span>{{ alert.acknowledgedAtUtc ? 'Confirmată de ' + alert.acknowledgedBy : 'Confirmă alerta' }}</span>
+        </button>
+
+        <div class="inline-action">
+          <label>
+            <span>Responsabil</span>
+            <input id="notification-assignee" [ngModel]="assignment ?? alert.assignee"
+              (ngModelChange)="assignment = $event" maxlength="160" placeholder="Echipă sau persoană" />
+          </label>
+          <button type="button" (click)="store.act('assign', actor, assignment ?? alert.assignee)"
+            [disabled]="!actor.trim() || !store.fresh() || !!store.pending() || store.working() || assignment === null || assignment.trim() === alert.assignee">
+            Atribuie
+          </button>
+        </div>
+
+        <div class="inline-action">
+          <label>
+            <span>Comentariu</span>
+            <textarea id="notification-comment" [(ngModel)]="comment" maxlength="2000" rows="2"
+              placeholder="Ce ai verificat sau ce urmează"></textarea>
+          </label>
+          <button type="button" (click)="store.act('comment', actor, comment)"
+            [disabled]="!actor.trim() || !comment.trim() || !store.fresh() || !!store.pending() || store.working()">
+            Trimite
+          </button>
+        </div>
+      </div>
+
+      <h3>Istoric</h3>
+      <ol class="timeline">
+        @for (item of detail.activity; track item.id) {
+          <li [attr.data-kind]="item.kind">
+            <span class="node" aria-hidden="true"></span>
+            <div>
+              <strong>{{ activityLabel(item.kind) }}</strong>
+              <span class="meta">{{ item.actor }} · {{ fromNow(item.recordedAtUtc) }}</span>
+              @if (item.evidence; as evidence) {
+                <p>Vârf {{ evidence.peakQueuePassengers | number: '1.0-0' }} pasageri în minutele {{ evidence.fromMinute }}–{{ evidence.toMinute }}.</p>
+              }
+              @if (item.text) {
+                <p class="comment-text">{{ item.text }}</p>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+
+      <details class="technical">
+        <summary>Detalii tehnice</summary>
+        <dl>
+          <div>
+            <dt>Sursă</dt>
+            <dd>Prognoza cozilor · {{ alert.evidence.observationSource === 'live_simulation' ? 'simularea în curs' : 'captură istorică' }}</dd>
+          </div>
+          <div>
+            <dt>Perioadă simulată · UTC</dt>
+            <dd>{{ alert.evidence.periodStartUtc | date: 'dd.MM.yyyy HH:mm' : 'UTC' }}–{{ alert.evidence.periodEndUtc | date: 'HH:mm' : 'UTC' }}</dd>
+          </div>
+          <div>
+            <dt>Declanșare · timp simulat UTC</dt>
+            <dd>{{ alert.simulationAtUtc | date: 'dd.MM.yyyy HH:mm' : 'UTC' }}</dd>
+          </div>
+          <div>
+            <dt>Prima / ultima înregistrare</dt>
+            <dd>{{ alert.firstObservedAtUtc | date: 'dd.MM.yyyy HH:mm:ss' }} / {{ alert.lastObservedAtUtc | date: 'dd.MM.yyyy HH:mm:ss' }}</dd>
+          </div>
+          <div>
+            <dt>Proveniență</dt>
+            <dd>{{ alert.observations }} observații unice · revizia {{ alert.revision }} · date sintetice</dd>
+          </div>
+          <div>
+            <dt>Formula</dt>
+            <dd><code>{{ alert.evidence.formula }}</code></dd>
+          </div>
+          <div>
+            <dt>Rulare</dt>
+            <dd><code>{{ alert.runId }}</code></dd>
+          </div>
+        </dl>
+      </details>
+    } @else {
+      <div class="empty-detail">
+        <i class="pi pi-bell" aria-hidden="true"></i>
+        <h2>{{ store.alerts().total ? 'Alege o alertă' : 'Nicio alertă de afișat' }}</h2>
+        <p>
+          {{ store.alerts().total
+            ? 'Selectează o alertă din listă (sau folosește săgețile ↑ ↓) ca s-o confirmi, s-o atribui sau s-o comentezi.'
+            : 'Generează alerte dintr-o rulare ca să vezi aici zonele aglomerate.' }}
+        </p>
+      </div>
+    }
+  </section>
+</div>
+
+<details class="recent">
+  <summary>Activitate recentă <span class="count">{{ store.activity().total }}</span></summary>
+  <ol class="timeline">
+    @for (item of store.activity().items; track item.id) {
+      <li [attr.data-kind]="item.kind">
+        <span class="node" aria-hidden="true"></span>
+        <div>
+          <button type="button" class="link" (click)="selectAlert(item.alertId)">{{ activityLabel(item.kind) }}</button>
+          <span class="meta">{{ item.actor }} · {{ fromNow(item.recordedAtUtc) }} · rulare {{ item.runId.slice(0, 8) }}</span>
+          @if (item.text) {
+            <p class="comment-text">{{ item.text }}</p>
+          }
+        </div>
+      </li>
+    } @empty {
+      <li class="none">Nicio activitate pentru filtrele alese.</li>
+    }
+  </ol>
+</details>

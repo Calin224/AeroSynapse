@@ -1,0 +1,132 @@
+<ul class="legend" aria-hidden="true">
+  <li><i class="key-dot"></i>o zi simulată</li>
+  <li><i class="key-band"></i>interval realist · 9 zile din 10</li>
+  <li><i class="key-median"></i>valoarea obișnuită</li>
+  <li>{{ metric().lowerIsBetter ? '← spre stânga e mai bine' : 'spre dreapta e mai bine →' }}</li>
+</ul>
+<div
+  class="plot"
+  role="group"
+  [attr.aria-label]="
+    'Fiecare punct este o zi simulată pentru ' +
+    metric().label.toLowerCase() +
+    (metric().lowerIsBetter ? '. Spre stânga e mai bine' : '. Spre dreapta e mai bine') +
+    '. Folosește săgețile pentru a trece de la o zi la alta.'
+  "
+  (keydown)="move($event)"
+>
+  @for (row of rows(); track row.variantId) {
+    <div class="lane" [style.--c]="row.color">
+      <p class="lane-label" [title]="row.name">
+        <span class="tag">{{ row.tag }}</span>
+        <strong>{{ row.name }}</strong>
+        <span>de obicei {{ row.typical }}</span>
+      </p>
+      <div class="track" [style.height.px]="row.height">
+        @if (row.band; as band) {
+          <span class="band" [style.left.%]="band.left" [style.width.%]="band.width"></span>
+        }
+        @if (row.median !== null) {
+          <span class="median" [style.left.%]="row.median"></span>
+        }
+        <span class="limit" [style.left.%]="thresholdX()"></span>
+        @for (dot of row.dots; track dot.id) {
+          <button
+            type="button"
+            class="dot"
+            [class.past]="dot.past"
+            [class.on]="active() === dot.id"
+            [style.left.%]="dot.x"
+            [style.--y.px]="dot.y"
+            [style.--i]="$index"
+            [attr.data-point]="dot.id"
+            [attr.data-label]="dot.label"
+            [attr.tabindex]="focusId() === dot.id ? 0 : -1"
+            [attr.aria-label]="describe(dot, row.tag)"
+            (mouseenter)="active.set(dot.id)"
+            (focus)="active.set(dot.id)"
+            (click)="active.set(dot.id)"
+          ></button>
+        } @empty {
+          <span class="waiting">Nicio zi finalizată.</span>
+        }
+      </div>
+    </div>
+  }
+  <div class="axis" aria-hidden="true">
+    @for (tick of ticks(); track tick.value) {
+      <span [style.left.%]="tick.x">{{ tick.label }}</span>
+    }
+  </div>
+</div>
+<p class="caption" aria-live="polite">
+  @if (detail(); as info) {
+    <strong>Ziua {{ info.dot.day }} · {{ info.lane }}: {{ info.dot.label }}.</strong>
+    {{ info.rank }}
+    <a routerLink="/replay" [queryParams]="{ runId: info.dot.runId }"
+      >Urmărește ziua în reluare →</a
+    >
+  }
+</p>
+<div class="often">
+  <label [for]="id">
+    Cât de des {{ metric().lowerIsBetter ? 'trece' : 'scade' }} {{ metric().noun }}
+    {{ metric().lowerIsBetter ? 'de' : 'sub' }} <strong>{{ thresholdLabel() }}</strong
+    >?
+  </label>
+  @if (domain(); as range) {
+    <input
+      type="range"
+      [id]="id"
+      [min]="range.lo"
+      [max]="range.hi"
+      [step]="range.step"
+      [value]="threshold()"
+      [attr.aria-valuetext]="thresholdLabel()"
+      (input)="setThreshold($event)"
+    />
+  }
+  <ul aria-live="polite">
+    @for (row of rows(); track row.variantId) {
+      <li [style.--c]="row.color">
+        <i aria-hidden="true"></i><span>{{ row.tag }}</span
+        ><strong>{{ row.often }}</strong>
+      </li>
+    }
+  </ul>
+</div>
+<details class="disclosure">
+  <summary>Vezi toate valorile ca tabel</summary>
+  <div class="table-wrap">
+    <table>
+      <caption>
+        {{
+          metric().label
+        }}
+        în fiecare zi simulată
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Varianta</th>
+          <th scope="col">Zile reușite</th>
+          <th scope="col">Valoarea în fiecare zi</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.variantId) {
+          <tr>
+            <th scope="row">{{ row.tag }} · {{ row.name }}</th>
+            <td>{{ row.dots.length }}</td>
+            <td>
+              @for (dot of row.dots; track dot.id) {
+                <span class="cell">ziua {{ dot.day }}: {{ dot.label }}</span>
+              } @empty {
+                —
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</details>

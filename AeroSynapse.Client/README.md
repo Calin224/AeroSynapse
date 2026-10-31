@@ -1,9 +1,10 @@
 # AeroSynapse Client
 
 Aplicație Angular standalone, organizată pe feature-uri, cu PrimeNG/Aura și Three.js.
+Pagina `/operations` folosește API-ul pentru scenarii persistente, lansare,
+consultarea metricilor/stărilor și retry după eșec. Consultă [modelul de date și contractele](../docs/product/data-and-contracts.md).
 Control Tower afișează un snapshot aeroportuar; Scenario permite selectarea unor
 configurații demonstrative, aplicate aceluiași model 3D.
-Pagina `/operations` pregătește managementul scenariilor și rulărilor persistente prin API.
 
 ## Pornire locală
 
@@ -15,15 +16,14 @@ npm.cmd ci
 npm.cmd start
 ```
 
-Rute: http://localhost:4200/control-tower, http://localhost:4200/scenario și
-http://localhost:4200/operations.
+Rute: http://localhost:4200/control-tower și http://localhost:4200/scenario.
 Ruta / redirecționează la Control Tower; adresele necunoscute afișează o pagină 404.
 
 În checkout-uri cu caracterul literal % în cale, inclusiv AeroSynapse%20AI,
 scripts/start.mjs dezactivează prebundling, HMR și live reload pentru a evita
 importurile /@fs/ decodificate greșit de browser. Compilarea continuă să urmărească
 modificările; reîncarcă manual pagina după editare. Pentru căi fără %, rămân
-opțiunile standard Angular. Scriptul transmite argumentele npm start -- ... către CLI.
+opțiunile standard Angular. Scriptul transmite argumentele npm.cmd start -- ... către CLI.
 
 ## Stack și temă
 
@@ -32,80 +32,61 @@ la 21.1.10, iar @primeuix/themes la 2.0.3. Aceste versiuni evită configurarea
 unei chei de licență introdusă în generația PrimeNG 22.
 Documentația furnizorului: https://primeui.dev/licenses/community.
 
-Tema Aura folosește presetul din `core/theme/app-theme.ts`, configurat prin
-providePrimeNG în app.config.ts; clasa app-dark din index.html activează paleta
-întunecată. Culorile, tipografia, spațierea, bordurile și suprafețele comune sunt
-definite în `src/styles.css`, în straturi CSS care permit ajustări locale în componente.
-Controalele native și PrimeNG folosesc aceeași paletă, fără servicii externe de fonturi.
+Tema Aura este configurată prin providePrimeNG în app.config.ts, cu presetul din
+core/theme/app-theme.ts. Spațiul de lucru folosește suprafețe deschise, navigare verde
+închis și o suprafață distinctă pentru terminalul 3D. Tokenii de design sunt în src/styles.css.
+Fonturile Geist și Geist Mono vin din pachetele @fontsource-variable și sunt servite
+local, fără servicii externe. CSS responsiv adaptează navigarea, indicatorii și
+panourile pentru desktop și telefon.
 
-Navigarea este o componentă separată, `core/layout/app-sidebar.ts`: sidebar complet
-pe desktop, bară cu pictograme pe tabletă și navigare cu etichete pe telefon.
-Linkurile active folosesc `aria-current`, etichetele rămân accesibile pe tabletă,
-iar țintele de navigare pe telefon au minimum 44 px. Cardurile, listele de zboruri,
-selectorul de scenarii și stările loading/empty/error folosesc aceleași stiluri.
+Navigarea păstrează etichete lizibile și ținte de minimum 44 px în meniul mobil.
+Pe telefon, bara de navigare rămâne vizibilă la derulare; dialogurile blochează
+derularea paginii din fundal și restabilesc focusul la închidere. Schimbarea paginii
+mută focusul pe titlu. Tabelele ample au derulare proprie și regiuni accesibile
+cu tastatura. Verifică layout-ul la 320, 768, 1024 și 1440 px, inclusiv stările de
+încărcare, eroare și lipsă de date. Păstrează paleta forest și tokenii existenți.
 
 ## Organizare
 
-- core/http: ApiClient, configurare runtime, DemoDataClient și interceptor funcțional pentru normalizarea erorilor.
-- core/layout și core/theme: navigarea responsivă și presetul vizual PrimeNG.
+- core/http: ApiClient, API_BASE_URL și interceptor funcțional pentru normalizarea erorilor.
 - shared: resource HTTP reutilizabil, loading/empty/error cu retry și pagina 404.
-- features/control-tower: modele, store și dashboard.
-- features/scenario: store, selecție și previzualizare de scenarii.
-- features/operations: creare de scenarii, istoric de rulări, polling până la finalizare,
-  metrici, snapshot-uri și reîncercarea unei rulări eșuate.
+- features/control-tower: dashboard-ul ultimei rulări finalizate și `run-overview.ts`, care derivă indicatorii, zborurile și scena 3D dintr-o rulare stocată.
+- features/scenario: scenariile salvate din API, previzualizarea ultimei lor rulări și lansarea simulărilor.
 - features/digital-twin: componenta Angular, contractul TwinRenderer, renderer Three.js,
-  încărcarea modelelor GLB și gestionarea resurselor GPU.
-- public/models/aerosynapse: terminalul, exteriorul cu două niveluri de detaliu și manifestul entităților.
-- public/data: fixture-uri locale servite prin HTTP; nu reprezintă telemetrie live.
+  încărcarea asset-urilor GLB și gestionarea resurselor GPU.
 
 Dashboardurile transmit un TwinScene rendererului. Ele nu dețin camere, materiale,
 geometrii sau WebGLRenderer. TWIN_RENDERER_FACTORY permite înlocuirea rendererului
 în teste, astfel încât testele rutelor și stărilor să ruleze fără GPU.
 
-Rendererul este inițializat după render-ul Angular și rulează în afara fluxului de
-actualizare al dashboardului. Are OrbitControls, resetarea camerei și ResizeObserver.
+Vizualizarea pornește cu harta 2D. Butonul **3D** încarcă dinamic motorul grafic
+și modelele; schimbarea paginii anulează inițializarea rămasă în așteptare.
+Rendererul 3D are OrbitControls, resetarea camerei și ResizeObserver.
 La distrugere oprește bucla de animație, deconectează observerul, elimină listenerii,
 eliberează controalele, geometriile, materialele și texturile partajate, apoi
-eliberează rendererul/contextul WebGL și elimină canvasul. Aeronavele reutilizează
-geometria modelelor la schimbarea snapshot-ului. Randarea continuă este suspendată
+eliberează rendererul/contextul WebGL și elimină canvasul. Aeronavele din GLB
+reutilizează geometria la schimbarea snapshot-ului. Randarea continuă este suspendată
 când documentul este ascuns. Erorile de inițializare și pierderea contextului au retry în UI.
 
-Terminalul folosește modelul GLB cu acoperiș transparent. Modurile Interior / Exterior,
-filtrele Aeronave / Bagaje / Vehicule / Pistă și selecția prin click sau listă sunt locale
-vizualizării. Exteriorul și nivelul detaliat se încarcă la cerere; un eșec permite retry
-și păstrează modelul deja încărcat. Entitățile au identificatori stabili în manifest,
-fără a crea date în backend. Vezi [documentația modelelor 3D](../docs/airport-3d-assets.md).
+Modelul folosește aeroportul furnizat, cu arhitectura originală, acoperiș
+transparent și lounge eliminat. Trei controale și cinci porți existente au ID-uri.
+Exteriorul și LOD
+detaliat sunt încărcate la cerere; modurile și filtrele nu modifică simularea.
+Selecția prin click sau listă returnează `zoneId` și `entityId` din glTF extras.
+Vezi [manifestul 3D](public/models/aerosynapse/manifest.json) și
+[creditele materialelor](../assets/blender/materials/asset-credits.json). `npm run verify:assets` verifică exporturile
+reale prin Three.js, independent de WebGL.
 
-## HTTP și configurare runtime
+## HTTP și backend viitor
 
-`public/runtime-config.js` este încărcat înaintea aplicației și configurează adresele
-publice ale serviciilor, implicit `apiBaseUrl: '/api'` și
-`intelligenceBaseUrl: '/intelligence'`. La găzduire, fișierul livrat poate fi înlocuit
-fără recompilarea aplicației; servește-l fără cache pentru a evita configurații vechi.
-Fișierul este public și nu trebuie să conțină parole sau chei API. Configurația implicită
-se aplică și dacă variabila globală nu este definită.
-
-ApiClient citește `API_BASE_URL` din această configurație. DemoDataClient citește
-separat fixture-urile din `/data`, astfel încât schimbarea adresei backendului nu mută
-datele demonstrative. Interceptorul păstrează statusul HTTP și produce mesaje utile
-fără a afișa detalii interne de la server.
-
-`npm start` activează `proxy.conf.json` pentru dezvoltare:
-
-| Cerere din browser | Destinație |
-| --- | --- |
-| `/api/health` | `http://127.0.0.1:5080/health` |
-| `/api/airports` și `/api/airports/**` | `http://127.0.0.1:5080/api/airports`, cu ruta păstrată |
-| Celelalte rute `/api/**` | `http://127.0.0.1:5080/**`, fără prefixul `/api` |
-| `/intelligence/**` | `http://127.0.0.1:8000/**`, fără prefixul `/intelligence` |
-
-Proxy-ul Angular este doar pentru dezvoltare. Găzduirea de producție trebuie să
-configureze propriul proxy sau adrese compatibile cu politica CORS a serviciilor.
-
-Footer-ul verifică o dată, la încărcarea aplicației, endpoint-urile de sănătate API și
-FastAPI, cu timeout de 4 secunde. Afișează verificare, conectat sau indisponibil,
-independent pentru fiecare serviciu. Serviciul FastAPI nu este inclus încă în acest
-repository; absența lui sau a API-ului nu împiedică explorarea datelor demo.
+ApiClient folosește HttpClient și API_BASE_URL (implicit /api), citit din
+runtime-config.js. În Docker, fișierul este generat la pornire din variabilele
+publice FRONTEND_API_BASE_URL și FRONTEND_INTELLIGENCE_BASE_URL. Nginx proxy
+trimite cererile către API .NET și FastAPI. În dezvoltarea locală, proxy.conf.json
+folosește porturile 5080 și 8000. Alertele paginii indică lipsa conexiunii browserului
+și cererile API lente, fără a deduce starea serviciilor.
+Interceptorul păstrează statusul
+HTTP și produce mesaje utile fără a afișa detalii interne de la server.
 
 Resource-ul reutilizabil expune loading, ready, empty și error. Refresh/retry anulează
 cererea precedentă prin switchMap; distrugerea feature-ului anulează abonamentul.
@@ -114,32 +95,19 @@ Nu sunt efectuate retry-uri automate pentru cereri eșuate.
 Pentru verificare manuală:
 
 - Loading: activează throttling în DevTools și actualizează pagina.
-- Empty Control Tower: înlocuiește temporar fixture-ul control-tower.json cu null.
-- Empty Scenario: înlocuiește temporar scenarios.json cu [].
-- Error: blochează requestul /data/control-tower.json în DevTools și actualizează.
+- Empty Control Tower: pornește cu o bază de date fără rulări finalizate.
+- Empty Scenario: pornește cu o bază de date fără scenarii salvate.
+- Error: blochează requestul /api/scenes în DevTools și actualizează.
 - Retry: deblochează requestul și apasă „Încearcă din nou”.
 - 3D: rotește modelul, mărește-l, resetează camera și navighează între feature-uri.
   Restabilește fixture-urile după verificare. Scenariile schimbă poziții demonstrative;
-  un motor de simulare și telemetria reală vor fi integrate separat.
+  un motor de simulare și telemetria reală nu fac parte din acest prototip.
 
 ## Build și teste
-
-Pagina „Scenarii și rulări” folosește contractele de management, separat de fixture-urile
-Control Tower și Scenario. Necesită `GET /scenes`, publicarea unui layout prin
-`POST /scenes/{id}/layout-versions`, `GET/POST /scenarios`, detaliile unui scenariu,
-`GET/POST /scenarios/{id}/runs`, `GET /runs/{id}` și `POST /runs/{id}/retry`.
-Browserul folosește prefixul public `/api`, eliminat de proxy pentru aceste rute.
-
-Aceste endpoint-uri de management nu sunt încă înregistrate în backendul acestui
-checkout. Până la integrarea lor, pagina afișează starea de eroare și oferă retry;
-celelalte pagini demonstrative rămân independente. Testele verifică interfața și
-contractele HTTP cu răspunsuri simulate, inclusiv publicarea layout-ului înaintea
-salvării scenariului, polling, retry cu revizia rulării și anularea cererilor la navigare.
 
 ```powershell
 npm.cmd test -- --watch=false
 npm.cmd run build
-npm.cmd run verify:assets
 ```
 
 TypeScript și template-urile Angular folosesc verificare strictă.
@@ -151,51 +119,28 @@ Testele Vitest verifică HTTP/interceptorul, rutele și fallbackul, loading/empt
 retry-ul, selecția de scenarii, anularea cererilor și cleanup-ul rendererului.
 Testele folosesc porturi browser simulate pentru GPU, controale și observer;
 vizualizarea reală trebuie verificată și într-un browser cu WebGL disponibil.
-Verificatorul de asset-uri importă GLB-urile prin Three.js/Meshopt fără GPU și verifică
-dimensiunile, axele, transparența, identificatorii și bugetele modelelor.
 
-## Rulare în Docker
+## Navigare și explorare interactivă
 
-Din rădăcina repository-ului, cu Docker pornit:
+Meniul grupează instrumentele pe operațiuni, simulare, analiză și explorare.
+Pe telefon se deschide din butonul de meniu. Căutarea globală se deschide cu Ctrl+K / ⌘K
+sau din meniul lateral; acceptă cuvinte fără diacritice, săgeți, Enter și Escape. Destinațiile
+recente sunt păstrate doar în memorie. Meniul și căutarea respectă rolul și feature flags;
+guard-urile și autorizarea serverului rămân obligatorii.
 
-```powershell
-docker build -t aerosynapse-frontend ./AeroSynapse.Client
-docker run --rm --name aerosynapse-frontend -p 127.0.0.1:8080:80 aerosynapse-frontend
+În Control Tower, „De la scenariu la decizie” deschide ghidul de lucru. Graficele permit
+selectarea unui moment prin cursor, atingere sau slider cu tastatura. „Ultimul moment”
+revine la observația recentă. Inspecția graficului nu modifică KPI-urile rulării sau harta;
+Time Travel oferă replay-ul complet. Selectarea unei alte rulări resetează momentul inspectat.
+
+Verificarea experienței (fixture-uri de test, fără mutații în backend):
+
+```sh
+npm start
+# În alt terminal:
+npx playwright test e2e/workspace-experience.spec.ts
 ```
 
-Deschide `http://127.0.0.1:8080/control-tower` sau `/scenario`. Imaginea compilează
-aplicația cu Node.js 24 și servește doar rezultatul de producție prin Nginx.
-Dependențele Node, cache-urile, rapoartele de test, fișierele `.env` și suitele E2E
-sunt excluse din contextul Docker.
-
-La pornire, `docker/30-runtime-config.sh` generează `runtime-config.js` din variabilele
-de mai jos. Valorile sunt serializate prin JSON și fișierul este servit cu
-`Cache-Control: no-store`, astfel încât aceeași imagine poate fi configurată pentru
-mai multe medii fără recompilare.
-
-| Variabilă | Implicit | Rol |
-| --- | --- | --- |
-| `API_UPSTREAM` | `host.docker.internal:5080` | Adresa API accesibilă din container, fără schemă URL |
-| `INTELLIGENCE_UPSTREAM` | `host.docker.internal:8000` | Adresa FastAPI accesibilă din container, fără schemă URL |
-| `FRONTEND_API_BASE_URL` | `/api` | Adresa publică folosită de browser pentru API |
-| `FRONTEND_INTELLIGENCE_BASE_URL` | `/intelligence` | Adresa publică folosită de browser pentru FastAPI |
-
-Suprascrie variabilele cu `docker run -e NUME=valoare`. Pe Docker Desktop,
-`host.docker.internal` indică gazda; pe Docker Engine pentru Linux adaugă
-`--add-host host.docker.internal:host-gateway` sau folosește numele serviciilor din
-aceeași rețea Docker. Numele upstream trebuie să poată fi rezolvate la pornirea Nginx.
-Serviciile API și FastAPI se pornesc separat; datele demo rămân disponibile în lipsa lor.
-Adresele `FRONTEND_*` sunt publice și nu trebuie să conțină credențiale.
-
-Nginx păstrează prefixul `/api/airports` pentru endpoint-urile hărților, elimină `/api`
-pentru celelalte rute backend și elimină prefixul `/intelligence` pentru FastAPI.
-Navigarea directă către rutele SPA primește `index.html`. Fișierele statice lipsă,
-inclusiv modelele 3D și datele demonstrative, răspund cu 404.
-
-`GET /health` verifică frontend-ul și este folosit de healthcheck-ul imaginii Docker;
-conectivitatea backendurilor este afișată separat în aplicație. Verificarea configurației:
-
-```powershell
-docker exec aerosynapse-frontend nginx -t
-curl http://127.0.0.1:8080/health
-```
+Suita verifică autentificarea și recuperarea după eroare, căutarea, rolul Viewer, stările
+loading/empty/error/partial, accesibilitatea cu axe, focusul în dialoguri și reflow la
+320, 390, 1366 și 1440 px. Capturile locale sunt în `artifacts/experience/` la rădăcina repo-ului.

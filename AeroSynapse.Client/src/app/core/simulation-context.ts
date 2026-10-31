@@ -64,8 +64,6 @@ export class SimulationContext {
     const path = tree.root.children['primary']?.segments.map((segment) => segment.path).join('/');
     const scenarioPages = [
       'control-tower',
-      'control-tower/compare',
-      'control-tower/batches',
       'scenario',
       'operations',
       'compare',

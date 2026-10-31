@@ -15,7 +15,7 @@
     <span>AeroSynapse</span>
   </a>
 </ng-template>
-<ng-template #navigationLinks let-surface="surface">
+<ng-template #navigationLinks>
   <nav aria-label="Navigare principală">
     @for (group of navigation.groups(); track group.label) {
       <details class="nav-group" [open]="expandedGroups().has(group.label)">
@@ -23,55 +23,14 @@
           {{ group.label }}<i class="pi pi-angle-down" aria-hidden="true"></i>
         </summary>
         @for (item of group.items; track item.path) {
-          <div class="nav-entry">
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              ariaCurrentWhenActive="page"
-              (click)="closeOnCurrentPage(item.path)"
-            >
-              <i [class]="'pi pi-' + item.icon" aria-hidden="true"></i><span>{{ item.label }}</span>
-            </a>
-            @if (item.children && session.canWrite()) {
-              <button
-                class="nav-toggle"
-                type="button"
-                [attr.aria-label]="'Paginile ' + item.label"
-                [attr.aria-expanded]="expandedDestinations().has(item.path)"
-                [attr.aria-controls]="surface + '-control-tower-pages'"
-                (click)="toggleDestination(item.path)"
-              >
-                <i
-                  class="pi pi-angle-down"
-                  [class.collapsed]="!expandedDestinations().has(item.path)"
-                  aria-hidden="true"
-                ></i>
-              </button>
-            }
-          </div>
-          @if (item.children && session.canWrite()) {
-            <div
-              class="nav-children"
-              role="group"
-              [hidden]="!expandedDestinations().has(item.path)"
-              [id]="surface + '-control-tower-pages'"
-              [attr.aria-label]="'Paginile ' + item.label"
-            >
-              @for (child of item.children; track child.id) {
-                <a
-                  [routerLink]="child.path"
-                  [queryParams]="childQueryParams(child.path)"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="exactPathMatch"
-                  ariaCurrentWhenActive="page"
-                  (click)="closeOnCurrentPage(child.path)"
-                >
-                  <i [class]="'pi pi-' + child.icon" aria-hidden="true"></i
-                  ><span>{{ child.label }}</span>
-                </a>
-              }
-            </div>
-          }
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            (click)="closeOnCurrentPage(item.path)"
+          >
+            <i [class]="'pi pi-' + item.icon" aria-hidden="true"></i><span>{{ item.label }}</span>
+          </a>
         }
       </details>
     }
@@ -91,7 +50,7 @@
       <i class="pi pi-search" aria-hidden="true"></i><span>Caută o pagină</span
       ><kbd aria-hidden="true">Ctrl K</kbd>
     </button>
-    <ng-container *ngTemplateOutlet="navigationLinks; context: { surface: 'sidebar' }" />
+    <ng-container *ngTemplateOutlet="navigationLinks" />
     <div class="sidebar-bottom">
       @if (session.session(); as account) {
         <div class="sidebar-footer">
@@ -164,7 +123,7 @@
   >
     <i class="pi pi-search" aria-hidden="true"></i>Caută o pagină
   </button>
-  <ng-container *ngTemplateOutlet="navigationLinks; context: { surface: 'drawer' }" />
+  <ng-container *ngTemplateOutlet="navigationLinks" />
   @if (session.session()) {
     <div class="drawer-account">
       <span>{{ session.session()?.username }}</span

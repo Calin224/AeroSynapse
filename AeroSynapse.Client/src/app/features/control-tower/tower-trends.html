@@ -1,0 +1,85 @@
+<header>
+  <div>
+    <h2>Evoluția terminalului</h2>
+    <p>{{ source() }}</p>
+  </div>
+  @if (selected(); as point) {
+    <div class="moment">
+      <span>Minutul <strong>{{ point.minute | number: '1.0-1' }}</strong></span>
+    </div>
+  }
+</header>
+@if (selected(); as point) {
+  <div class="charts">
+    @for (metric of metrics; track metric.key) {
+      <figure [class.processed]="metric.key === 'processed'">
+        <figcaption>
+          <span><i [class]="'pi pi-' + metric.icon" aria-hidden="true"></i>{{ metric.label }}</span
+          ><strong>{{ point[metric.key] | number: '1.0-0' }}<small> pax</small></strong>
+        </figcaption>
+        <svg
+          viewBox="0 0 500 92"
+          preserveAspectRatio="none"
+          role="img"
+          [attr.aria-label]="
+            metric.label + ': ' + point[metric.key] + ' pasageri la minutul ' + point.minute
+          "
+          (pointermove)="inspect($event)"
+          (pointerdown)="inspect($event)"
+        >
+          <line class="gridline" x1="8" y1="14" x2="492" y2="14" />
+          <line class="gridline" x1="8" y1="48" x2="492" y2="48" />
+          <line x1="8" y1="82" x2="492" y2="82" />
+          <polygon [attr.points]="plots()[metric.key].area" />
+          <polyline [attr.points]="plots()[metric.key].path" />
+          <line
+            class="crosshair"
+            [attr.x1]="plots()[metric.key].marker.x"
+            y1="6"
+            [attr.x2]="plots()[metric.key].marker.x"
+            y2="82"
+          />
+          <circle
+            [attr.cx]="plots()[metric.key].marker.x"
+            [attr.cy]="plots()[metric.key].marker.y"
+            r="4"
+          />
+        </svg>
+        <div class="axis">
+          <span>{{ points()[0].minute | number: '1.0-1' }} min</span
+          ><span>{{ last()?.minute | number: '1.0-1' }} min</span>
+        </div>
+      </figure>
+    }
+  </div>
+  <div class="timeline">
+    <label for="tower-timeline"
+      ><i class="pi pi-history" aria-hidden="true"></i>Explorează cronologia</label
+    >
+    <input
+      id="tower-timeline"
+      type="range"
+      min="0"
+      [max]="points().length - 1"
+      step="1"
+      [value]="selectedIndex()"
+      [disabled]="points().length < 2"
+      [attr.aria-valuetext]="
+        'Minutul ' +
+        point.minute +
+        ': ' +
+        point.queued +
+        ' în coadă, ' +
+        point.processed +
+        ' procesați'
+      "
+      (input)="scrub($event)"
+    />
+    <span>{{ selectedIndex() + 1 }} / {{ points().length }}</span>
+  </div>
+} @else {
+  <div class="empty">
+    <i class="pi pi-chart-line" aria-hidden="true"></i>
+    <p>Nicio observație completă.</p>
+  </div>
+}

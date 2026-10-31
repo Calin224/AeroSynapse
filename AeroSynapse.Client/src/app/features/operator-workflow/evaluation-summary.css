@@ -1,0 +1,224 @@
+:host {
+  --after: #258a72;
+  display: grid;
+  gap: 1.1rem;
+}
+h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+p {
+  line-height: 1.55;
+}
+small {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.25rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.verdict[data-tone='neutral'] {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.verdict .eyebrow {
+  color: inherit;
+  opacity: 0.8;
+}
+.verdict h3 {
+  margin: 0.4rem 0 0.75rem;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+.figure {
+  font-size: clamp(3rem, 8vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.verdict-line {
+  margin: 0;
+  font-size: 1.05rem;
+  opacity: 0.92;
+}
+.section-title {
+  margin-top: 0.5rem;
+}
+/* Staff plan: one row per checkpoint, people now and proposed. */
+.staff-plan {
+  display: grid;
+  gap: 0.4rem;
+}
+.plan-head,
+.plan-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1.2fr) 1fr 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+.plan-head {
+  padding: 0 0.9rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.plan-row {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.plan-row[data-change='up'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.plan-name {
+  font-weight: 600;
+  min-width: 0;
+}
+.plan-people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--text-muted);
+}
+.plan-people.proposed {
+  color: var(--accent);
+}
+.plan-people .count {
+  margin-left: 0.4rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.plan-people .delta {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.plan-row[data-change='down'] .delta {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.candidates > li {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.candidates > li.recommended {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.candidates header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+/* A dashed edge marks a rejected variant; fading it would drop its text below 4.5:1 contrast. */
+.candidates [data-status='rejected'],
+.candidates [data-status='failed'] {
+  border-style: dashed;
+}
+.config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.config li {
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  font-size: 0.78rem;
+}
+.config li.up {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+.config small {
+  color: inherit;
+  font-size: inherit;
+}
+.wait {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.wait strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+.wait-bar {
+  height: 0.5rem;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.wait-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--after);
+}
+.badge {
+  justify-self: start;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .plan-head,
+  .plan-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .plan-name {
+    grid-column: 1 / -1;
+  }
+  .plan-head span:first-child {
+    display: none;
+  }
+  .verdict {
+    grid-template-columns: 1fr;
+  }
+}

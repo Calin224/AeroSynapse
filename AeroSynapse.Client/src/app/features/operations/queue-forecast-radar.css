@@ -1,0 +1,40 @@
+:host {
+  display: block;
+  container-type: inline-size;
+  --qf-observed: var(--text);
+  --qf-forecast: var(--live);
+  --qf-limit: var(--danger);
+  --qf-mitigated: var(--success);
+}
+.radar { display: grid; gap: 8px; max-height: 640px; overflow: auto; padding: 2px; }
+.radar-card {
+  display: grid; gap: 6px; text-align: left; padding: 12px; border: 1px solid var(--border); border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius); background: var(--panel); color: var(--text); cursor: pointer; font: inherit;
+  transition: none; animation: rise-in .35s ease-out both;
+}
+.radar-card:hover { transform: translateY(-1px); box-shadow: none; }
+.radar-card.selected { box-shadow: 0 0 0 2px var(--accent); }
+.radar-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.radar-card[data-risk='breach'] { border-left-color: var(--danger); }
+.radar-card[data-risk='near'] { border-left-color: var(--warning); }
+.radar-card[data-risk='clear'] { border-left-color: var(--success); }
+.radar-card[data-risk='unbounded'] { border-left-color: var(--qf-forecast); }
+.radar-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; font-size: 13px; }
+.pill { flex: none; padding: 2px 8px; border-radius: var(--radius); font: 600 10.5px/1.6 var(--font-mono); letter-spacing: .03em; background: var(--surface-raised); color: var(--text-muted); white-space: nowrap; }
+.pill[data-risk='breach'] { background: var(--danger-soft); color: var(--danger); }
+.pill[data-risk='near'] { background: var(--warning-soft); color: var(--warning); }
+.pill[data-risk='clear'] { background: color-mix(in srgb, var(--success) 12%, var(--panel)); color: var(--success); }
+.pill[data-risk='unbounded'] { background: color-mix(in srgb, var(--qf-forecast) 10%, var(--panel)); color: var(--qf-forecast); }
+.spark { width: 100%; height: 44px; display: block; }
+.spark-area { fill: color-mix(in srgb, var(--qf-forecast) 14%, transparent); }
+.spark-observed { fill: none; stroke: var(--qf-observed); stroke-width: 1.5; }
+.spark-forecast { fill: none; stroke: var(--qf-forecast); stroke-width: 1.75; stroke-dasharray: 4 3; }
+.spark-threshold { stroke: var(--qf-limit); stroke-width: 1; stroke-dasharray: 2 3; }
+.radar-numbers { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); }
+.radar-numbers b { font: 600 13px var(--font-mono); color: var(--text); }
+.radar-advice { font-size: 12px; color: var(--qf-mitigated); font-weight: 500; }
+.radar-card[data-risk='breach'] .radar-advice { color: var(--danger); }
+
+@container (min-width: 460px) { .radar { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); max-height: none; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .radar-card { animation: none; } }
