@@ -1,0 +1,1235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/staffing/v1/contract.schema.json",
+  "title": "Integer staff redistribution proposals",
+  "$defs": {
+    "StaffingConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "minimumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "maximumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "physicalLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "requiredOpen": {
+          "type": "boolean"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "changeCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "checkpointId",
+        "minimumStaff",
+        "maximumStaff",
+        "physicalLimit",
+        "requiredOpen",
+        "closed",
+        "changeCost"
+      ]
+    },
+    "StaffingPool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "terminalId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "availableStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "terminalId",
+        "availableStaff"
+      ]
+    },
+    "StaffingCheckpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "minimumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "maximumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "physicalLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "requiredOpen": {
+          "type": "boolean"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "changeCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "terminalId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "currentStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "demandMilli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "capacityMilli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000000000
+        }
+      },
+      "required": [
+        "checkpointId",
+        "minimumStaff",
+        "maximumStaff",
+        "physicalLimit",
+        "requiredOpen",
+        "closed",
+        "changeCost",
+        "terminalId",
+        "currentStaff",
+        "demandMilli",
+        "capacityMilli"
+      ]
+    },
+    "StaffingProposalRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "availableStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "timeLimitSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingConstraint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "revision",
+        "availableStaff",
+        "timeLimitSeconds",
+        "checkpoints"
+      ]
+    },
+    "StaffingSolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "type": "string"
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "availableStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "timeLimitSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "staffPools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingPool"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingCheckpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "availableStaff",
+        "timeLimitSeconds",
+        "staffPools",
+        "checkpoints"
+      ]
+    },
+    "StaffingAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "estimatedCapacityMilli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000000000000
+        },
+        "unmetDemandMilli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "changePenalty": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000000
+        }
+      },
+      "required": [
+        "checkpointId",
+        "staffCount",
+        "estimatedCapacityMilli",
+        "unmetDemandMilli",
+        "changePenalty"
+      ]
+    },
+    "StaffingSolveResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "optimal",
+            "feasible",
+            "infeasible",
+            "timeout",
+            "invalid_model"
+          ]
+        },
+        "solverStatus": {
+          "type": "string",
+          "enum": [
+            "OPTIMAL",
+            "FEASIBLE",
+            "INFEASIBLE",
+            "UNKNOWN",
+            "MODEL_INVALID"
+          ]
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bestBound": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usedStaff": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unassignedStaff": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingAssignment"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "constraints": {
+          "$ref": "#/$defs/StaffingSolveRequest"
+        },
+        "objective": {
+          "type": "string",
+          "const": "min sum(unmetDemandMilli + changeCost * abs(staffCount - currentStaff))"
+        },
+        "capacityScale": {
+          "type": "integer",
+          "const": 1000
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "status",
+        "solverStatus",
+        "timedOut",
+        "score",
+        "bestBound",
+        "usedStaff",
+        "unassignedStaff",
+        "assignments",
+        "constraints",
+        "objective",
+        "capacityScale",
+        "wallTimeSeconds"
+      ]
+    },
+    "StaffingCandidateSearchRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "$ref": "#/$defs/StaffingSolveRequest"
+        },
+        "candidateCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        }
+      },
+      "required": [
+        "constraints",
+        "candidateCount"
+      ]
+    },
+    "StaffingCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingAssignment"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000000000
+        }
+      },
+      "required": [
+        "assignments",
+        "score"
+      ]
+    },
+    "StaffingCandidateSearchResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/StaffingCandidateSearchRequest"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "exhausted",
+            "timeout",
+            "invalid_model"
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingCandidate"
+          },
+          "minItems": 0,
+          "maxItems": 4
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "request",
+        "status",
+        "candidates",
+        "wallTimeSeconds"
+      ]
+    },
+    "ObjectiveWeights": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "time": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "risk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "time",
+        "cost",
+        "risk"
+      ]
+    },
+    "ObjectiveNormalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeMinutes": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 10080
+        },
+        "costPoints": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000000000000
+        },
+        "riskFraction": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "timeMinutes",
+        "costPoints",
+        "riskFraction"
+      ]
+    },
+    "ParetoOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "weights": {
+          "$ref": "#/$defs/ObjectiveWeights"
+        },
+        "normalization": {
+          "$ref": "#/$defs/ObjectiveNormalization"
+        },
+        "operationalBudget": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000000000
+        },
+        "staffMinuteCost": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "maxMeanWaitMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "maxP95WaitMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "maxBoardingRisk": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "weights",
+        "normalization",
+        "operationalBudget",
+        "staffMinuteCost",
+        "maxMeanWaitMinutes",
+        "maxP95WaitMinutes",
+        "maxBoardingRisk"
+      ]
+    },
+    "ParetoSearchRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "$ref": "#/$defs/StaffingSolveRequest"
+        },
+        "candidateCount": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "options": {
+          "$ref": "#/$defs/ParetoOptions"
+        }
+      },
+      "required": [
+        "constraints",
+        "candidateCount",
+        "durationMinutes",
+        "options"
+      ]
+    },
+    "ParetoSolve": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "weights": {
+          "$ref": "#/$defs/ObjectiveWeights"
+        },
+        "solverStatus": {
+          "type": "string",
+          "enum": [
+            "OPTIMAL",
+            "FEASIBLE",
+            "INFEASIBLE",
+            "UNKNOWN",
+            "MODEL_INVALID"
+          ]
+        },
+        "attempted": {
+          "type": "boolean"
+        },
+        "scaledObjective": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bestBound": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxyTimeMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxyRisk": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operationalCost": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingAssignment"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "profile",
+        "weights",
+        "solverStatus",
+        "attempted",
+        "scaledObjective",
+        "bestBound",
+        "proxyTimeMinutes",
+        "proxyRisk",
+        "operationalCost",
+        "assignments",
+        "wallTimeSeconds"
+      ]
+    },
+    "ParetoSearchResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/ParetoSearchRequest"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "exhausted",
+            "timeout",
+            "invalid_model"
+          ]
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffingCandidate"
+          },
+          "minItems": 0,
+          "maxItems": 4
+        },
+        "solves": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ParetoSolve"
+          },
+          "minItems": 4,
+          "maxItems": 8
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "request",
+        "status",
+        "formula",
+        "candidates",
+        "solves",
+        "wallTimeSeconds"
+      ]
+    },
+    "ShiftRules": {
+      "type": "object",
+      "description": "Shift rules, in 15-minute slots: one contiguous shift per person that starts and ends working, a break inside every run of breakAfterSlots worked slots, and a cap on moves between checkpoints per rolling hour. Operators are planned at targetUtilizationPercent of their capacity, rounded down, because random arrivals and service times queue well before an operator is fully busy.",
+      "additionalProperties": false,
+      "properties": {
+        "minShiftSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "maxShiftSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "breakAfterSlots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "transferMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 14
+        },
+        "maxMovesPerHour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "queueWeight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "staffSlotCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "moveCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "targetUtilizationPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "minShiftSlots",
+        "maxShiftSlots",
+        "breakAfterSlots",
+        "transferMinutes",
+        "maxMovesPerHour",
+        "queueWeight",
+        "staffSlotCost",
+        "moveCost",
+        "targetUtilizationPercent"
+      ]
+    },
+    "ShiftStaffMember": {
+      "type": "object",
+      "description": "A person who can be scheduled at the checkpoints of their terminal.",
+      "additionalProperties": false,
+      "properties": {
+        "staffMemberId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "terminalId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        }
+      },
+      "required": [
+        "staffMemberId",
+        "terminalId"
+      ]
+    },
+    "ShiftCheckpoint": {
+      "type": "object",
+      "description": "Per-slot staffing limits and demand at one checkpoint. capacityMilliPerMinute is passengers per operator-minute times 1000. requiredOpen staffs the checkpoint in every slot with arrivals.",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "terminalId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "minimumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "maximumStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "physicalLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "requiredOpen": {
+          "type": "boolean"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "capacityMilliPerMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "arrivalsPerSlot": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "minItems": 1,
+          "maxItems": 672
+        }
+      },
+      "required": [
+        "checkpointId",
+        "terminalId",
+        "minimumStaff",
+        "maximumStaff",
+        "physicalLimit",
+        "requiredOpen",
+        "closed",
+        "capacityMilliPerMinute",
+        "arrivalsPerSlot"
+      ]
+    },
+    "ShiftPlanRequest": {
+      "type": "object",
+      "description": "Extension: who works where in each 15-minute slot of a long day.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "slotMinutes": {
+          "type": "integer",
+          "const": 15
+        },
+        "slotCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 672
+        },
+        "timeLimitSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "rules": {
+          "$ref": "#/$defs/ShiftRules"
+        },
+        "staff": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShiftStaffMember"
+          },
+          "minItems": 0,
+          "maxItems": 500
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShiftCheckpoint"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "slotMinutes",
+        "slotCount",
+        "timeLimitSeconds",
+        "rules",
+        "staff",
+        "checkpoints"
+      ]
+    },
+    "ShiftSegment": {
+      "type": "object",
+      "description": "A person works at one checkpoint for slots [startSlot, endSlot).",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "startSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 671
+        },
+        "endSlot": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 672
+        }
+      },
+      "required": [
+        "checkpointId",
+        "startSlot",
+        "endSlot"
+      ]
+    },
+    "StaffShift": {
+      "type": "object",
+      "description": "One person's shift [startSlot, endSlot): working segments in order, and the break slots between them.",
+      "additionalProperties": false,
+      "properties": {
+        "staffMemberId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "startSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 671
+        },
+        "endSlot": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 672
+        },
+        "breaks": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 671
+          },
+          "maxItems": 672
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShiftSegment"
+          },
+          "minItems": 1,
+          "maxItems": 672
+        }
+      },
+      "required": [
+        "staffMemberId",
+        "startSlot",
+        "endSlot",
+        "breaks",
+        "segments"
+      ]
+    },
+    "ShiftCheckpointPlan": {
+      "type": "object",
+      "description": "Per-slot staff on duty, people arriving from another checkpoint, and the estimated queue carried to the next slot (passengers times 1000).",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "staff": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minItems": 1,
+          "maxItems": 672
+        },
+        "arrivingMovers": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minItems": 1,
+          "maxItems": 672
+        },
+        "queueMilli": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000000
+          },
+          "minItems": 1,
+          "maxItems": 672
+        }
+      },
+      "required": [
+        "checkpointId",
+        "staff",
+        "arrivingMovers",
+        "queueMilli"
+      ]
+    },
+    "ShiftPlanResult": {
+      "type": "object",
+      "description": "A CP-SAT shift plan and the request it answers; without an incumbent, shifts and checkpoints are empty and the figures null.",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "optimal",
+            "feasible",
+            "infeasible",
+            "timeout",
+            "invalid_model"
+          ]
+        },
+        "solverStatus": {
+          "type": "string",
+          "enum": [
+            "OPTIMAL",
+            "FEASIBLE",
+            "INFEASIBLE",
+            "UNKNOWN",
+            "MODEL_INVALID"
+          ]
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bestBound": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dutySlots": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 336000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "moves": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 336000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shifts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffShift"
+          },
+          "maxItems": 500
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShiftCheckpointPlan"
+          },
+          "maxItems": 100
+        },
+        "request": {
+          "$ref": "#/$defs/ShiftPlanRequest"
+        },
+        "objective": {
+          "type": "string",
+          "const": "min queueWeight*sum(queueMilli) + staffSlotCost*dutySlots + moveCost*moves; queue[t]=max(0, queue[t-1] + 1000*arrivals - floor(capacityMilliPerMinute*targetUtilizationPercent/100)*(15*staff - transferMinutes*arrivingMovers))"
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "status",
+        "solverStatus",
+        "timedOut",
+        "score",
+        "bestBound",
+        "dutySlots",
+        "moves",
+        "shifts",
+        "checkpoints",
+        "request",
+        "objective",
+        "wallTimeSeconds"
+      ]
+    }
+  }
+}

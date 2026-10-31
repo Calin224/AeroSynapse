@@ -1,0 +1,359 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "scenarioId": "70000000-0000-0000-0000-000000000002",
+  "scenarioRevision": 1,
+  "layoutVersionId": "70000000-0000-0000-0000-000000000003",
+  "startsAtUtc": "2026-10-11T06:00:00Z",
+  "timeZone": "Europe/Bucharest",
+  "durationMinutes": 720,
+  "seed": 42,
+  "passengerCount": 16,
+  "arrivalRatePerMinute": 0.022222222222222223,
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "serviceRatePerMinute": 1,
+      "staffCount": 1
+    }
+  ],
+  "passengerGeneration": {
+    "generatorVersion": "1.0",
+    "seed": 42,
+    "durationMinutes": 720,
+    "checkpoints": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "serviceRatePerMinute": 1,
+        "staffCount": 1
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "71000000-0000-0000-0000-000000000001",
+        "passengerCapacity": 4,
+        "boardingCloseMinute": 115,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000002",
+        "passengerCapacity": 4,
+        "boardingCloseMinute": 175,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000003",
+        "passengerCapacity": 4,
+        "boardingCloseMinute": 235,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000004",
+        "passengerCapacity": 4,
+        "boardingCloseMinute": 475,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      }
+    ],
+    "batches": [
+      {
+        "flightId": "71000000-0000-0000-0000-000000000001",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 4,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 22.5,
+          "stdDev": 7.5,
+          "mode": 22.5
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000002",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 4,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 22.5,
+          "stdDev": 7.5,
+          "mode": 22.5
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000003",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 4,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 22.5,
+          "stdDev": 7.5,
+          "mode": 22.5
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000004",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 4,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 22.5,
+          "stdDev": 7.5,
+          "mode": 22.5
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      }
+    ],
+    "isSynthetic": true
+  },
+  "engine": "simpy-kpi-1.0",
+  "snapshotIntervalMinutes": 5,
+  "journey": {
+    "journeyVersion": "1.0",
+    "passportStaffCount": 1,
+    "passportServiceMinutes": 2,
+    "boardingStaffPerGate": 1,
+    "boardingServiceMinutes": 1,
+    "gateChangeWalkingMinutes": 4,
+    "riskBufferMinutes": 10,
+    "flights": [
+      {
+        "flightId": "71000000-0000-0000-0000-000000000001",
+        "gateId": "71000000-0000-0000-0000-000000000010",
+        "arrivalMinute": 60,
+        "boardingOpenMinute": 65,
+        "boardingCloseMinute": 115,
+        "departureMinute": 120,
+        "delayMinutes": 0,
+        "passengerCapacity": 4,
+        "isCancelled": false,
+        "requiresPassport": true,
+        "previousFlightId": null,
+        "rotationMinutes": 0,
+        "eligibleGateIds": [
+          "71000000-0000-0000-0000-000000000010",
+          "71000000-0000-0000-0000-000000000011"
+        ]
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000002",
+        "gateId": "71000000-0000-0000-0000-000000000010",
+        "arrivalMinute": 120,
+        "boardingOpenMinute": 125,
+        "boardingCloseMinute": 175,
+        "departureMinute": 180,
+        "delayMinutes": 0,
+        "passengerCapacity": 4,
+        "isCancelled": false,
+        "requiresPassport": true,
+        "previousFlightId": null,
+        "rotationMinutes": 0,
+        "eligibleGateIds": [
+          "71000000-0000-0000-0000-000000000010",
+          "71000000-0000-0000-0000-000000000011"
+        ]
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000003",
+        "gateId": "71000000-0000-0000-0000-000000000010",
+        "arrivalMinute": 180,
+        "boardingOpenMinute": 185,
+        "boardingCloseMinute": 235,
+        "departureMinute": 240,
+        "delayMinutes": 0,
+        "passengerCapacity": 4,
+        "isCancelled": false,
+        "requiresPassport": true,
+        "previousFlightId": null,
+        "rotationMinutes": 0,
+        "eligibleGateIds": [
+          "71000000-0000-0000-0000-000000000010",
+          "71000000-0000-0000-0000-000000000011"
+        ]
+      },
+      {
+        "flightId": "71000000-0000-0000-0000-000000000004",
+        "gateId": "71000000-0000-0000-0000-000000000010",
+        "arrivalMinute": 420,
+        "boardingOpenMinute": 425,
+        "boardingCloseMinute": 475,
+        "departureMinute": 480,
+        "delayMinutes": 0,
+        "passengerCapacity": 4,
+        "isCancelled": false,
+        "requiresPassport": true,
+        "previousFlightId": "71000000-0000-0000-0000-000000000003",
+        "rotationMinutes": 180,
+        "eligibleGateIds": [
+          "71000000-0000-0000-0000-000000000010",
+          "71000000-0000-0000-0000-000000000011"
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "id": "71000000-0000-0000-0000-000000000020",
+        "inboundFlightId": "71000000-0000-0000-0000-000000000001",
+        "outboundFlightId": "71000000-0000-0000-0000-000000000002",
+        "passengerCount": 2,
+        "transferMinutes": 5,
+        "requiresPassport": true
+      }
+    ],
+    "routes": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "gateId": "71000000-0000-0000-0000-000000000010",
+        "walkingMinutes": 2
+      },
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "gateId": "71000000-0000-0000-0000-000000000011",
+        "walkingMinutes": 2
+      }
+    ],
+    "gateChoices": [
+      {
+        "eventId": "71000000-0000-0000-0000-000000000030",
+        "mode": "keep_gates"
+      }
+    ]
+  },
+  "events": [
+    {
+      "eventId": "71000000-0000-0000-0000-000000000030",
+      "type": "flight_change",
+      "minute": 20,
+      "flightId": "71000000-0000-0000-0000-000000000001",
+      "delayMinutes": 130
+    }
+  ]
+}

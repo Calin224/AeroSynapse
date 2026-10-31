@@ -1,0 +1,47 @@
+{
+  "contractVersion": "1.0",
+  "optimizationId": "70000000-0000-0000-0000-000000000005",
+  "objective": "minimizeMeanWaitMinutes",
+  "baseline": {
+    "contractVersion": "1.0",
+    "runId": "70000000-0000-0000-0000-000000000001",
+    "scenarioId": "70000000-0000-0000-0000-000000000002",
+    "scenarioRevision": 1,
+    "layoutVersionId": "70000000-0000-0000-0000-000000000003",
+    "startsAtUtc": "2026-10-11T06:00:00Z",
+    "timeZone": "Europe/Bucharest",
+    "durationMinutes": 60,
+    "seed": 42,
+    "passengerCount": 120,
+    "arrivalRatePerMinute": 2,
+    "checkpoints": [
+      {
+        "checkpointId": "70000000-0000-0000-0000-000000000101",
+        "serviceRatePerMinute": 1.5,
+        "staffCount": 1
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "contractVersion": "1.0",
+      "runId": "70000000-0000-0000-0000-000000000004",
+      "scenarioId": "70000000-0000-0000-0000-000000000002",
+      "scenarioRevision": 1,
+      "layoutVersionId": "70000000-0000-0000-0000-000000000003",
+      "startsAtUtc": "2026-10-11T06:00:00Z",
+      "timeZone": "Europe/Bucharest",
+      "durationMinutes": 60,
+      "seed": 42,
+      "passengerCount": 120,
+      "arrivalRatePerMinute": 2,
+      "checkpoints": [
+        {
+          "checkpointId": "70000000-0000-0000-0000-000000000101",
+          "serviceRatePerMinute": 1.5,
+          "staffCount": 2
+        }
+      ]
+    }
+  ]
+}

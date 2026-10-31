@@ -1,0 +1,95 @@
+[
+  {
+    "name": "empty-kpi",
+    "fixture": "kpis/v1/examples/empty-request.json",
+    "definition": "KpiSimulationRequest",
+    "endpoint": "/contracts/v1/kpis/simulation/validate",
+    "status": 200,
+    "mutations": [],
+    "expected": { "processed": 0, "queued": 0 }
+  },
+  {
+    "name": "two-passenger-kpi",
+    "fixture": "kpis/v1/examples/kpi-request.json",
+    "definition": "KpiSimulationRequest",
+    "endpoint": "/contracts/v1/kpis/simulation/validate",
+    "status": 200,
+    "mutations": [],
+    "expected": { "processed": 2, "queued": 0 }
+  },
+  {
+    "name": "closed-checkpoint",
+    "fixture": "kpis/v1/examples/kpi-request.json",
+    "definition": "KpiSimulationRequest",
+    "endpoint": "/contracts/v1/kpis/simulation/validate",
+    "status": 200,
+    "mutations": [
+      { "path": "/checkpoints/0/staffCount", "value": 0 },
+      { "path": "/passengerGeneration/checkpoints/0/staffCount", "value": 0 }
+    ],
+    "expected": { "processed": 0, "queued": 2 }
+  },
+  {
+    "name": "incompatible-version",
+    "fixture": "kpis/v1/examples/kpi-request.json",
+    "definition": "KpiSimulationRequest",
+    "endpoint": "/contracts/v1/kpis/simulation/validate",
+    "status": 422,
+    "mutations": [{ "path": "/contractVersion", "value": "99.0" }]
+  },
+  {
+    "name": "unknown-field",
+    "fixture": "kpis/v1/examples/kpi-request.json",
+    "definition": "KpiSimulationRequest",
+    "endpoint": "/contracts/v1/kpis/simulation/validate",
+    "status": 422,
+    "mutations": [{ "path": "/unknownControl", "value": true }]
+  },
+  {
+    "name": "staffing-optimum",
+    "fixture": "staffing/v1/examples/staffing-request.json",
+    "definition": "StaffingSolveRequest",
+    "endpoint": "/contracts/v1/staffing/validate",
+    "status": 200,
+    "mutations": [],
+    "expected": { "solverStatus": "optimal", "score": 40, "allocation": [2, 1] }
+  },
+  {
+    "name": "insufficient-staff",
+    "fixture": "staffing/v1/examples/staffing-request.json",
+    "definition": "StaffingSolveRequest",
+    "endpoint": "/contracts/v1/staffing/validate",
+    "status": 200,
+    "mutations": [
+      { "path": "/availableStaff", "value": 1 },
+      { "path": "/checkpoints/0/requiredOpen", "value": true },
+      { "path": "/checkpoints/0/minimumStaff", "value": 2 }
+    ],
+    "expected": { "solverStatus": "infeasible" }
+  },
+  {
+    "name": "physical-limit-infeasible",
+    "fixture": "staffing/v1/examples/staffing-request.json",
+    "definition": "StaffingSolveRequest",
+    "endpoint": "/contracts/v1/staffing/validate",
+    "status": 200,
+    "mutations": [
+      { "path": "/checkpoints/0/requiredOpen", "value": true },
+      { "path": "/checkpoints/0/minimumStaff", "value": 3 }
+    ],
+    "expected": { "solverStatus": "infeasible" }
+  },
+  {
+    "name": "closed-required-infeasible",
+    "fixture": "staffing/v1/examples/staffing-request.json",
+    "definition": "StaffingSolveRequest",
+    "endpoint": "/contracts/v1/staffing/validate",
+    "status": 200,
+    "mutations": [
+      { "path": "/checkpoints/0/requiredOpen", "value": true },
+      { "path": "/checkpoints/0/closed", "value": true },
+      { "path": "/checkpoints/0/minimumStaff", "value": 1 }
+    ],
+    "expected": { "solverStatus": "infeasible" }
+  }
+]

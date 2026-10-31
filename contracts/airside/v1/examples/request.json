@@ -1,0 +1,86 @@
+{
+  "contractVersion": "1.0",
+  "synthetic": true,
+  "seed": 53,
+  "durationMinutes": 20,
+  "serviceVariation": 0.0,
+  "timeLimitSeconds": 3,
+  "stands": [
+    {
+      "id": "S1",
+      "available": [
+        {
+          "startMinute": 0,
+          "endMinute": 240
+        }
+      ]
+    }
+  ],
+  "teams": [
+    {
+      "id": "T1",
+      "memberIds": [
+        "M1"
+      ],
+      "skills": [
+        "handling",
+        "pushback"
+      ],
+      "standIds": [
+        "S1"
+      ],
+      "available": [
+        {
+          "startMinute": 0,
+          "endMinute": 240
+        }
+      ]
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "V1",
+      "kind": "service",
+      "standIds": [
+        "S1"
+      ],
+      "available": [
+        {
+          "startMinute": 0,
+          "endMinute": 240
+        }
+      ]
+    },
+    {
+      "id": "G1",
+      "kind": "tug",
+      "standIds": [
+        "S1"
+      ],
+      "available": [
+        {
+          "startMinute": 0,
+          "endMinute": 240
+        }
+      ]
+    }
+  ],
+  "turnarounds": [
+    {
+      "id": "F1",
+      "standId": "S1",
+      "arrivalMinute": 0,
+      "scheduledPushbackMinute": 3,
+      "handlingMinutes": 3,
+      "pushbackMinutes": 2
+    },
+    {
+      "id": "F2",
+      "standId": "S1",
+      "arrivalMinute": 0,
+      "scheduledPushbackMinute": 6,
+      "handlingMinutes": 3,
+      "pushbackMinutes": 2
+    }
+  ]
+}

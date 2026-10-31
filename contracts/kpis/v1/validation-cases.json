@@ -1,0 +1,373 @@
+[
+  {
+    "name": "profiled-kpi-request",
+    "definition": "KpiSimulationRequest",
+    "example": "kpi-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "empty-kpi-request",
+    "definition": "KpiSimulationRequest",
+    "example": "empty-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "captured-cadence",
+    "definition": "KpiScenarioSnapshot",
+    "example": "kpi-snapshot-input",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "full-kpi-result",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "single-zone-snapshot",
+    "definition": "KpiSnapshot",
+    "example": "kpi-snapshot",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "closed-control-snapshot",
+    "definition": "KpiSnapshot",
+    "example": "closed-zone-snapshot",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "fractional-integer-minute",
+    "definition": "KpiSnapshot",
+    "example": "kpi-snapshot",
+    "mutations": [
+      {
+        "path": "/minute",
+        "value": 1.0
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "cadence-too-small",
+    "definition": "KpiSimulationRequest",
+    "example": "kpi-request",
+    "mutations": [
+      {
+        "path": "/snapshotIntervalMinutes",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshotIntervalMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "cadence-too-large",
+    "definition": "KpiSimulationRequest",
+    "example": "kpi-request",
+    "mutations": [
+      {
+        "path": "/snapshotIntervalMinutes",
+        "value": 6
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshotIntervalMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "unclear-population-label",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/definitions/waitPopulation",
+        "value": "all_passengers"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/definitions/waitPopulation",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "empty-wait-artificial-zero",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/snapshots/0/meanWaitMinutes",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshots/0",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "p95-below-median",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/snapshots/2/p95WaitMinutes",
+        "value": 0.1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshots/2",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "wrong-run-correlation",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/snapshots/1/runId",
+        "value": "60000000-0000-0000-0000-000000009999"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshots/1",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "unreconciled-population",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/unprocessedCount",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "wrong-window-throughput",
+    "definition": "KpiSnapshot",
+    "example": "kpi-snapshot",
+    "mutations": [
+      {
+        "path": "/throughputPerMinute",
+        "value": 3
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "closed-utilization-artificial-zero",
+    "definition": "KpiSnapshot",
+    "example": "closed-zone-snapshot",
+    "mutations": [
+      {
+        "path": "/utilization",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "busy-time-above-capacity",
+    "definition": "KpiSnapshot",
+    "example": "kpi-snapshot",
+    "mutations": [
+      {
+        "path": "/busyMinutes",
+        "value": 2
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "impossible-date",
+    "definition": "KpiSnapshot",
+    "example": "kpi-snapshot",
+    "mutations": [
+      {
+        "path": "/recordedAtUtc",
+        "value": "2026-02-30T10:00:00Z"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/recordedAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing-sample-reconciliation",
+    "definition": "KpiResult",
+    "example": "kpi-result",
+    "mutations": [
+      {
+        "path": "/snapshotCount",
+        "value": 10
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "snapshot-budget",
+    "definition": "KpiSimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/durationMinutes",
+        "value": 10080
+      },
+      {
+        "path": "/checkpoints",
+        "value": [
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000001",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000002",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000003",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000004",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000005",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000006",
+            "serviceRatePerMinute": 1,
+            "staffCount": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/snapshotIntervalMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "check-in-request",
+    "definition": "KpiSimulationRequest",
+    "example": "check-in-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "check-in-response",
+    "definition": "KpiSimulationResponse",
+    "example": "check-in-response",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "check-in-zone-is-a-control",
+    "definition": "KpiSimulationRequest",
+    "example": "check-in-request",
+    "mutations": [
+      {
+        "path": "/checkIn",
+        "value": {
+          "zoneId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 1,
+          "serviceRatePerMinute": 0.4,
+          "holdBaggageShare": 0.6,
+          "walkingMinutes": 1.5
+        }
+      }
+    ],
+    "errors": [
+      {
+        "field": "/checkIn/zoneId",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "check-in-unknown-field",
+    "definition": "KpiSimulationRequest",
+    "example": "check-in-request",
+    "mutations": [
+      {
+        "path": "/checkIn",
+        "value": {
+          "zoneId": "60000000-0000-0000-0000-000000000901",
+          "staffCount": 1,
+          "serviceRatePerMinute": 0.4,
+          "holdBaggageShare": 0.6,
+          "walkingMinutes": 1.5,
+          "queueLimit": 10
+        }
+      }
+    ],
+    "errors": [
+      {
+        "field": "/checkIn/queueLimit",
+        "code": "unknown_field"
+      }
+    ]
+  }
+]

@@ -1,0 +1,216 @@
+{
+  "passengerGeneration": {
+    "generatorVersion": "1.0",
+    "seed": 42,
+    "durationMinutes": 10,
+    "checkpoints": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "serviceRatePerMinute": 1,
+        "staffCount": 1
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "passengerCapacity": 2,
+        "boardingCloseMinute": 3,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      }
+    ],
+    "batches": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 2,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 22.5,
+          "stdDev": 7.5,
+          "mode": 22.5
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      }
+    ],
+    "isSynthetic": true
+  },
+  "navigation": {
+    "navigationVersion": "1.0",
+    "graph": {
+      "nodes": [
+        {
+          "id": "60000000-0000-0000-0000-000000000101",
+          "name": "Control",
+          "kind": "Security",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000701",
+          "name": "Coridor principal",
+          "kind": "Walkway",
+          "x": 50,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000702",
+          "name": "Alternativ\u0103",
+          "kind": "Stairs",
+          "x": 50,
+          "y": 0,
+          "z": 50,
+          "isActive": true,
+          "isStepFree": false,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000201",
+          "name": "Poarta",
+          "kind": "Gate",
+          "x": 100,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "60000000-0000-0000-0000-000000000801",
+          "fromZoneId": "60000000-0000-0000-0000-000000000101",
+          "toZoneId": "60000000-0000-0000-0000-000000000701",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000802",
+          "fromZoneId": "60000000-0000-0000-0000-000000000701",
+          "toZoneId": "60000000-0000-0000-0000-000000000201",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000803",
+          "fromZoneId": "60000000-0000-0000-0000-000000000101",
+          "toZoneId": "60000000-0000-0000-0000-000000000702",
+          "distanceMeters": 70,
+          "travelSeconds": 90,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000804",
+          "fromZoneId": "60000000-0000-0000-0000-000000000702",
+          "toZoneId": "60000000-0000-0000-0000-000000000201",
+          "distanceMeters": 70,
+          "travelSeconds": 90,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        }
+      ]
+    },
+    "checkpointBindings": [
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000101",
+        "zoneId": "60000000-0000-0000-0000-000000000101"
+      }
+    ],
+    "gateBindings": [
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000201",
+        "zoneId": "60000000-0000-0000-0000-000000000201"
+      }
+    ],
+    "accessProfiles": [
+      {
+        "groupKind": "solo",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "family",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "business",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "tour",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      }
+    ],
+    "closedZoneIds": [],
+    "closedEdgeIds": [],
+    "flightGates": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201"
+      }
+    ]
+  }
+}

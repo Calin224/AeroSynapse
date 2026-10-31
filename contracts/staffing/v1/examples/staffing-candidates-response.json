@@ -1,0 +1,126 @@
+{
+  "request": {
+    "constraints": {
+      "contractVersion": "1.0",
+      "scenarioId": "70000000-0000-0000-0000-000000000002",
+      "scenarioRevision": 1,
+      "availableStaff": 3,
+      "timeLimitSeconds": 5,
+      "staffPools": [
+        {
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "availableStaff": 3
+        }
+      ],
+      "checkpoints": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "minimumStaff": 0,
+          "maximumStaff": 3,
+          "physicalLimit": 2,
+          "requiredOpen": false,
+          "closed": false,
+          "changeCost": 10,
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "currentStaff": 0,
+          "demandMilli": 6000,
+          "capacityMilli": 3000
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "minimumStaff": 0,
+          "maximumStaff": 3,
+          "physicalLimit": 3,
+          "requiredOpen": false,
+          "closed": false,
+          "changeCost": 10,
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "currentStaff": 3,
+          "demandMilli": 1000,
+          "capacityMilli": 1000
+        }
+      ]
+    },
+    "candidateCount": 4
+  },
+  "status": "complete",
+  "candidates": [
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "score": 40
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 1000,
+          "changePenalty": 30
+        }
+      ],
+      "score": 1050
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 3000,
+          "unmetDemandMilli": 3000,
+          "changePenalty": 10
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 2000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 10
+        }
+      ],
+      "score": 3020
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 3000,
+          "unmetDemandMilli": 3000,
+          "changePenalty": 10
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "score": 3030
+    }
+  ],
+  "wallTimeSeconds": 0
+}

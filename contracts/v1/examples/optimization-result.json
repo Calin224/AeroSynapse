@@ -1,0 +1,17 @@
+{
+  "contractVersion": "1.0",
+  "optimizationId": "70000000-0000-0000-0000-000000000005",
+  "status": "completed",
+  "objective": "minimizeMeanWaitMinutes",
+  "baselineRunId": "70000000-0000-0000-0000-000000000001",
+  "baselineScore": 2.5,
+  "candidates": [
+    {
+      "runId": "70000000-0000-0000-0000-000000000004",
+      "score": 1,
+      "rank": 1
+    }
+  ],
+  "recommendedRunId": "70000000-0000-0000-0000-000000000004",
+  "failure": null
+}

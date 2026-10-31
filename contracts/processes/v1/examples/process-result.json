@@ -1,0 +1,71 @@
+{
+  "processVersion": "1.0",
+  "engine": "simpy-1.0",
+  "mode": "flight_profiles",
+  "horizonMinutes": 10,
+  "populationCount": 2,
+  "arrivedCount": 2,
+  "notArrivedCount": 0,
+  "deadlineMissedCount": 1,
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "capacity": 1,
+      "peakBusy": 1,
+      "peakQueue": 1,
+      "arrivedCount": 2,
+      "queuedCount": 0,
+      "processingCount": 0,
+      "processedCount": 2,
+      "meanWaitMinutes": 0.5
+    }
+  ],
+  "passengers": [
+    {
+      "id": "demo-pax-70000000000000000000000000000001-000001",
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "flightId": "70000000-0000-0000-0000-000000000001",
+      "gateId": "60000000-0000-0000-0000-000000000201",
+      "arrivalMinute": 0.0,
+      "serviceMinutes": 1.0,
+      "walkingMinutes": 2.0,
+      "boardingCloseMinute": 3.0,
+      "stage": "at_gate",
+      "queueEnteredMinute": 0,
+      "processingStartedMinute": 0,
+      "securityClearedMinute": 1.0,
+      "gateArrivalMinute": 3.0,
+      "queueWaitMinutes": 0.0,
+      "boardingRisk": "safe",
+      "deadlineMissed": false,
+      "errorCode": null
+    },
+    {
+      "id": "demo-pax-70000000000000000000000000000001-000002",
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "flightId": "70000000-0000-0000-0000-000000000001",
+      "gateId": "60000000-0000-0000-0000-000000000201",
+      "arrivalMinute": 0.0,
+      "serviceMinutes": 1.0,
+      "walkingMinutes": 2.0,
+      "boardingCloseMinute": 3.0,
+      "stage": "at_gate",
+      "queueEnteredMinute": 0,
+      "processingStartedMinute": 1.0,
+      "securityClearedMinute": 2.0,
+      "gateArrivalMinute": 4.0,
+      "queueWaitMinutes": 1.0,
+      "boardingRisk": "late",
+      "deadlineMissed": true,
+      "errorCode": null
+    }
+  ],
+  "offset": 0,
+  "returnedCount": 2,
+  "hasMore": false,
+  "queuedCount": 0,
+  "processingCount": 0,
+  "walkingCount": 0,
+  "atGateCount": 2,
+  "unreachableCount": 0
+}

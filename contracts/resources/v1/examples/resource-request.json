@@ -1,0 +1,124 @@
+{
+  "contractVersion": "1.0",
+  "scenarioId": "00000000-0000-0000-0000-000000000001",
+  "scenarioRevision": 1,
+  "durationMinutes": 90,
+  "timeLimitSeconds": 5,
+  "resources": {
+    "contractVersion": "1.0",
+    "gates": [
+      {
+        "gateId": "00000000-0000-0000-0000-0000000000c9",
+        "availability": [
+          {
+            "startMinute": 0,
+            "endMinute": 90
+          }
+        ]
+      },
+      {
+        "gateId": "00000000-0000-0000-0000-0000000000ca",
+        "availability": [
+          {
+            "startMinute": 0,
+            "endMinute": 15
+          },
+          {
+            "startMinute": 40,
+            "endMinute": 90
+          }
+        ]
+      }
+    ],
+    "workers": [
+      {
+        "staffMemberId": "00000000-0000-0000-0000-00000000012d",
+        "skills": [
+          "ramp",
+          "boarding"
+        ],
+        "shifts": [
+          {
+            "startMinute": 0,
+            "endMinute": 90
+          }
+        ]
+      },
+      {
+        "staffMemberId": "00000000-0000-0000-0000-00000000012e",
+        "skills": [
+          "ramp",
+          "boarding"
+        ],
+        "shifts": [
+          {
+            "startMinute": 0,
+            "endMinute": 90
+          }
+        ]
+      }
+    ],
+    "teams": [
+      {
+        "teamId": "00000000-0000-0000-0000-000000000191",
+        "name": "Handling 1",
+        "memberIds": [
+          "00000000-0000-0000-0000-00000000012d"
+        ],
+        "gateIds": [
+          "00000000-0000-0000-0000-0000000000c9",
+          "00000000-0000-0000-0000-0000000000ca"
+        ]
+      },
+      {
+        "teamId": "00000000-0000-0000-0000-000000000192",
+        "name": "Handling 2",
+        "memberIds": [
+          "00000000-0000-0000-0000-00000000012e"
+        ],
+        "gateIds": [
+          "00000000-0000-0000-0000-0000000000c9",
+          "00000000-0000-0000-0000-0000000000ca"
+        ]
+      }
+    ],
+    "requirements": [
+      {
+        "flightId": "00000000-0000-0000-0000-0000000001f5",
+        "compatibleGateIds": [
+          "00000000-0000-0000-0000-0000000000c9",
+          "00000000-0000-0000-0000-0000000000ca"
+        ],
+        "requiredSkills": [
+          "boarding"
+        ],
+        "minimumTeamSize": 1
+      },
+      {
+        "flightId": "00000000-0000-0000-0000-0000000001f6",
+        "compatibleGateIds": [
+          "00000000-0000-0000-0000-0000000000c9",
+          "00000000-0000-0000-0000-0000000000ca"
+        ],
+        "requiredSkills": [
+          "boarding"
+        ],
+        "minimumTeamSize": 1
+      }
+    ]
+  },
+  "flights": [
+    {
+      "flightId": "00000000-0000-0000-0000-0000000001f5",
+      "currentGateId": "00000000-0000-0000-0000-0000000000ca",
+      "startMinute": 10,
+      "endMinute": 40
+    },
+    {
+      "flightId": "00000000-0000-0000-0000-0000000001f6",
+      "currentGateId": "00000000-0000-0000-0000-0000000000ca",
+      "startMinute": 40,
+      "endMinute": 60
+    }
+  ]
+}

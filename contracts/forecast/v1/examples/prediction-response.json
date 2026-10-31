@@ -1,0 +1,33 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "kind": "simulated_estimate",
+  "validity": "synthetic_only: no operational accuracy is claimed without authorised real data",
+  "fromMinute": 0,
+  "toMinute": 15,
+  "queueThresholdPassengers": 0,
+  "observationSource": "captured_snapshot",
+  "predictor": {
+    "kind": "ml",
+    "modelVersion": "us038-residual-cqr-calibrated-2.0+a4cc10b74862107a",
+    "estimator": "hgb_medium_disruption_gated",
+    "datasetVersion": "us038-synthetic-2.0",
+    "datasetHash": "aab3b72963460c559c1b04682791b090295ddb24734dc7d8cfc9949ce448f2b5",
+    "trainingDataSource": "synthetic_simpy_simulation",
+    "formula": null,
+    "fallbackReason": null
+  },
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "deterministicQueuePassengers": 0.0,
+      "predictedQueuePassengers": 0.0,
+      "predictionInterval": {
+        "lowerPassengers": 0.0,
+        "upperPassengers": 0.11075385341512482,
+        "nominalCoverage": 0.8
+      },
+      "exceedanceProbability": 0.0004197919382981917
+    }
+  ]
+}

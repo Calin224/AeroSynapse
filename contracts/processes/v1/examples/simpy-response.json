@@ -1,0 +1,198 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "status": "completed",
+  "metrics": [
+    {
+      "zoneId": "60000000-0000-0000-0000-000000000101",
+      "recordedAtUtc": "2026-10-11T06:10:00Z",
+      "meanWaitMinutes": 0.5,
+      "throughputPerMinute": 0.2,
+      "processedPassengers": 2
+    }
+  ],
+  "snapshots": [
+    {
+      "zoneId": "60000000-0000-0000-0000-000000000101",
+      "elapsedMinutes": 10.0,
+      "queuedPassengers": 0,
+      "processedPassengers": 2,
+      "contractVersion": "1.0"
+    }
+  ],
+  "failure": null,
+  "simulatedMinutes": 10.0,
+  "navigationResult": {
+    "navigationVersion": "1.0",
+    "algorithm": "dijkstra",
+    "graphFingerprint": "b01e23c4dab327a8048ca7e023ea60e390584758c392928e5e2f3aa17102d7b7",
+    "populationFingerprint": "a05f2b13a4f5ea01aef5f35fc00e234d656516ee173dfb6f52c94e797c5363c8",
+    "isSynthetic": true,
+    "modeledCount": 2,
+    "routedCount": 2,
+    "errorCount": 0,
+    "assessed": true,
+    "routes": [
+      {
+        "zoneIds": [
+          "60000000-0000-0000-0000-000000000101",
+          "60000000-0000-0000-0000-000000000701",
+          "60000000-0000-0000-0000-000000000201"
+        ],
+        "edgeIds": [
+          "60000000-0000-0000-0000-000000000801",
+          "60000000-0000-0000-0000-000000000802"
+        ],
+        "distanceMeters": 100.0,
+        "baseWalkingMinutes": 2.0,
+        "waypoints": [
+          {
+            "zoneId": "60000000-0000-0000-0000-000000000101",
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          {
+            "zoneId": "60000000-0000-0000-0000-000000000701",
+            "x": 50,
+            "y": 0,
+            "z": 0
+          },
+          {
+            "zoneId": "60000000-0000-0000-0000-000000000201",
+            "x": 100,
+            "y": 0,
+            "z": 0
+          }
+        ],
+        "routeKey": "nav-46d261bf7275e221a7c6e6ce",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "groupKind": "solo",
+        "passengerCount": 2
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "modeledCount": 2,
+        "routedCount": 2,
+        "errorCount": 0,
+        "safeCount": 1,
+        "lateCount": 1,
+        "unservedCount": 0,
+        "pendingCount": 0,
+        "meanWalkingMinutes": 2.0,
+        "meanQueueWaitMinutes": 0.5
+      }
+    ],
+    "journeys": [
+      {
+        "id": "demo-pax-70000000000000000000000000000001-000001",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeKey": "nav-46d261bf7275e221a7c6e6ce",
+        "error": null,
+        "walkingMinutes": 2.0,
+        "queueWaitMinutes": 0.0,
+        "serviceMinutes": 1.0,
+        "arrivalMinute": 0.0,
+        "gateArrivalMinute": 3.0,
+        "boardingCloseMinute": 3.0,
+        "boardingRisk": "safe"
+      },
+      {
+        "id": "demo-pax-70000000000000000000000000000001-000002",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeKey": "nav-46d261bf7275e221a7c6e6ce",
+        "error": null,
+        "walkingMinutes": 2.0,
+        "queueWaitMinutes": 1.0,
+        "serviceMinutes": 1.0,
+        "arrivalMinute": 0.0,
+        "gateArrivalMinute": 4.0,
+        "boardingCloseMinute": 3.0,
+        "boardingRisk": "late"
+      }
+    ],
+    "offset": 0,
+    "returnedCount": 2,
+    "hasMore": false
+  },
+  "processResult": {
+    "processVersion": "1.0",
+    "engine": "simpy-1.0",
+    "mode": "flight_profiles",
+    "horizonMinutes": 10,
+    "populationCount": 2,
+    "arrivedCount": 2,
+    "notArrivedCount": 0,
+    "deadlineMissedCount": 1,
+    "checkpoints": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "capacity": 1,
+        "peakBusy": 1,
+        "peakQueue": 1,
+        "arrivedCount": 2,
+        "queuedCount": 0,
+        "processingCount": 0,
+        "processedCount": 2,
+        "meanWaitMinutes": 0.5
+      }
+    ],
+    "passengers": [
+      {
+        "id": "demo-pax-70000000000000000000000000000001-000001",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "arrivalMinute": 0.0,
+        "serviceMinutes": 1.0,
+        "walkingMinutes": 2.0,
+        "boardingCloseMinute": 3.0,
+        "stage": "at_gate",
+        "queueEnteredMinute": 0,
+        "processingStartedMinute": 0,
+        "securityClearedMinute": 1.0,
+        "gateArrivalMinute": 3.0,
+        "queueWaitMinutes": 0.0,
+        "boardingRisk": "safe",
+        "deadlineMissed": false,
+        "errorCode": null
+      },
+      {
+        "id": "demo-pax-70000000000000000000000000000001-000002",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201",
+        "arrivalMinute": 0.0,
+        "serviceMinutes": 1.0,
+        "walkingMinutes": 2.0,
+        "boardingCloseMinute": 3.0,
+        "stage": "at_gate",
+        "queueEnteredMinute": 0,
+        "processingStartedMinute": 1.0,
+        "securityClearedMinute": 2.0,
+        "gateArrivalMinute": 4.0,
+        "queueWaitMinutes": 1.0,
+        "boardingRisk": "late",
+        "deadlineMissed": true,
+        "errorCode": null
+      }
+    ],
+    "offset": 0,
+    "returnedCount": 2,
+    "hasMore": false,
+    "queuedCount": 0,
+    "processingCount": 0,
+    "walkingCount": 0,
+    "atGateCount": 2,
+    "unreachableCount": 0
+  }
+}

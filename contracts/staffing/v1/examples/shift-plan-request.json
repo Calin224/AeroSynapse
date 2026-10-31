@@ -1,0 +1,95 @@
+{
+  "contractVersion": "1.0",
+  "scenarioId": "40000000-0000-0000-0000-000000000001",
+  "scenarioRevision": 1,
+  "slotMinutes": 15,
+  "slotCount": 16,
+  "timeLimitSeconds": 10,
+  "rules": {
+    "minShiftSlots": 6,
+    "maxShiftSlots": 12,
+    "breakAfterSlots": 6,
+    "transferMinutes": 5,
+    "maxMovesPerHour": 2,
+    "queueWeight": 1,
+    "staffSlotCost": 1500,
+    "moveCost": 4000,
+    "targetUtilizationPercent": 75
+  },
+  "staff": [
+    {
+      "staffMemberId": "30000000-0000-0000-0000-000000000001",
+      "terminalId": "10000000-0000-0000-0000-000000000001"
+    },
+    {
+      "staffMemberId": "30000000-0000-0000-0000-000000000002",
+      "terminalId": "10000000-0000-0000-0000-000000000001"
+    },
+    {
+      "staffMemberId": "30000000-0000-0000-0000-000000000003",
+      "terminalId": "10000000-0000-0000-0000-000000000001"
+    },
+    {
+      "staffMemberId": "30000000-0000-0000-0000-000000000004",
+      "terminalId": "10000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "checkpoints": [
+    {
+      "checkpointId": "20000000-0000-0000-0000-000000000001",
+      "terminalId": "10000000-0000-0000-0000-000000000001",
+      "minimumStaff": 0,
+      "maximumStaff": 4,
+      "physicalLimit": 3,
+      "requiredOpen": false,
+      "closed": false,
+      "capacityMilliPerMinute": 500,
+      "arrivalsPerSlot": [
+        2,
+        4,
+        30,
+        45,
+        40,
+        12,
+        4,
+        2,
+        2,
+        2,
+        3,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "checkpointId": "20000000-0000-0000-0000-000000000002",
+      "terminalId": "10000000-0000-0000-0000-000000000001",
+      "minimumStaff": 0,
+      "maximumStaff": 4,
+      "physicalLimit": 3,
+      "requiredOpen": false,
+      "closed": false,
+      "capacityMilliPerMinute": 500,
+      "arrivalsPerSlot": [
+        2,
+        2,
+        2,
+        2,
+        3,
+        4,
+        8,
+        30,
+        42,
+        36,
+        10,
+        4,
+        2,
+        2,
+        2,
+        2
+      ]
+    }
+  ]
+}

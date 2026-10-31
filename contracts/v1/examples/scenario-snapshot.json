@@ -1,0 +1,20 @@
+{
+  "contractVersion": "1.0",
+  "scenarioId": "70000000-0000-0000-0000-000000000002",
+  "scenarioRevision": 1,
+  "layoutVersionId": "70000000-0000-0000-0000-000000000003",
+  "startsAtUtc": "2026-10-11T06:00:00Z",
+  "timeZone": "Europe/Bucharest",
+  "durationMinutes": 60,
+  "seed": 42,
+  "passengerCount": 120,
+  "arrivalRatePerMinute": 2,
+  "checkpoints": [
+    {
+      "checkpointId": "70000000-0000-0000-0000-000000000101",
+      "serviceRatePerMinute": 1.5,
+      "staffCount": 1
+    }
+  ],
+  "capturedAtUtc": "2026-10-11T05:55:00Z"
+}

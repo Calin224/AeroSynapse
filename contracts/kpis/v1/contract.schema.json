@@ -1,0 +1,1317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.example/contracts/kpis/1.0/contract.schema.json",
+  "title": "KPI definitions; bundled with existing contracts",
+  "$defs": {
+    "KpiSimulationRequest": {
+      "type": "object",
+      "description": "Version 1 queue simulation input, copied from frozen inputs. No live database references are resolved by validation.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "engine": {
+          "type": "string",
+          "const": "simpy-kpi-1.0"
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        },
+        "navigation": {
+          "$ref": "#/$defs/NavigationInput"
+        },
+        "snapshotIntervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScheduledEvent"
+          },
+          "maxItems": 1000,
+          "description": "Scheduled events; absent or empty keeps constant capacity and the captured demand."
+        },
+        "checkIn": {
+          "$ref": "#/$defs/CheckInInput",
+          "description": "Check-in desks before security; requires passengerGeneration and no alternative flow."
+        },
+        "staffSchedules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffSchedule"
+          },
+          "maxItems": 1000,
+          "description": "People on duty over time at some checkpoints; requires events (possibly empty). A scheduled checkpoint's staffCount is the most people on duty at once."
+        },
+        "journey": {
+          "$ref": "#/$defs/JourneyInput"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "engine",
+        "snapshotIntervalMinutes"
+      ]
+    },
+    "KpiScenarioSnapshot": {
+      "type": "object",
+      "description": "Versioned frozen queue simulation inputs. Independent of a run; ToSimulationRequest assigns runId without reading mutable data. capturedAtUtc records capture time, not simulation start.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "capturedAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "engine": {
+          "type": "string",
+          "const": "simpy-kpi-1.0"
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        },
+        "navigation": {
+          "$ref": "#/$defs/NavigationInput"
+        },
+        "snapshotIntervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScheduledEvent"
+          },
+          "maxItems": 1000,
+          "description": "Scheduled events; absent or empty keeps constant capacity and the captured demand."
+        },
+        "checkIn": {
+          "$ref": "#/$defs/CheckInInput",
+          "description": "Check-in desks before security; requires passengerGeneration and no alternative flow."
+        },
+        "staffSchedules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StaffSchedule"
+          },
+          "maxItems": 1000,
+          "description": "People on duty over time at some checkpoints; requires events (possibly empty). A scheduled checkpoint's staffCount is the most people on duty at once."
+        },
+        "journey": {
+          "$ref": "#/$defs/JourneyInput"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "capturedAtUtc",
+        "engine",
+        "snapshotIntervalMinutes"
+      ]
+    },
+    "KpiDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "waitPopulation": {
+          "type": "string",
+          "const": "service_completed_by_minute"
+        },
+        "percentileMethod": {
+          "type": "string",
+          "const": "nearest_rank"
+        },
+        "throughputPopulation": {
+          "type": "string",
+          "const": "service_completed_in_window"
+        },
+        "queuePopulation": {
+          "type": "string",
+          "const": "waiting_for_resource"
+        },
+        "utilizationPopulation": {
+          "type": "string",
+          "const": "observed_busy_slots_including_unfinished_service"
+        },
+        "boardingPopulation": {
+          "type": "string",
+          "const": "modeled_passengers_with_boarding_deadline"
+        },
+        "reconciliationPopulation": {
+          "type": "string",
+          "const": "configured_modeled_demand"
+        }
+      },
+      "required": [
+        "waitPopulation",
+        "percentileMethod",
+        "throughputPopulation",
+        "queuePopulation",
+        "utilizationPopulation",
+        "boardingPopulation",
+        "reconciliationPopulation"
+      ]
+    },
+    "KpiSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kpiVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "zoneType": {
+          "type": "string",
+          "const": "checkpoint"
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "elapsedMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "windowStartMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "recordedAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "populationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrivedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "notArrivedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "queuedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processingPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "walkingPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "atGatePassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unreachablePassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "waitSampleCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "completedInWindow": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "maximumQueue": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "boardingRiskPopulationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "boardingAtRiskCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "lateAtGateCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "missedDeadlineUnfinishedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "meanWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "medianWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95WaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "throughputPerMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cumulativeThroughputPerMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "utilization": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cumulativeUtilization": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "boardingLateRisk": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "peakBusy": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "busyMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "busyMinutesInWindow": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "firstQueueMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effectiveCapacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Staff on duty at this minute, 0 while the control is unavailable. capacity and utilization stay nominal."
+        }
+      },
+      "required": [
+        "kpiVersion",
+        "runId",
+        "zoneId",
+        "zoneType",
+        "minute",
+        "elapsedMinutes",
+        "windowStartMinute",
+        "recordedAtUtc",
+        "populationCount",
+        "arrivedPassengers",
+        "notArrivedPassengers",
+        "queuedPassengers",
+        "processingPassengers",
+        "processedPassengers",
+        "walkingPassengers",
+        "atGatePassengers",
+        "unreachablePassengers",
+        "waitSampleCount",
+        "completedInWindow",
+        "maximumQueue",
+        "boardingRiskPopulationCount",
+        "boardingAtRiskCount",
+        "lateAtGateCount",
+        "missedDeadlineUnfinishedCount",
+        "meanWaitMinutes",
+        "medianWaitMinutes",
+        "p95WaitMinutes",
+        "throughputPerMinute",
+        "cumulativeThroughputPerMinute",
+        "utilization",
+        "cumulativeUtilization",
+        "boardingLateRisk",
+        "capacity",
+        "peakBusy",
+        "busyMinutes",
+        "busyMinutesInWindow",
+        "firstQueueMinute"
+      ]
+    },
+    "KpiResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kpiVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "engine": {
+          "type": "string",
+          "const": "simpy-kpi-1.0"
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "intervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "horizonMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "populationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unprocessedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrivedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "notArrivedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unreachableCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "snapshotCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50000
+        },
+        "matchedSnapshotCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50000
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50000
+        },
+        "returnedSnapshotCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50000
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "definitions": {
+          "$ref": "#/$defs/KpiDefinitions"
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KpiSnapshot"
+          },
+          "maxItems": 50000
+        },
+        "eventCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Scheduled events applied by the run. With events, a zone population changes at surge minutes and redirected arrivals."
+        }
+      },
+      "required": [
+        "kpiVersion",
+        "engine",
+        "runId",
+        "intervalMinutes",
+        "horizonMinutes",
+        "populationCount",
+        "processedCount",
+        "unprocessedCount",
+        "arrivedCount",
+        "notArrivedCount",
+        "unreachableCount",
+        "snapshotCount",
+        "matchedSnapshotCount",
+        "offset",
+        "returnedSnapshotCount",
+        "hasMore",
+        "definitions",
+        "snapshots"
+      ]
+    },
+    "KpiProcessResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "processVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "engine": {
+          "type": "string",
+          "const": "simpy-kpi-1.0"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "flight_profiles",
+            "aggregate"
+          ]
+        },
+        "horizonMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "populationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrivedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "notArrivedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "queuedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processingCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "walkingCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "atGateCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unreachableCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "deadlineMissedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProcessCheckpoint"
+          },
+          "maxItems": 1000
+        },
+        "passengers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProcessPassenger"
+          },
+          "maxItems": 100000
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AppliedEvent"
+          },
+          "maxItems": 1000,
+          "description": "Events applied by the run, in application order. Present when the request carried events."
+        }
+      },
+      "required": [
+        "processVersion",
+        "engine",
+        "mode",
+        "horizonMinutes",
+        "populationCount",
+        "arrivedCount",
+        "notArrivedCount",
+        "queuedCount",
+        "processingCount",
+        "walkingCount",
+        "atGateCount",
+        "unreachableCount",
+        "deadlineMissedCount",
+        "checkpoints",
+        "passengers",
+        "offset",
+        "returnedCount",
+        "hasMore"
+      ]
+    },
+    "KpiSimulationResponse": {
+      "type": "object",
+      "description": "Versioned simulation response. simulatedMinutes is actual simulated time, independent of wall clock; snapshots never exceed it. Result is the legacy shape without this field.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed"
+          ]
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ZoneSnapshot"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunFailure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "simulatedMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080,
+          "description": "Actual simulated minutes since startsAtUtc; completed runs must advance time. Not execution time in seconds."
+        },
+        "processResult": {
+          "$ref": "#/$defs/KpiProcessResult"
+        },
+        "navigationResult": {
+          "$ref": "#/$defs/NavigationResult"
+        },
+        "kpiResult": {
+          "$ref": "#/$defs/KpiResult"
+        },
+        "checkInResult": {
+          "$ref": "#/$defs/CheckInResult",
+          "description": "Present exactly when the request has checkIn."
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "status",
+        "metrics",
+        "snapshots",
+        "failure",
+        "simulatedMinutes",
+        "processResult",
+        "kpiResult"
+      ]
+    },
+    "StaffSchedule": {
+      "type": "object",
+      "description": "A step function of people on duty at one checkpoint, from minute 0 with strictly increasing minutes inside the horizon.",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10080,
+          "items": {
+            "$ref": "#/$defs/StaffStep"
+          }
+        }
+      },
+      "required": [
+        "checkpointId",
+        "steps"
+      ]
+    },
+    "StaffStep": {
+      "type": "object",
+      "description": "From startMinute on, staffCount people serve at the checkpoint, until the next step.",
+      "additionalProperties": false,
+      "properties": {
+        "startMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10079
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "startMinute",
+        "staffCount"
+      ]
+    },
+    "CheckInInput": {
+      "type": "object",
+      "description": "Check-in desks before security. Passengers with hold baggage queue FIFO at the desks, then walk to their control; their arrivalMinute at the control is the check-in finish plus walkingMinutes.",
+      "additionalProperties": false,
+      "properties": {
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Staffed desks; zero serves nobody."
+        },
+        "serviceRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers per minute per staffed desk; service is exponential with this rate."
+        },
+        "holdBaggageShare": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of generated passengers who check hold baggage; the others go straight to security."
+        },
+        "walkingMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240,
+          "description": "Walk from the desks to the control."
+        },
+        "deskSteps": {
+          "type": "array",
+          "description": "Desks open over time, a nondecreasing step function from minute 0 whose last staffCount is staffCount. Desks only open during a run; a desk never closes on a passenger.",
+          "items": {
+            "$ref": "#/$defs/StaffStep"
+          },
+          "minItems": 1,
+          "maxItems": 1440
+        }
+      },
+      "required": [
+        "zoneId",
+        "staffCount",
+        "serviceRatePerMinute",
+        "holdBaggageShare",
+        "walkingMinutes"
+      ]
+    },
+    "CheckInPassenger": {
+      "type": "object",
+      "description": "One check-in journey; times after the horizon are null.",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^demo-(pax|surge)-[0-9a-f]{32}-[0-9]{6}$"
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "terminalArrivalMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "serviceMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "startedMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finishedMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "securityArrivalMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "checkpointId",
+        "terminalArrivalMinute",
+        "serviceMinutes",
+        "startedMinute",
+        "finishedMinute",
+        "securityArrivalMinute"
+      ]
+    },
+    "CheckInSnapshot": {
+      "type": "object",
+      "description": "Check-in desks at one KPI grid minute. Waits cover services completed by the minute; utilization is cumulative.",
+      "additionalProperties": false,
+      "properties": {
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "zoneType": {
+          "type": "string",
+          "const": "checkIn"
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "arrivedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "queuedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processingPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "walkingPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "maximumQueue": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "meanWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "medianWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95WaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "busyMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080000
+        },
+        "utilization": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "zoneId",
+        "zoneType",
+        "minute",
+        "arrivedPassengers",
+        "queuedPassengers",
+        "processingPassengers",
+        "processedPassengers",
+        "walkingPassengers",
+        "maximumQueue",
+        "meanWaitMinutes",
+        "medianWaitMinutes",
+        "p95WaitMinutes",
+        "capacity",
+        "busyMinutes",
+        "utilization"
+      ]
+    },
+    "CheckInResult": {
+      "type": "object",
+      "description": "Check-in stage of a run. unfinishedCount passengers did not reach security by the horizon; their controls count them as not arrived.",
+      "additionalProperties": false,
+      "properties": {
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "populationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "processedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unfinishedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CheckInSnapshot"
+          },
+          "maxItems": 10081
+        },
+        "passengers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CheckInPassenger"
+          },
+          "maxItems": 100000
+        }
+      },
+      "required": [
+        "zoneId",
+        "capacity",
+        "populationCount",
+        "processedCount",
+        "unfinishedCount",
+        "snapshots",
+        "passengers"
+      ]
+    }
+  }
+}

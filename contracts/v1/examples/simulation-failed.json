@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "status": "failed",
+  "metrics": [],
+  "snapshots": [],
+  "failure": {
+    "code": "engine_error",
+    "message": "The simulation worker stopped before completing."
+  }
+}

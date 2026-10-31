@@ -1,0 +1,71 @@
+[
+  {
+    "name": "unknown Unicode properties",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {"op": "set", "path": "/\ue000", "value": 1},
+      {"op": "set", "path": "/\ud83d\ude80", "value": 1}
+    ],
+    "status": 422,
+    "errors": [
+      {"field": "/\ud83d\ude80", "code": "unknown_field"},
+      {"field": "/\ue000", "code": "unknown_field"}
+    ]
+  },
+  {
+    "name": "UUID rejects trailing newline",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [{"op": "set", "path": "/runId", "value": "70000000-0000-0000-0000-000000000001\n"}],
+    "status": 422,
+    "errors": [{"field": "/runId", "code": "invalid_format"}]
+  },
+  {
+    "name": "checkpoint UUID rejects trailing newline",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [{"op": "set", "path": "/checkpoints/0/checkpointId", "value": "70000000-0000-0000-0000-000000000101\n"}],
+    "status": 422,
+    "errors": [{"field": "/checkpoints/0/checkpointId", "code": "invalid_format"}]
+  },
+  {
+    "name": "failure code rejects trailing newline",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [{"op": "set", "path": "/failure/code", "value": "engine_error\n"}],
+    "status": 422,
+    "errors": [{"field": "/failure/code", "code": "invalid_format"}]
+  },
+  {
+    "name": "equivalent zero fractional timestamp",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [{"op": "set", "path": "/candidates/0/startsAtUtc", "value": "2026-10-11T06:00:00.000000Z"}],
+    "status": 200
+  },
+  {
+    "name": "equivalent nonzero fractional timestamps",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {"op": "set", "path": "/baseline/startsAtUtc", "value": "2026-10-11T06:00:00.125Z"},
+      {"op": "set", "path": "/candidates/0/startsAtUtc", "value": "2026-10-11T06:00:00.125000Z"}
+    ],
+    "status": 200
+  },
+  {
+    "name": "failure message whitespace uses shared Unicode rules",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [{"op": "set", "path": "/failure/message", "value": "\u001c"}],
+    "status": 200
+  },
+  {
+    "name": "failure message valid supplementary Unicode",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [{"op": "set", "path": "/failure/message", "value": "Worker \ud83d\ude80 stopped."}],
+    "status": 200
+  }
+]

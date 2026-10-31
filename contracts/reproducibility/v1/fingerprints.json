@@ -1,0 +1,71 @@
+[
+  {
+    "name": "null",
+    "kind": "input",
+    "value": null,
+    "expected": "0feafdf1f991ee7426b48421f4da848673de66c5d39e0da649bb58b0202e9368"
+  },
+  {
+    "name": "numeric normalization and unicode",
+    "kind": "input",
+    "value": {
+      "z": -0.0,
+      "a": [
+        1,
+        1.0,
+        1e-20,
+        0.3333333333333333,
+        "București ✈ 🛫",
+        true,
+        false,
+        null
+      ]
+    },
+    "expected": "76b4c9eddef30fcba2aac7b5efc815ce078a00a5eac256153a30683bc4333c59"
+  },
+  {
+    "name": "nested run identity excluded",
+    "kind": "result",
+    "value": {
+      "runId": "first",
+      "kpiResult": {
+        "runId": "first",
+        "snapshots": [
+          {
+            "runId": "first",
+            "recordedAtUtc": "2026-10-15T10:00:00.100000Z",
+            "meanWaitMinutes": 0.1
+          }
+        ]
+      }
+    },
+    "expected": "286dfadaf3c224d983e4b8bf5bc4756a2e0b0cd7fc9014d1dc21cb8e58d331d8"
+  },
+  {
+    "name": "equivalent timestamp and identity",
+    "kind": "result",
+    "value": {
+      "kpiResult": {
+        "snapshots": [
+          {
+            "meanWaitMinutes": 0.1,
+            "recordedAtUtc": "2026-10-15T10:00:00.1Z",
+            "runId": "second"
+          }
+        ],
+        "runId": "second"
+      },
+      "runId": "second"
+    },
+    "expected": "286dfadaf3c224d983e4b8bf5bc4756a2e0b0cd7fc9014d1dc21cb8e58d331d8"
+  },
+  {
+    "name": "array order matters",
+    "kind": "input",
+    "value": [
+      2,
+      1
+    ],
+    "expected": "706bf4165021710fa1018cd91323c8effc3bafea1c66bd16cfddfa2a367522eb"
+  }
+]

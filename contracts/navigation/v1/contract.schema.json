@@ -1,0 +1,1262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.example/contracts/navigation/1.0/contract.schema.json",
+  "title": "Navigation definitions; exported with the v1 and passenger definitions",
+  "$defs": {
+    "NavigationNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Entrance",
+            "Walkway",
+            "CheckIn",
+            "Security",
+            "PassportControl",
+            "Gate",
+            "Lounge",
+            "BaggageClaim",
+            "Stairs",
+            "Elevator"
+          ]
+        },
+        "x": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "y": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "z": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isStepFree": {
+          "type": "boolean"
+        },
+        "requiredTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "minItems": 0,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "x",
+        "y",
+        "z",
+        "isActive",
+        "isStepFree",
+        "requiredTags"
+      ]
+    },
+    "NavigationEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "fromZoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "toZoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "distanceMeters": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "travelSeconds": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 604800
+        },
+        "isBidirectional": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isStepFree": {
+          "type": "boolean"
+        },
+        "requiredTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "minItems": 0,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "id",
+        "fromZoneId",
+        "toZoneId",
+        "distanceMeters",
+        "travelSeconds",
+        "isBidirectional",
+        "isActive",
+        "isStepFree",
+        "requiredTags"
+      ]
+    },
+    "NavigationGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationNode"
+          },
+          "minItems": 1,
+          "maxItems": 2000
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationEdge"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "nodes",
+        "edges"
+      ]
+    },
+    "NavigationBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resourceId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        }
+      },
+      "required": [
+        "resourceId",
+        "zoneId"
+      ]
+    },
+    "NavigationAccessProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "groupKind": {
+          "type": "string",
+          "enum": [
+            "solo",
+            "family",
+            "business",
+            "tour"
+          ]
+        },
+        "requireStepFree": {
+          "type": "boolean"
+        },
+        "accessTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "minItems": 0,
+          "maxItems": 32
+        },
+        "forbiddenZoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 2000
+        },
+        "walkingMultiplier": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "groupKind",
+        "requireStepFree",
+        "accessTags",
+        "forbiddenZoneIds",
+        "walkingMultiplier"
+      ]
+    },
+    "NavigationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "navigationVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "graph": {
+          "$ref": "#/$defs/NavigationGraph"
+        },
+        "checkpointBindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationBinding"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "gateBindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationBinding"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "accessProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationAccessProfile"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "closedZoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 2000
+        },
+        "closedEdgeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "navigationVersion",
+        "graph",
+        "checkpointBindings",
+        "gateBindings",
+        "accessProfiles",
+        "closedZoneIds",
+        "closedEdgeIds"
+      ]
+    },
+    "NavigationFlightGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId"
+      ]
+    },
+    "NavigationInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "navigationVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "graph": {
+          "$ref": "#/$defs/NavigationGraph"
+        },
+        "checkpointBindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationBinding"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "gateBindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationBinding"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "accessProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationAccessProfile"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "closedZoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 2000
+        },
+        "closedEdgeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "flightGates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationFlightGate"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "navigationVersion",
+        "graph",
+        "checkpointBindings",
+        "gateBindings",
+        "accessProfiles",
+        "closedZoneIds",
+        "closedEdgeIds",
+        "flightGates"
+      ]
+    },
+    "NavigationPreviewRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        },
+        "navigation": {
+          "$ref": "#/$defs/NavigationInput"
+        }
+      },
+      "required": [
+        "passengerGeneration",
+        "navigation"
+      ]
+    },
+    "NavigationRouteQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "navigation": {
+          "$ref": "#/$defs/NavigationConfig"
+        },
+        "fromZoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "toZoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "groupKind": {
+          "type": "string",
+          "enum": [
+            "solo",
+            "family",
+            "business",
+            "tour"
+          ]
+        }
+      },
+      "required": [
+        "navigation",
+        "fromZoneId",
+        "toZoneId",
+        "groupKind"
+      ]
+    },
+    "NavigationWaypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "x": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "y": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "z": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "zoneId",
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "NavigationRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routeKey": {
+          "type": "string",
+          "pattern": "^nav-[0-9a-f]{24}$"
+        },
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "groupKind": {
+          "type": "string",
+          "enum": [
+            "solo",
+            "family",
+            "business",
+            "tour"
+          ]
+        },
+        "zoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 1,
+          "maxItems": 2000
+        },
+        "edgeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 0,
+          "maxItems": 2000
+        },
+        "distanceMeters": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000000000
+        },
+        "baseWalkingMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationWaypoint"
+          },
+          "minItems": 1,
+          "maxItems": 2000
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "routeKey",
+        "flightId",
+        "gateId",
+        "checkpointId",
+        "groupKind",
+        "zoneIds",
+        "edgeIds",
+        "distanceMeters",
+        "baseWalkingMinutes",
+        "waypoints",
+        "passengerCount"
+      ]
+    },
+    "NavigationError": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "checkpoint_zone_missing",
+            "gate_zone_missing",
+            "access_profile_missing",
+            "zone_unavailable",
+            "route_unreachable",
+            "route_time_limit_exceeded"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "NavigationJourney": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^demo-pax-[0-9a-f]{32}-[0-9]{6}$"
+        },
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "routeKey": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^nav-[0-9a-f]{24}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NavigationError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "walkingMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queueWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "serviceMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240
+        },
+        "arrivalMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "gateArrivalMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "boardingCloseMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "boardingRisk": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "safe",
+            "late",
+            "unserved",
+            "unreachable"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "flightId",
+        "gateId",
+        "checkpointId",
+        "routeKey",
+        "error",
+        "walkingMinutes",
+        "queueWaitMinutes",
+        "serviceMinutes",
+        "arrivalMinute",
+        "gateArrivalMinute",
+        "boardingCloseMinute",
+        "boardingRisk"
+      ]
+    },
+    "NavigationFlightSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "modeledCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "routedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "errorCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "safeCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "lateCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unservedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "pendingCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "meanWalkingMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "meanQueueWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId",
+        "modeledCount",
+        "routedCount",
+        "errorCount",
+        "safeCount",
+        "lateCount",
+        "unservedCount",
+        "pendingCount",
+        "meanWalkingMinutes",
+        "meanQueueWaitMinutes"
+      ]
+    },
+    "NavigationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "navigationVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "algorithm": {
+          "type": "string",
+          "const": "dijkstra"
+        },
+        "graphFingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "populationFingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "isSynthetic": {
+          "type": "boolean",
+          "const": true
+        },
+        "modeledCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "routedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "errorCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "assessed": {
+          "type": "boolean"
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationRoute"
+          },
+          "minItems": 0,
+          "maxItems": 4000
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationFlightSummary"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "journeys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NavigationJourney"
+          },
+          "minItems": 0,
+          "maxItems": 100000
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "hasMore": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "navigationVersion",
+        "algorithm",
+        "graphFingerprint",
+        "populationFingerprint",
+        "isSynthetic",
+        "modeledCount",
+        "routedCount",
+        "errorCount",
+        "assessed",
+        "routes",
+        "flights",
+        "journeys",
+        "offset",
+        "returnedCount",
+        "hasMore"
+      ]
+    },
+    "RoutedSimulationRequest": {
+      "type": "object",
+      "description": "Version 1 queue simulation input, copied from frozen inputs. No live database references are resolved by validation.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Total demand; arrivals stop when this count is reached."
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers entering the simulation per minute."
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        },
+        "navigation": {
+          "$ref": "#/$defs/NavigationInput"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "passengerGeneration",
+        "navigation"
+      ]
+    },
+    "RoutedScenarioSnapshot": {
+      "type": "object",
+      "description": "Versioned frozen queue simulation inputs. Independent of a run; ToSimulationRequest assigns runId without reading mutable data. capturedAtUtc records capture time, not simulation start.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Total demand; arrivals stop when this count is reached."
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers entering the simulation per minute."
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "capturedAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        },
+        "navigation": {
+          "$ref": "#/$defs/NavigationInput"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "capturedAtUtc",
+        "passengerGeneration",
+        "navigation"
+      ]
+    },
+    "RoutedSimulationResponse": {
+      "type": "object",
+      "description": "Versioned simulation response. simulatedMinutes is actual simulated time, independent of wall clock; snapshots never exceed it. Result is the legacy shape without this field.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed"
+          ]
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ZoneSnapshot"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunFailure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "simulatedMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080,
+          "description": "Actual simulated minutes since startsAtUtc; completed runs must advance time. Not execution time in seconds."
+        },
+        "navigationResult": {
+          "$ref": "#/$defs/NavigationResult"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "status",
+        "metrics",
+        "snapshots",
+        "failure",
+        "simulatedMinutes",
+        "navigationResult"
+      ]
+    }
+  }
+}

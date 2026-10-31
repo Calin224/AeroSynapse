@@ -1,0 +1,757 @@
+{
+  "contractVersion": "1.0",
+  "engine": "simpy-baggage-1.0",
+  "synthetic": true,
+  "populationFingerprint": "c2e425a2d70d996de9c8832aa5dec4a4e7948868066b61f36677003b5d9a98b3",
+  "request": {
+    "contractVersion": "1.0",
+    "synthetic": true,
+    "seed": 52,
+    "durationMinutes": 10,
+    "unitCount": 2,
+    "arrivalWindowMinutes": 0.0,
+    "loadingDeadlineMinute": 4.0,
+    "serviceVariation": 0.0,
+    "resources": {
+      "checkIn": {
+        "capacity": 1,
+        "serviceMinutes": 1.0
+      },
+      "beltA": {
+        "capacity": 1,
+        "serviceMinutes": 1.0
+      },
+      "beltB": {
+        "capacity": 1,
+        "serviceMinutes": 1.0
+      },
+      "sorting": {
+        "capacity": 1,
+        "serviceMinutes": 1.0
+      },
+      "loading": {
+        "capacity": 1,
+        "serviceMinutes": 1.0
+      }
+    },
+    "incident": null
+  },
+  "kpis": {
+    "unitCount": 2,
+    "loadedCount": 2,
+    "backlogCount": 0,
+    "throughputPerMinute": 0.2,
+    "totalWaitingMinutes": 1.0,
+    "meanWaitingMinutes": 0.5,
+    "totalDelayMinutes": 1.0,
+    "meanDelayMinutes": 0.5,
+    "lateCount": 1,
+    "divertedCount": 0
+  },
+  "resources": [
+    {
+      "resourceId": "checkIn",
+      "capacity": 1,
+      "serviceMinutes": 1.0,
+      "queued": 0,
+      "inService": 0,
+      "completed": 2,
+      "peakQueue": 1,
+      "peakBusy": 1,
+      "stopped": false,
+      "totalWaitingMinutes": 1.0,
+      "meanWaitingMinutes": 0.5,
+      "utilization": 0.2
+    },
+    {
+      "resourceId": "beltA",
+      "capacity": 1,
+      "serviceMinutes": 1.0,
+      "queued": 0,
+      "inService": 0,
+      "completed": 1,
+      "peakQueue": 0,
+      "peakBusy": 1,
+      "stopped": false,
+      "totalWaitingMinutes": 0.0,
+      "meanWaitingMinutes": 0.0,
+      "utilization": 0.1
+    },
+    {
+      "resourceId": "beltB",
+      "capacity": 1,
+      "serviceMinutes": 1.0,
+      "queued": 0,
+      "inService": 0,
+      "completed": 1,
+      "peakQueue": 0,
+      "peakBusy": 1,
+      "stopped": false,
+      "totalWaitingMinutes": 0.0,
+      "meanWaitingMinutes": 0.0,
+      "utilization": 0.1
+    },
+    {
+      "resourceId": "sorting",
+      "capacity": 1,
+      "serviceMinutes": 1.0,
+      "queued": 0,
+      "inService": 0,
+      "completed": 2,
+      "peakQueue": 0,
+      "peakBusy": 1,
+      "stopped": false,
+      "totalWaitingMinutes": 0.0,
+      "meanWaitingMinutes": 0.0,
+      "utilization": 0.2
+    },
+    {
+      "resourceId": "loading",
+      "capacity": 1,
+      "serviceMinutes": 1.0,
+      "queued": 0,
+      "inService": 0,
+      "completed": 2,
+      "peakQueue": 0,
+      "peakBusy": 1,
+      "stopped": false,
+      "totalWaitingMinutes": 0.0,
+      "meanWaitingMinutes": 0.0,
+      "utilization": 0.2
+    }
+  ],
+  "snapshots": [
+    {
+      "minute": 0,
+      "loadedCount": 0,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 1,
+          "inService": 1,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 1,
+      "loadedCount": 0,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 2,
+      "loadedCount": 0,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 0,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 0,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 3,
+      "loadedCount": 0,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 0,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 4,
+      "loadedCount": 1,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 1,
+          "completed": 1,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 5,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 6,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 7,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 8,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 9,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    },
+    {
+      "minute": 10,
+      "loadedCount": 2,
+      "resources": [
+        {
+          "resourceId": "checkIn",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltA",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "beltB",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 1,
+          "stopped": false
+        },
+        {
+          "resourceId": "sorting",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        },
+        {
+          "resourceId": "loading",
+          "capacity": 1,
+          "queued": 0,
+          "inService": 0,
+          "completed": 2,
+          "stopped": false
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "id": "synthetic-bag-00001",
+      "arrivalMinute": 0.0,
+      "nominalBelt": "beltA",
+      "belt": "beltA",
+      "diverted": false,
+      "loadedMinute": 4.0,
+      "stages": [
+        {
+          "resourceId": "checkIn",
+          "enteredMinute": 0.0,
+          "startedMinute": 0.0,
+          "completedMinute": 1.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 0.0,
+              "endMinute": 1.0
+            }
+          ]
+        },
+        {
+          "resourceId": "beltA",
+          "enteredMinute": 1.0,
+          "startedMinute": 1.0,
+          "completedMinute": 2.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 1.0,
+              "endMinute": 2.0
+            }
+          ]
+        },
+        {
+          "resourceId": "sorting",
+          "enteredMinute": 2.0,
+          "startedMinute": 2.0,
+          "completedMinute": 3.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 2.0,
+              "endMinute": 3.0
+            }
+          ]
+        },
+        {
+          "resourceId": "loading",
+          "enteredMinute": 3.0,
+          "startedMinute": 3.0,
+          "completedMinute": 4.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 3.0,
+              "endMinute": 4.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "synthetic-bag-00002",
+      "arrivalMinute": 0.0,
+      "nominalBelt": "beltB",
+      "belt": "beltB",
+      "diverted": false,
+      "loadedMinute": 5.0,
+      "stages": [
+        {
+          "resourceId": "checkIn",
+          "enteredMinute": 0.0,
+          "startedMinute": 1.0,
+          "completedMinute": 2.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 1.0,
+              "endMinute": 2.0
+            }
+          ]
+        },
+        {
+          "resourceId": "beltB",
+          "enteredMinute": 2.0,
+          "startedMinute": 2.0,
+          "completedMinute": 3.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 2.0,
+              "endMinute": 3.0
+            }
+          ]
+        },
+        {
+          "resourceId": "sorting",
+          "enteredMinute": 3.0,
+          "startedMinute": 3.0,
+          "completedMinute": 4.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 3.0,
+              "endMinute": 4.0
+            }
+          ]
+        },
+        {
+          "resourceId": "loading",
+          "enteredMinute": 4.0,
+          "startedMinute": 4.0,
+          "completedMinute": 5.0,
+          "serviceMinutes": 1.0,
+          "workSegments": [
+            {
+              "startMinute": 4.0,
+              "endMinute": 5.0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

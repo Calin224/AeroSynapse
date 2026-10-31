@@ -1,0 +1,1066 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.example/contracts/journeys/1.0/contract.schema.json",
+  "$defs": {
+    "JourneyFlight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "arrivalMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 10080
+        },
+        "boardingOpenMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 10080
+        },
+        "boardingCloseMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 10080
+        },
+        "departureMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "delayMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "passengerCapacity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "isCancelled": {
+          "type": "boolean"
+        },
+        "requiresPassport": {
+          "type": "boolean"
+        },
+        "previousFlightId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotationMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "eligibleGateIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId",
+        "arrivalMinute",
+        "boardingOpenMinute",
+        "boardingCloseMinute",
+        "departureMinute",
+        "delayMinutes",
+        "passengerCapacity",
+        "isCancelled",
+        "requiresPassport",
+        "previousFlightId",
+        "rotationMinutes",
+        "eligibleGateIds"
+      ]
+    },
+    "JourneyConnection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "inboundFlightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "outboundFlightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "transferMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240
+        },
+        "requiresPassport": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "inboundFlightId",
+        "outboundFlightId",
+        "passengerCount",
+        "transferMinutes",
+        "requiresPassport"
+      ]
+    },
+    "JourneyRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "walkingMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240
+        }
+      },
+      "required": [
+        "checkpointId",
+        "gateId",
+        "walkingMinutes"
+      ]
+    },
+    "JourneyInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "journeyVersion": {
+          "const": "1.0",
+          "type": "string"
+        },
+        "passportStaffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "passportServiceMinutes": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 60
+        },
+        "boardingStaffPerGate": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "boardingServiceMinutes": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 60
+        },
+        "gateChangeWalkingMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240
+        },
+        "riskBufferMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 240
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyFlight"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyConnection"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyRoute"
+          },
+          "minItems": 1,
+          "maxItems": 20000
+        },
+        "gateChoices": {
+          "type": "array",
+          "description": "How each flight_change is absorbed: the rolling optimum, or every flight kept at its gate when that plan exists.",
+          "items": {
+            "$ref": "#/$defs/JourneyGateChoice"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "journeyVersion",
+        "passportStaffCount",
+        "passportServiceMinutes",
+        "boardingStaffPerGate",
+        "boardingServiceMinutes",
+        "gateChangeWalkingMinutes",
+        "riskBufferMinutes",
+        "flights",
+        "connections",
+        "routes"
+      ]
+    },
+    "JourneyVisit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "check_in",
+            "security",
+            "passport",
+            "boarding"
+          ]
+        },
+        "resourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "arrivalMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30240
+        },
+        "startedMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30240
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finishedMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30240
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "stage",
+        "resourceId",
+        "arrivalMinute",
+        "startedMinute",
+        "finishedMinute"
+      ]
+    },
+    "JourneyPassenger": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "flightId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "connectionId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inboundFlightId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "arrivalMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30240
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gateId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gateArrivalMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30240
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "boardedMinute": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30240
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "not_arrived",
+            "check_in",
+            "security",
+            "passport",
+            "walking",
+            "gate_queue",
+            "boarding",
+            "boarded",
+            "missed",
+            "unreachable"
+          ]
+        },
+        "connectionStatus": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "pending",
+                "at_risk",
+                "missed",
+                "boarded"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyVisit"
+          },
+          "minItems": 0,
+          "maxItems": 4
+        },
+        "history": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2200,
+          "items": {
+            "$ref": "#/$defs/JourneyStep"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "flightId",
+        "connectionId",
+        "inboundFlightId",
+        "arrivalMinute",
+        "gateId",
+        "gateArrivalMinute",
+        "boardedMinute",
+        "stage",
+        "connectionStatus",
+        "visits",
+        "history"
+      ]
+    },
+    "JourneyFlightPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "arrivalMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 30240
+        },
+        "boardingOpenMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 30240
+        },
+        "boardingCloseMinute": {
+          "type": "number",
+          "minimum": -10080,
+          "maximum": 30240
+        },
+        "departureMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30240
+        },
+        "delayMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30240
+        },
+        "isCancelled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId",
+        "arrivalMinute",
+        "boardingOpenMinute",
+        "boardingCloseMinute",
+        "departureMinute",
+        "delayMinutes",
+        "isCancelled"
+      ]
+    },
+    "JourneyReplan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30240
+        },
+        "eventId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "solverStatus": {
+          "type": "string",
+          "enum": [
+            "optimal",
+            "feasible"
+          ]
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyFlightPlan"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "minute",
+        "eventId",
+        "solverStatus",
+        "flights"
+      ]
+    },
+    "JourneySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "notArrivedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "passportQueuedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "passportBusyCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "gateQueuedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "boardingCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "boardedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "missedConnectionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "atRiskConnectionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "delayedFlightCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "totalDelayMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 6048000
+        }
+      },
+      "required": [
+        "minute",
+        "notArrivedCount",
+        "passportQueuedCount",
+        "passportBusyCount",
+        "gateQueuedCount",
+        "boardingCount",
+        "boardedCount",
+        "missedConnectionCount",
+        "atRiskConnectionCount",
+        "delayedFlightCount",
+        "totalDelayMinutes"
+      ]
+    },
+    "JourneyResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "journeyVersion": {
+          "const": "1.0",
+          "type": "string"
+        },
+        "horizonMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "populationCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "connectionPassengerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "boardedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "missedConnectionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "plans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyReplan"
+          },
+          "minItems": 1,
+          "maxItems": 101
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneySnapshot"
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "passengers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyPassenger"
+          },
+          "minItems": 0,
+          "maxItems": 100000
+        },
+        "upstreamResult": {
+          "$ref": "#/$defs/KpiSimulationResponse"
+        }
+      },
+      "required": [
+        "journeyVersion",
+        "horizonMinutes",
+        "populationCount",
+        "connectionPassengerCount",
+        "boardedCount",
+        "missedConnectionCount",
+        "plans",
+        "snapshots",
+        "passengers",
+        "upstreamResult"
+      ]
+    },
+    "JourneySimulationResponse": {
+      "type": "object",
+      "description": "Versioned simulation response. simulatedMinutes is actual simulated time, independent of wall clock; snapshots never exceed it. Result is the legacy shape without this field.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed"
+          ]
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "snapshots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ZoneSnapshot"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunFailure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "simulatedMinutes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080,
+          "description": "Actual simulated minutes since startsAtUtc; completed runs must advance time. Not execution time in seconds."
+        },
+        "journeyResult": {
+          "$ref": "#/$defs/JourneyResult"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "status",
+        "metrics",
+        "snapshots",
+        "failure",
+        "simulatedMinutes",
+        "journeyResult"
+      ]
+    },
+    "JourneyStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "not_arrived",
+            "check_in",
+            "security",
+            "passport",
+            "walking",
+            "gate_queue",
+            "boarding",
+            "boarded",
+            "missed",
+            "unreachable"
+          ]
+        },
+        "gateId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "minute",
+        "stage",
+        "gateId"
+      ]
+    },
+    "GateAdviceEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A flight delay already scheduled in the scenario, replayed before the new one.",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "delayMinutes": {
+          "type": "integer",
+          "minimum": -10080,
+          "maximum": 10080,
+          "not": {
+            "const": 0
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "flightId",
+        "minute",
+        "delayMinutes"
+      ]
+    },
+    "GateAdviceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Recommend the gate plan that absorbs a delay reported at a moment of the captured day.",
+      "properties": {
+        "adviceVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "minute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyFlight"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GateAdviceEvent"
+          },
+          "maxItems": 100
+        },
+        "delay": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flightId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              },
+              "description": "Nonempty UUID in lowercase canonical D format."
+            },
+            "delayMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1440
+            }
+          },
+          "required": [
+            "flightId",
+            "delayMinutes"
+          ]
+        }
+      },
+      "required": [
+        "adviceVersion",
+        "minute",
+        "flights",
+        "events",
+        "delay"
+      ]
+    },
+    "GateAdvice": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The plan known before the delay, the optimal plan after it, and the best plan that keeps every gate; null when no such plan exists.",
+      "properties": {
+        "adviceVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "minute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "solverStatus": {
+          "type": "string",
+          "enum": [
+            "optimal",
+            "feasible"
+          ]
+        },
+        "before": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyFlightPlan"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        },
+        "recommended": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JourneyFlightPlan"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        },
+        "withoutMoves": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/JourneyFlightPlan"
+              },
+              "minItems": 1,
+              "maxItems": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "adviceVersion",
+        "minute",
+        "solverStatus",
+        "before",
+        "recommended",
+        "withoutMoves"
+      ]
+    },
+    "JourneyGateChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "optimal",
+            "keep_gates"
+          ]
+        }
+      },
+      "required": [
+        "eventId",
+        "mode"
+      ]
+    }
+  }
+}

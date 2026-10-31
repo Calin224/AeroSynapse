@@ -1,0 +1,801 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/airside/v1/contract.schema.json",
+  "$ref": "#/$defs/AirsideRequest",
+  "$defs": {
+    "Availability": {
+      "additionalProperties": false,
+      "properties": {
+        "startMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Startminute",
+          "type": "integer"
+        },
+        "endMinute": {
+          "maximum": 240,
+          "minimum": 1,
+          "title": "Endminute",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startMinute",
+        "endMinute"
+      ],
+      "title": "Availability",
+      "type": "object"
+    },
+    "Stand": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "available": {
+          "items": {
+            "$ref": "#/$defs/Availability"
+          },
+          "maxItems": 12,
+          "title": "Available",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "available"
+      ],
+      "title": "Stand",
+      "type": "object"
+    },
+    "Team": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "available": {
+          "items": {
+            "$ref": "#/$defs/Availability"
+          },
+          "maxItems": 12,
+          "title": "Available",
+          "type": "array"
+        },
+        "memberIds": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Memberids",
+          "type": "array"
+        },
+        "skills": {
+          "items": {
+            "enum": [
+              "handling",
+              "pushback"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Skills",
+          "type": "array"
+        },
+        "standIds": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Standids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "available",
+        "memberIds",
+        "skills",
+        "standIds"
+      ],
+      "title": "Team",
+      "type": "object"
+    },
+    "Turnaround": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "standId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Standid",
+          "type": "string"
+        },
+        "arrivalMinute": {
+          "maximum": 239,
+          "minimum": 0,
+          "title": "Arrivalminute",
+          "type": "integer"
+        },
+        "scheduledPushbackMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Scheduledpushbackminute",
+          "type": "integer"
+        },
+        "handlingMinutes": {
+          "maximum": 120,
+          "minimum": 1,
+          "title": "Handlingminutes",
+          "type": "integer"
+        },
+        "pushbackMinutes": {
+          "maximum": 60,
+          "minimum": 1,
+          "title": "Pushbackminutes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "standId",
+        "arrivalMinute",
+        "scheduledPushbackMinute",
+        "handlingMinutes",
+        "pushbackMinutes"
+      ],
+      "title": "Turnaround",
+      "type": "object"
+    },
+    "Vehicle": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "available": {
+          "items": {
+            "$ref": "#/$defs/Availability"
+          },
+          "maxItems": 12,
+          "title": "Available",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "service",
+            "tug"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "standIds": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Standids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "available",
+        "kind",
+        "standIds"
+      ],
+      "title": "Vehicle",
+      "type": "object"
+    },
+    "AirsideRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "seed": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "durationMinutes": {
+          "maximum": 240,
+          "minimum": 1,
+          "title": "Durationminutes",
+          "type": "integer"
+        },
+        "serviceVariation": {
+          "default": 0,
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Servicevariation",
+          "type": "number"
+        },
+        "stands": {
+          "items": {
+            "$ref": "#/$defs/Stand"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Stands",
+          "type": "array"
+        },
+        "teams": {
+          "items": {
+            "$ref": "#/$defs/Team"
+          },
+          "maxItems": 20,
+          "title": "Teams",
+          "type": "array"
+        },
+        "vehicles": {
+          "items": {
+            "$ref": "#/$defs/Vehicle"
+          },
+          "maxItems": 30,
+          "title": "Vehicles",
+          "type": "array"
+        },
+        "turnarounds": {
+          "items": {
+            "$ref": "#/$defs/Turnaround"
+          },
+          "maxItems": 30,
+          "title": "Turnarounds",
+          "type": "array"
+        },
+        "timeLimitSeconds": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Timelimitseconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "synthetic",
+        "seed",
+        "durationMinutes",
+        "stands",
+        "teams",
+        "vehicles",
+        "turnarounds"
+      ],
+      "title": "AirsideRequest",
+      "type": "object"
+    },
+    "Allocation": {
+      "additionalProperties": false,
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "stand",
+            "team",
+            "member",
+            "vehicle"
+          ],
+          "title": "Resourcetype",
+          "type": "string"
+        },
+        "resourceId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Resourceid",
+          "type": "string"
+        },
+        "turnaroundId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Turnaroundid",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "stand",
+            "handling",
+            "pushback"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "startMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Startminute",
+          "type": "integer"
+        },
+        "endMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Endminute",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "resourceType",
+        "resourceId",
+        "turnaroundId",
+        "stage",
+        "startMinute",
+        "endMinute"
+      ],
+      "title": "Allocation",
+      "type": "object"
+    },
+    "Conflict": {
+      "additionalProperties": false,
+      "properties": {
+        "turnaroundId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Turnaroundid",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "stand",
+            "handling",
+            "pushback"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "minute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Minute",
+          "type": "integer"
+        },
+        "reason": {
+          "enum": [
+            "stand_occupied_or_unavailable",
+            "team_vehicle_or_member_unavailable",
+            "no_complete_available_path"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "resourceIds": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+            "type": "string"
+          },
+          "title": "Resourceids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "turnaroundId",
+        "stage",
+        "minute",
+        "reason",
+        "resourceIds"
+      ],
+      "title": "Conflict",
+      "type": "object"
+    },
+    "Kpis": {
+      "additionalProperties": false,
+      "properties": {
+        "turnaroundCount": {
+          "title": "Turnaroundcount",
+          "type": "integer"
+        },
+        "departedCount": {
+          "title": "Departedcount",
+          "type": "integer"
+        },
+        "backlogCount": {
+          "title": "Backlogcount",
+          "type": "integer"
+        },
+        "readyCount": {
+          "title": "Readycount",
+          "type": "integer"
+        },
+        "meanTurnaroundMinutes": {
+          "title": "Meanturnaroundminutes",
+          "type": "number"
+        },
+        "meanWaitingMinutes": {
+          "title": "Meanwaitingminutes",
+          "type": "number"
+        },
+        "meanReadinessDelayMinutes": {
+          "title": "Meanreadinessdelayminutes",
+          "type": "number"
+        },
+        "lateCount": {
+          "title": "Latecount",
+          "type": "integer"
+        },
+        "conflictCount": {
+          "title": "Conflictcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "turnaroundCount",
+        "departedCount",
+        "backlogCount",
+        "readyCount",
+        "meanTurnaroundMinutes",
+        "meanWaitingMinutes",
+        "meanReadinessDelayMinutes",
+        "lateCount",
+        "conflictCount"
+      ],
+      "title": "Kpis",
+      "type": "object"
+    },
+    "Snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "title": "Minute",
+          "type": "integer"
+        },
+        "departedCount": {
+          "title": "Departedcount",
+          "type": "integer"
+        },
+        "readyCount": {
+          "title": "Readycount",
+          "type": "integer"
+        },
+        "backlogCount": {
+          "title": "Backlogcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "minute",
+        "departedCount",
+        "readyCount",
+        "backlogCount"
+      ],
+      "title": "Snapshot",
+      "type": "object"
+    },
+    "TurnaroundResult": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "standId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Standid",
+          "type": "string"
+        },
+        "arrivalMinute": {
+          "maximum": 239,
+          "minimum": 0,
+          "title": "Arrivalminute",
+          "type": "integer"
+        },
+        "scheduledPushbackMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Scheduledpushbackminute",
+          "type": "integer"
+        },
+        "handlingMinutes": {
+          "maximum": 180,
+          "minimum": 1,
+          "title": "Handlingminutes",
+          "type": "integer"
+        },
+        "pushbackMinutes": {
+          "maximum": 90,
+          "minimum": 1,
+          "title": "Pushbackminutes",
+          "type": "integer"
+        },
+        "standEnteredMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Standenteredminute"
+        },
+        "handlingStartedMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Handlingstartedminute"
+        },
+        "handlingCompletedMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Handlingcompletedminute"
+        },
+        "pushbackReadyMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pushbackreadyminute"
+        },
+        "departedMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Departedminute"
+        },
+        "waitingMinutes": {
+          "minimum": 0,
+          "title": "Waitingminutes",
+          "type": "integer"
+        },
+        "readinessDelayMinutes": {
+          "minimum": 0,
+          "title": "Readinessdelayminutes",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "waiting",
+            "handling",
+            "ready",
+            "pushback",
+            "departed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "handlingTeamId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Handlingteamid"
+        },
+        "handlingVehicleId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Handlingvehicleid"
+        },
+        "pushbackTeamId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pushbackteamid"
+        },
+        "tugId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tugid"
+        }
+      },
+      "required": [
+        "id",
+        "standId",
+        "arrivalMinute",
+        "scheduledPushbackMinute",
+        "handlingMinutes",
+        "pushbackMinutes",
+        "standEnteredMinute",
+        "handlingStartedMinute",
+        "handlingCompletedMinute",
+        "pushbackReadyMinute",
+        "departedMinute",
+        "waitingMinutes",
+        "readinessDelayMinutes",
+        "status",
+        "handlingTeamId",
+        "handlingVehicleId",
+        "pushbackTeamId",
+        "tugId"
+      ],
+      "title": "TurnaroundResult",
+      "type": "object"
+    },
+    "AirsideResult": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "engine": {
+          "enum": [
+            "simpy-airside-fifo-1.0",
+            "simpy-airside-cp-sat-replay-1.0"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "populationFingerprint": {
+          "title": "Populationfingerprint",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/AirsideRequest"
+        },
+        "kpis": {
+          "$ref": "#/$defs/Kpis"
+        },
+        "turnarounds": {
+          "items": {
+            "$ref": "#/$defs/TurnaroundResult"
+          },
+          "title": "Turnarounds",
+          "type": "array"
+        },
+        "allocations": {
+          "items": {
+            "$ref": "#/$defs/Allocation"
+          },
+          "title": "Allocations",
+          "type": "array"
+        },
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/Conflict"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/Snapshot"
+          },
+          "title": "Snapshots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "engine",
+        "synthetic",
+        "populationFingerprint",
+        "request",
+        "kpis",
+        "turnarounds",
+        "allocations",
+        "conflicts",
+        "snapshots"
+      ],
+      "title": "AirsideResult",
+      "type": "object"
+    },
+    "OptimizeResult": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "optimal",
+            "feasible",
+            "infeasible",
+            "timeout"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "method": {
+          "const": "cp-sat-airside-1.0",
+          "default": "cp-sat-airside-1.0",
+          "title": "Method",
+          "type": "string"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Objective"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AirsideResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "objective",
+        "result",
+        "diagnostics"
+      ],
+      "title": "OptimizeResult",
+      "type": "object"
+    }
+  }
+}

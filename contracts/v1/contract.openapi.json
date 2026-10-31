@@ -1,0 +1,1214 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AeroSynapse .NET–Python contracts",
+    "version": "1.0"
+  },
+  "paths": {
+    "/contracts/v1/scenario/validate": {
+      "post": {
+        "operationId": "validate_ScenarioSnapshot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractScenarioSnapshot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractScenarioSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/zone/validate": {
+      "post": {
+        "operationId": "validate_ZoneSnapshot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractZoneSnapshot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractZoneSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/simulation/validate": {
+      "post": {
+        "operationId": "validate_SimulationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractSimulationRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/optimization/validate": {
+      "post": {
+        "operationId": "validate_OptimizationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractOptimizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOptimizationRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/simulation/response/validate": {
+      "post": {
+        "operationId": "validate_SimulationResponse",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractSimulationResponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractSimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/optimization/response/validate": {
+      "post": {
+        "operationId": "validate_OptimizationResponse",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractOptimizationResponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOptimizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/simulation/result/validate": {
+      "post": {
+        "operationId": "validate_SimulationResult",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractSimulationResult"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractSimulationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/v1/optimization/result/validate": {
+      "post": {
+        "operationId": "validate_OptimizationResult",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractOptimizationResult"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOptimizationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid contract or malformed JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ContractCheckpoint": {
+        "type": "object",
+        "description": "Frozen checkpoint inputs. A checkpoint ID occurs only once.",
+        "additionalProperties": false,
+        "properties": {
+          "checkpointId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "serviceRatePerMinute": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "description": "Passengers processed per minute per allocated staff member."
+          },
+          "staffCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Allocated people; zero closes the checkpoint."
+          }
+        },
+        "required": [
+          "checkpointId",
+          "serviceRatePerMinute",
+          "staffCount"
+        ]
+      },
+      "ContractSimulationRequest": {
+        "type": "object",
+        "description": "Version 1 queue simulation input, copied from frozen inputs. No live database references are resolved by validation.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "runId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "scenarioId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "scenarioRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Captured scenario revision."
+          },
+          "layoutVersionId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "startsAtUtc": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+            "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Explicit reproducibility seed; no implicit default in v1."
+          },
+          "passengerCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Total demand; arrivals stop when this count is reached."
+          },
+          "arrivalRatePerMinute": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "description": "Passengers entering the simulation per minute."
+          },
+          "checkpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractCheckpoint"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          }
+        },
+        "required": [
+          "contractVersion",
+          "runId",
+          "scenarioId",
+          "scenarioRevision",
+          "layoutVersionId",
+          "startsAtUtc",
+          "timeZone",
+          "durationMinutes",
+          "seed",
+          "passengerCount",
+          "arrivalRatePerMinute",
+          "checkpoints"
+        ]
+      },
+      "ContractOptimizationRequest": {
+        "type": "object",
+        "description": "Compare explicit candidates with the baseline; run IDs are unique and layout, horizon, time zone, demand and seed match.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "optimizationId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "minimizeMeanWaitMinutes",
+              "maximizeThroughputPerMinute"
+            ]
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/ContractSimulationRequest"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractSimulationRequest"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "contractVersion",
+          "optimizationId",
+          "objective",
+          "baseline",
+          "candidates"
+        ]
+      },
+      "ContractMetric": {
+        "type": "object",
+        "description": "Result at a captured checkpoint zone.",
+        "additionalProperties": false,
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "recordedAtUtc": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+            "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+          },
+          "meanWaitMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10080,
+            "description": "Mean passenger waiting time in minutes."
+          },
+          "throughputPerMinute": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Processed passengers divided by elapsed minutes."
+          },
+          "processedPassengers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Cumulative count at recordedAtUtc."
+          }
+        },
+        "required": [
+          "zoneId",
+          "recordedAtUtc",
+          "meanWaitMinutes",
+          "throughputPerMinute",
+          "processedPassengers"
+        ]
+      },
+      "ContractSnapshot": {
+        "type": "object",
+        "description": "Snapshot of one captured checkpoint zone.",
+        "additionalProperties": false,
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "elapsedMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10080,
+            "description": "Simulation-relative minutes from startsAtUtc."
+          },
+          "queuedPassengers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Count waiting at this zone."
+          },
+          "processedPassengers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Cumulative processed count."
+          }
+        },
+        "required": [
+          "zoneId",
+          "elapsedMinutes",
+          "queuedPassengers",
+          "processedPassengers"
+        ]
+      },
+      "ContractRunFailure": {
+        "type": "object",
+        "description": "Failure code and human-readable reason; no valid results on failure.",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ContractSimulationResult": {
+        "type": "object",
+        "description": "Completed requires failure=null; failed requires failure and empty metrics/snapshots.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "runId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractMetric"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractSnapshot"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractRunFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contractVersion",
+          "runId",
+          "status",
+          "metrics",
+          "snapshots",
+          "failure"
+        ]
+      },
+      "ContractCandidateScore": {
+        "type": "object",
+        "description": "Every compared candidate is included.",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000,
+            "description": "Same unit as the selected objective; lower wait or higher throughput is better."
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Unique, contiguous ranks starting at 1."
+          }
+        },
+        "required": [
+          "runId",
+          "score",
+          "rank"
+        ]
+      },
+      "ContractOptimizationResult": {
+        "type": "object",
+        "description": "Completed includes baseline score and all candidates; recommendedRunId is rank 1. Failed carries no scores or recommendation.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "optimizationId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "minimizeMeanWaitMinutes",
+              "maximizeThroughputPerMinute"
+            ]
+          },
+          "baselineRunId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "baselineScore": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000000000
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractCandidateScore"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "recommendedRunId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "not": {
+                  "const": "00000000-0000-0000-0000-000000000000"
+                },
+                "description": "Nonempty UUID in lowercase canonical D format."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractRunFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contractVersion",
+          "optimizationId",
+          "status",
+          "objective",
+          "baselineRunId",
+          "baselineScore",
+          "candidates",
+          "recommendedRunId",
+          "failure"
+        ]
+      },
+      "ContractFieldError": {
+        "type": "object",
+        "description": "Stable code without echoing the supplied input.",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "RFC 6901 JSON Pointer; empty string identifies the root body."
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message"
+        ]
+      },
+      "ContractValidationError": {
+        "type": "object",
+        "description": "HTTP 422 for invalid contract data or malformed JSON.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "code": {
+            "const": "validation_failed"
+          },
+          "message": {
+            "const": "Invalid contract request."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractFieldError"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          }
+        },
+        "required": [
+          "contractVersion",
+          "code",
+          "message",
+          "errors"
+        ]
+      },
+      "ContractZoneSnapshot": {
+        "type": "object",
+        "description": "Versioned snapshot of one captured checkpoint zone; elapsedMinutes is simulation time, not wall-clock execution time.",
+        "additionalProperties": false,
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "elapsedMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10080,
+            "description": "Simulation-relative minutes from startsAtUtc."
+          },
+          "queuedPassengers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Count waiting at this zone."
+          },
+          "processedPassengers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Cumulative processed count."
+          },
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          }
+        },
+        "required": [
+          "zoneId",
+          "elapsedMinutes",
+          "queuedPassengers",
+          "processedPassengers",
+          "contractVersion"
+        ]
+      },
+      "ContractSimulationResponse": {
+        "type": "object",
+        "description": "Versioned simulation response. simulatedMinutes is actual simulated time, independent of wall clock; snapshots never exceed it. Result is the legacy shape without this field.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "runId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractMetric"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractZoneSnapshot"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractRunFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "simulatedMinutes": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10080,
+            "description": "Actual simulated minutes since startsAtUtc; completed runs must advance time. Not execution time in seconds."
+          }
+        },
+        "required": [
+          "contractVersion",
+          "runId",
+          "status",
+          "metrics",
+          "snapshots",
+          "failure",
+          "simulatedMinutes"
+        ]
+      },
+      "ContractOptimizationResponse": {
+        "type": "object",
+        "description": "Completed includes baseline score and all candidates; recommendedRunId is rank 1. Failed carries no scores or recommendation.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "optimizationId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "minimizeMeanWaitMinutes",
+              "maximizeThroughputPerMinute"
+            ]
+          },
+          "baselineRunId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "baselineScore": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000000000
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractCandidateScore"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "recommendedRunId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "not": {
+                  "const": "00000000-0000-0000-0000-000000000000"
+                },
+                "description": "Nonempty UUID in lowercase canonical D format."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractRunFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contractVersion",
+          "optimizationId",
+          "status",
+          "objective",
+          "baselineRunId",
+          "baselineScore",
+          "candidates",
+          "recommendedRunId",
+          "failure"
+        ]
+      },
+      "ContractScenarioSnapshot": {
+        "type": "object",
+        "description": "Versioned frozen queue simulation inputs. Independent of a run; ToSimulationRequest assigns runId without reading mutable data. capturedAtUtc records capture time, not simulation start.",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "Wire protocol version; every envelope must explicitly provide it."
+          },
+          "scenarioId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "scenarioRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Captured scenario revision."
+          },
+          "layoutVersionId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Nonempty UUID in lowercase canonical D format."
+          },
+          "startsAtUtc": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+            "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Explicit reproducibility seed; no implicit default in v1."
+          },
+          "passengerCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Total demand; arrivals stop when this count is reached."
+          },
+          "arrivalRatePerMinute": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "description": "Passengers entering the simulation per minute."
+          },
+          "checkpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractCheckpoint"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "capturedAtUtc": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+            "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+          }
+        },
+        "required": [
+          "contractVersion",
+          "scenarioId",
+          "scenarioRevision",
+          "layoutVersionId",
+          "startsAtUtc",
+          "timeZone",
+          "durationMinutes",
+          "seed",
+          "passengerCount",
+          "arrivalRatePerMinute",
+          "checkpoints",
+          "capturedAtUtc"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,407 @@
+{
+  "status": "optimal",
+  "method": "cp-sat-airside-1.0",
+  "objective": 20015,
+  "result": {
+    "contractVersion": "1.0",
+    "engine": "simpy-airside-cp-sat-replay-1.0",
+    "synthetic": true,
+    "populationFingerprint": "589a9d4765e0a2d55eacc2b9a389bc1cc819ac0df4c3aa14d59a73f0cc76c19d",
+    "request": {
+      "contractVersion": "1.0",
+      "synthetic": true,
+      "seed": 53,
+      "durationMinutes": 20,
+      "serviceVariation": 0.0,
+      "stands": [
+        {
+          "id": "S1",
+          "available": [
+            {
+              "startMinute": 0,
+              "endMinute": 240
+            }
+          ]
+        }
+      ],
+      "teams": [
+        {
+          "id": "T1",
+          "available": [
+            {
+              "startMinute": 0,
+              "endMinute": 240
+            }
+          ],
+          "memberIds": [
+            "M1"
+          ],
+          "skills": [
+            "handling",
+            "pushback"
+          ],
+          "standIds": [
+            "S1"
+          ]
+        }
+      ],
+      "vehicles": [
+        {
+          "id": "V1",
+          "available": [
+            {
+              "startMinute": 0,
+              "endMinute": 240
+            }
+          ],
+          "kind": "service",
+          "standIds": [
+            "S1"
+          ]
+        },
+        {
+          "id": "G1",
+          "available": [
+            {
+              "startMinute": 0,
+              "endMinute": 240
+            }
+          ],
+          "kind": "tug",
+          "standIds": [
+            "S1"
+          ]
+        }
+      ],
+      "turnarounds": [
+        {
+          "id": "F1",
+          "standId": "S1",
+          "arrivalMinute": 0,
+          "scheduledPushbackMinute": 3,
+          "handlingMinutes": 3,
+          "pushbackMinutes": 2
+        },
+        {
+          "id": "F2",
+          "standId": "S1",
+          "arrivalMinute": 0,
+          "scheduledPushbackMinute": 6,
+          "handlingMinutes": 3,
+          "pushbackMinutes": 2
+        }
+      ],
+      "timeLimitSeconds": 3
+    },
+    "kpis": {
+      "turnaroundCount": 2,
+      "departedCount": 2,
+      "backlogCount": 0,
+      "readyCount": 0,
+      "meanTurnaroundMinutes": 7.5,
+      "meanWaitingMinutes": 2.5,
+      "meanReadinessDelayMinutes": 1.0,
+      "lateCount": 1,
+      "conflictCount": 1
+    },
+    "turnarounds": [
+      {
+        "id": "F1",
+        "standId": "S1",
+        "arrivalMinute": 0,
+        "scheduledPushbackMinute": 3,
+        "handlingMinutes": 3,
+        "pushbackMinutes": 2,
+        "standEnteredMinute": 0,
+        "handlingStartedMinute": 0,
+        "handlingCompletedMinute": 3,
+        "pushbackReadyMinute": 3,
+        "departedMinute": 5,
+        "handlingTeamId": "T1",
+        "handlingVehicleId": "V1",
+        "pushbackTeamId": "T1",
+        "tugId": "G1",
+        "waitingMinutes": 0,
+        "readinessDelayMinutes": 0,
+        "status": "departed"
+      },
+      {
+        "id": "F2",
+        "standId": "S1",
+        "arrivalMinute": 0,
+        "scheduledPushbackMinute": 6,
+        "handlingMinutes": 3,
+        "pushbackMinutes": 2,
+        "standEnteredMinute": 5,
+        "handlingStartedMinute": 5,
+        "handlingCompletedMinute": 8,
+        "pushbackReadyMinute": 8,
+        "departedMinute": 10,
+        "handlingTeamId": "T1",
+        "handlingVehicleId": "V1",
+        "pushbackTeamId": "T1",
+        "tugId": "G1",
+        "waitingMinutes": 5,
+        "readinessDelayMinutes": 2,
+        "status": "departed"
+      }
+    ],
+    "allocations": [
+      {
+        "resourceType": "stand",
+        "resourceId": "S1",
+        "turnaroundId": "F1",
+        "stage": "stand",
+        "startMinute": 0,
+        "endMinute": 5
+      },
+      {
+        "resourceType": "team",
+        "resourceId": "T1",
+        "turnaroundId": "F1",
+        "stage": "handling",
+        "startMinute": 0,
+        "endMinute": 3
+      },
+      {
+        "resourceType": "vehicle",
+        "resourceId": "V1",
+        "turnaroundId": "F1",
+        "stage": "handling",
+        "startMinute": 0,
+        "endMinute": 3
+      },
+      {
+        "resourceType": "member",
+        "resourceId": "M1",
+        "turnaroundId": "F1",
+        "stage": "handling",
+        "startMinute": 0,
+        "endMinute": 3
+      },
+      {
+        "resourceType": "team",
+        "resourceId": "T1",
+        "turnaroundId": "F1",
+        "stage": "pushback",
+        "startMinute": 3,
+        "endMinute": 5
+      },
+      {
+        "resourceType": "vehicle",
+        "resourceId": "G1",
+        "turnaroundId": "F1",
+        "stage": "pushback",
+        "startMinute": 3,
+        "endMinute": 5
+      },
+      {
+        "resourceType": "member",
+        "resourceId": "M1",
+        "turnaroundId": "F1",
+        "stage": "pushback",
+        "startMinute": 3,
+        "endMinute": 5
+      },
+      {
+        "resourceType": "stand",
+        "resourceId": "S1",
+        "turnaroundId": "F2",
+        "stage": "stand",
+        "startMinute": 5,
+        "endMinute": 10
+      },
+      {
+        "resourceType": "team",
+        "resourceId": "T1",
+        "turnaroundId": "F2",
+        "stage": "handling",
+        "startMinute": 5,
+        "endMinute": 8
+      },
+      {
+        "resourceType": "vehicle",
+        "resourceId": "V1",
+        "turnaroundId": "F2",
+        "stage": "handling",
+        "startMinute": 5,
+        "endMinute": 8
+      },
+      {
+        "resourceType": "member",
+        "resourceId": "M1",
+        "turnaroundId": "F2",
+        "stage": "handling",
+        "startMinute": 5,
+        "endMinute": 8
+      },
+      {
+        "resourceType": "team",
+        "resourceId": "T1",
+        "turnaroundId": "F2",
+        "stage": "pushback",
+        "startMinute": 8,
+        "endMinute": 10
+      },
+      {
+        "resourceType": "vehicle",
+        "resourceId": "G1",
+        "turnaroundId": "F2",
+        "stage": "pushback",
+        "startMinute": 8,
+        "endMinute": 10
+      },
+      {
+        "resourceType": "member",
+        "resourceId": "M1",
+        "turnaroundId": "F2",
+        "stage": "pushback",
+        "startMinute": 8,
+        "endMinute": 10
+      }
+    ],
+    "conflicts": [
+      {
+        "turnaroundId": "F2",
+        "stage": "stand",
+        "minute": 0,
+        "reason": "stand_occupied_or_unavailable",
+        "resourceIds": [
+          "S1"
+        ]
+      }
+    ],
+    "snapshots": [
+      {
+        "minute": 0,
+        "departedCount": 0,
+        "readyCount": 0,
+        "backlogCount": 2
+      },
+      {
+        "minute": 1,
+        "departedCount": 0,
+        "readyCount": 0,
+        "backlogCount": 2
+      },
+      {
+        "minute": 2,
+        "departedCount": 0,
+        "readyCount": 0,
+        "backlogCount": 2
+      },
+      {
+        "minute": 3,
+        "departedCount": 0,
+        "readyCount": 0,
+        "backlogCount": 2
+      },
+      {
+        "minute": 4,
+        "departedCount": 0,
+        "readyCount": 0,
+        "backlogCount": 2
+      },
+      {
+        "minute": 5,
+        "departedCount": 1,
+        "readyCount": 0,
+        "backlogCount": 1
+      },
+      {
+        "minute": 6,
+        "departedCount": 1,
+        "readyCount": 0,
+        "backlogCount": 1
+      },
+      {
+        "minute": 7,
+        "departedCount": 1,
+        "readyCount": 0,
+        "backlogCount": 1
+      },
+      {
+        "minute": 8,
+        "departedCount": 1,
+        "readyCount": 0,
+        "backlogCount": 1
+      },
+      {
+        "minute": 9,
+        "departedCount": 1,
+        "readyCount": 0,
+        "backlogCount": 1
+      },
+      {
+        "minute": 10,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 11,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 12,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 13,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 14,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 15,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 16,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 17,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 18,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 19,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      },
+      {
+        "minute": 20,
+        "departedCount": 2,
+        "readyCount": 0,
+        "backlogCount": 0
+      }
+    ]
+  },
+  "diagnostics": [
+    "Advisory synthetic schedule. Minimize 10,000 \u00d7 total readiness delay + total departure minutes.",
+    "Every allocated team, shared member, vehicle and stand was checked and replayed through SimPy."
+  ]
+}

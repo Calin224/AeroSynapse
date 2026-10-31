@@ -1,0 +1,542 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/resources/v1/contract.schema.json",
+  "title": "Advisory integrated resource planning",
+  "$defs": {
+    "ResourceWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "startMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        }
+      },
+      "required": [
+        "startMinute",
+        "endMinute"
+      ]
+    },
+    "ResourceGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "availability": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceWindow"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "gateId",
+        "availability"
+      ]
+    },
+    "ResourceWorker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "staffMemberId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "shifts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceWindow"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "staffMemberId",
+        "skills",
+        "shifts"
+      ]
+    },
+    "HandlingTeam": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "memberIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            }
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "gateIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            }
+          },
+          "minItems": 0,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "teamId",
+        "name",
+        "memberIds",
+        "gateIds"
+      ]
+    },
+    "ResourceRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "compatibleGateIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "not": {
+              "const": "00000000-0000-0000-0000-000000000000"
+            }
+          },
+          "minItems": 0,
+          "maxItems": 50
+        },
+        "requiredSkills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "minimumTeamSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "flightId",
+        "compatibleGateIds",
+        "requiredSkills",
+        "minimumTeamSize"
+      ]
+    },
+    "IntegratedResourceConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "gates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceGate"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        },
+        "workers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceWorker"
+          },
+          "minItems": 0,
+          "maxItems": 200
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HandlingTeam"
+          },
+          "minItems": 0,
+          "maxItems": 50
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceRequirement"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "contractVersion",
+        "gates",
+        "workers",
+        "teams",
+        "requirements"
+      ]
+    },
+    "ResourceFlight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "currentGateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "startMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        }
+      },
+      "required": [
+        "flightId",
+        "currentGateId",
+        "startMinute",
+        "endMinute"
+      ]
+    },
+    "ResourceSolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "timeLimitSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "resources": {
+          "$ref": "#/$defs/IntegratedResourceConfig"
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceFlight"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "durationMinutes",
+        "timeLimitSeconds",
+        "resources",
+        "flights"
+      ]
+    },
+    "ResourceConfigWriteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "resources": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntegratedResourceConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "revision",
+        "resources"
+      ]
+    },
+    "ResourceProposalRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "timeLimitSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        }
+      },
+      "required": [
+        "revision",
+        "timeLimitSeconds"
+      ]
+    },
+    "ResourceAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "gateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "teamId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        }
+      },
+      "required": [
+        "flightId",
+        "gateId",
+        "teamId"
+      ]
+    },
+    "ResourceRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "gate_coverage",
+            "handling_coverage",
+            "gate_capacity",
+            "team_capacity",
+            "staff_capacity",
+            "gate_availability",
+            "gate_compatibility",
+            "team_skills",
+            "team_shift",
+            "team_size",
+            "team_gate_compatibility"
+          ]
+        },
+        "flightId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resourceId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "not": {
+                "const": "00000000-0000-0000-0000-000000000000"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "code",
+        "flightId",
+        "resourceId",
+        "message"
+      ]
+    },
+    "ResourceSolveResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "optimal",
+            "feasible",
+            "infeasible",
+            "timeout",
+            "invalid_model"
+          ]
+        },
+        "solverStatus": {
+          "enum": [
+            "OPTIMAL",
+            "FEASIBLE",
+            "INFEASIBLE",
+            "UNKNOWN",
+            "MODEL_INVALID"
+          ]
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 50
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bestBound": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 50
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceAssignment"
+          },
+          "minItems": 0,
+          "maxItems": 50
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceRule"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "constraints": {
+          "$ref": "#/$defs/ResourceSolveRequest"
+        },
+        "advisoryOnly": {
+          "const": true
+        },
+        "wallTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "status",
+        "solverStatus",
+        "timedOut",
+        "score",
+        "bestBound",
+        "assignments",
+        "rules",
+        "constraints",
+        "advisoryOnly",
+        "wallTimeSeconds"
+      ]
+    }
+  }
+}

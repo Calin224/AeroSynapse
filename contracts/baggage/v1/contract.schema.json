@@ -1,0 +1,595 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Incident": {
+      "additionalProperties": false,
+      "properties": {
+        "belt": {
+          "enum": [
+            "beltA",
+            "beltB"
+          ],
+          "title": "Belt",
+          "type": "string"
+        },
+        "startMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Startminute",
+          "type": "number"
+        },
+        "durationMinutes": {
+          "maximum": 240,
+          "minimum": 0.01,
+          "title": "Durationminutes",
+          "type": "number"
+        },
+        "divert": {
+          "default": false,
+          "title": "Divert",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "belt",
+        "startMinute",
+        "durationMinutes"
+      ],
+      "title": "Incident",
+      "type": "object"
+    },
+    "Resource": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity": {
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "serviceMinutes": {
+          "maximum": 30,
+          "minimum": 0.01,
+          "title": "Serviceminutes",
+          "type": "number"
+        }
+      },
+      "required": [
+        "capacity",
+        "serviceMinutes"
+      ],
+      "title": "Resource",
+      "type": "object"
+    },
+    "Resources": {
+      "additionalProperties": false,
+      "properties": {
+        "checkIn": {
+          "$ref": "#/$defs/Resource"
+        },
+        "beltA": {
+          "$ref": "#/$defs/Resource"
+        },
+        "beltB": {
+          "$ref": "#/$defs/Resource"
+        },
+        "sorting": {
+          "$ref": "#/$defs/Resource"
+        },
+        "loading": {
+          "$ref": "#/$defs/Resource"
+        }
+      },
+      "required": [
+        "checkIn",
+        "beltA",
+        "beltB",
+        "sorting",
+        "loading"
+      ],
+      "title": "Resources",
+      "type": "object"
+    },
+    "BaggageRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "seed": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "durationMinutes": {
+          "maximum": 240,
+          "minimum": 1,
+          "title": "Durationminutes",
+          "type": "integer"
+        },
+        "unitCount": {
+          "maximum": 5000,
+          "minimum": 0,
+          "title": "Unitcount",
+          "type": "integer"
+        },
+        "arrivalWindowMinutes": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Arrivalwindowminutes",
+          "type": "number"
+        },
+        "loadingDeadlineMinute": {
+          "maximum": 240,
+          "minimum": 0,
+          "title": "Loadingdeadlineminute",
+          "type": "number"
+        },
+        "serviceVariation": {
+          "default": 0.2,
+          "maximum": 0.8,
+          "minimum": 0,
+          "title": "Servicevariation",
+          "type": "number"
+        },
+        "resources": {
+          "$ref": "#/$defs/Resources"
+        },
+        "incident": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Incident"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "synthetic",
+        "seed",
+        "durationMinutes",
+        "unitCount",
+        "arrivalWindowMinutes",
+        "loadingDeadlineMinute",
+        "resources"
+      ],
+      "title": "BaggageRequest",
+      "type": "object"
+    },
+    "Frame": {
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "title": "Minute",
+          "type": "integer"
+        },
+        "loadedCount": {
+          "title": "Loadedcount",
+          "type": "integer"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/ResourceFrame"
+          },
+          "title": "Resources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "minute",
+        "loadedCount",
+        "resources"
+      ],
+      "title": "Frame",
+      "type": "object"
+    },
+    "Kpis": {
+      "additionalProperties": false,
+      "properties": {
+        "unitCount": {
+          "title": "Unitcount",
+          "type": "integer"
+        },
+        "loadedCount": {
+          "title": "Loadedcount",
+          "type": "integer"
+        },
+        "backlogCount": {
+          "title": "Backlogcount",
+          "type": "integer"
+        },
+        "throughputPerMinute": {
+          "title": "Throughputperminute",
+          "type": "number"
+        },
+        "totalWaitingMinutes": {
+          "title": "Totalwaitingminutes",
+          "type": "number"
+        },
+        "meanWaitingMinutes": {
+          "title": "Meanwaitingminutes",
+          "type": "number"
+        },
+        "totalDelayMinutes": {
+          "title": "Totaldelayminutes",
+          "type": "number"
+        },
+        "meanDelayMinutes": {
+          "title": "Meandelayminutes",
+          "type": "number"
+        },
+        "lateCount": {
+          "title": "Latecount",
+          "type": "integer"
+        },
+        "divertedCount": {
+          "title": "Divertedcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "unitCount",
+        "loadedCount",
+        "backlogCount",
+        "throughputPerMinute",
+        "totalWaitingMinutes",
+        "meanWaitingMinutes",
+        "totalDelayMinutes",
+        "meanDelayMinutes",
+        "lateCount",
+        "divertedCount"
+      ],
+      "title": "Kpis",
+      "type": "object"
+    },
+    "ResourceFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "resourceId": {
+          "enum": [
+            "checkIn",
+            "beltA",
+            "beltB",
+            "sorting",
+            "loading"
+          ],
+          "title": "Resourceid",
+          "type": "string"
+        },
+        "capacity": {
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "queued": {
+          "title": "Queued",
+          "type": "integer"
+        },
+        "inService": {
+          "title": "Inservice",
+          "type": "integer"
+        },
+        "completed": {
+          "title": "Completed",
+          "type": "integer"
+        },
+        "stopped": {
+          "title": "Stopped",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resourceId",
+        "capacity",
+        "queued",
+        "inService",
+        "completed",
+        "stopped"
+      ],
+      "title": "ResourceFrame",
+      "type": "object"
+    },
+    "ResourceReport": {
+      "additionalProperties": false,
+      "properties": {
+        "resourceId": {
+          "enum": [
+            "checkIn",
+            "beltA",
+            "beltB",
+            "sorting",
+            "loading"
+          ],
+          "title": "Resourceid",
+          "type": "string"
+        },
+        "capacity": {
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "queued": {
+          "title": "Queued",
+          "type": "integer"
+        },
+        "inService": {
+          "title": "Inservice",
+          "type": "integer"
+        },
+        "completed": {
+          "title": "Completed",
+          "type": "integer"
+        },
+        "stopped": {
+          "title": "Stopped",
+          "type": "boolean"
+        },
+        "serviceMinutes": {
+          "title": "Serviceminutes",
+          "type": "number"
+        },
+        "peakQueue": {
+          "title": "Peakqueue",
+          "type": "integer"
+        },
+        "peakBusy": {
+          "title": "Peakbusy",
+          "type": "integer"
+        },
+        "totalWaitingMinutes": {
+          "title": "Totalwaitingminutes",
+          "type": "number"
+        },
+        "meanWaitingMinutes": {
+          "title": "Meanwaitingminutes",
+          "type": "number"
+        },
+        "utilization": {
+          "title": "Utilization",
+          "type": "number"
+        }
+      },
+      "required": [
+        "resourceId",
+        "capacity",
+        "queued",
+        "inService",
+        "completed",
+        "stopped",
+        "serviceMinutes",
+        "peakQueue",
+        "peakBusy",
+        "totalWaitingMinutes",
+        "meanWaitingMinutes",
+        "utilization"
+      ],
+      "title": "ResourceReport",
+      "type": "object"
+    },
+    "Stage": {
+      "additionalProperties": false,
+      "properties": {
+        "resourceId": {
+          "enum": [
+            "checkIn",
+            "beltA",
+            "beltB",
+            "sorting",
+            "loading"
+          ],
+          "title": "Resourceid",
+          "type": "string"
+        },
+        "enteredMinute": {
+          "title": "Enteredminute",
+          "type": "number"
+        },
+        "startedMinute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Startedminute"
+        },
+        "completedMinute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Completedminute"
+        },
+        "serviceMinutes": {
+          "title": "Serviceminutes",
+          "type": "number"
+        },
+        "workSegments": {
+          "items": {
+            "$ref": "#/$defs/WorkSegment"
+          },
+          "title": "Worksegments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "resourceId",
+        "enteredMinute",
+        "startedMinute",
+        "completedMinute",
+        "serviceMinutes",
+        "workSegments"
+      ],
+      "title": "Stage",
+      "type": "object"
+    },
+    "Unit": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "arrivalMinute": {
+          "title": "Arrivalminute",
+          "type": "number"
+        },
+        "nominalBelt": {
+          "enum": [
+            "beltA",
+            "beltB"
+          ],
+          "title": "Nominalbelt",
+          "type": "string"
+        },
+        "belt": {
+          "anyOf": [
+            {
+              "enum": [
+                "beltA",
+                "beltB"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Belt"
+        },
+        "diverted": {
+          "title": "Diverted",
+          "type": "boolean"
+        },
+        "loadedMinute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Loadedminute"
+        },
+        "stages": {
+          "items": {
+            "$ref": "#/$defs/Stage"
+          },
+          "title": "Stages",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "arrivalMinute",
+        "nominalBelt",
+        "belt",
+        "diverted",
+        "loadedMinute",
+        "stages"
+      ],
+      "title": "Unit",
+      "type": "object"
+    },
+    "WorkSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "startMinute": {
+          "title": "Startminute",
+          "type": "number"
+        },
+        "endMinute": {
+          "title": "Endminute",
+          "type": "number"
+        }
+      },
+      "required": [
+        "startMinute",
+        "endMinute"
+      ],
+      "title": "WorkSegment",
+      "type": "object"
+    },
+    "BaggageResult": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "engine": {
+          "const": "simpy-baggage-1.0",
+          "title": "Engine",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "populationFingerprint": {
+          "title": "Populationfingerprint",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/BaggageRequest"
+        },
+        "kpis": {
+          "$ref": "#/$defs/Kpis"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/ResourceReport"
+          },
+          "title": "Resources",
+          "type": "array"
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/Frame"
+          },
+          "title": "Snapshots",
+          "type": "array"
+        },
+        "units": {
+          "items": {
+            "$ref": "#/$defs/Unit"
+          },
+          "title": "Units",
+          "type": "array"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "engine",
+        "synthetic",
+        "populationFingerprint",
+        "request",
+        "kpis",
+        "resources",
+        "snapshots",
+        "units"
+      ],
+      "title": "BaggageResult",
+      "type": "object"
+    }
+  }
+}

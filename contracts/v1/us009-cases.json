@@ -1,0 +1,948 @@
+[
+  {
+    "name": "us009-valid-scenario-snapshot",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-contractVersion",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-scenarioId",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/scenarioId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-scenarioRevision",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/scenarioRevision"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioRevision",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-layoutVersionId",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/layoutVersionId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/layoutVersionId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-startsAtUtc",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/startsAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-timeZone",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/timeZone"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/timeZone",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-durationMinutes",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/durationMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-seed",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/seed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-passengerCount",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/passengerCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-arrivalRatePerMinute",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/arrivalRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/arrivalRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-checkpoints",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/checkpoints"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-requires-capturedAtUtc",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/capturedAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/capturedAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-snapshot-unknown-field",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/unknown",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/unknown",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "us009-valid-zone-snapshot",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "us009-zone-snapshot-requires-zoneId",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/zoneId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/zoneId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-zone-snapshot-requires-elapsedMinutes",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/elapsedMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/elapsedMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-zone-snapshot-requires-queuedPassengers",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/queuedPassengers"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/queuedPassengers",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-zone-snapshot-requires-processedPassengers",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/processedPassengers"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/processedPassengers",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-zone-snapshot-unknown-field",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/unknown",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/unknown",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "us009-valid-simulation-response",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "us009-simulation-response-requires-contractVersion",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-requires-runId",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-requires-status",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-requires-metrics",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-requires-snapshots",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-requires-failure",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-unknown-field",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/unknown",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/unknown",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "us009-valid-optimization-response",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "us009-optimization-response-requires-contractVersion",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-optimizationId",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/optimizationId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-status",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-objective",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/objective"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/objective",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-baselineRunId",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-baselineScore",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineScore"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineScore",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-candidates",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-recommendedRunId",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/recommendedRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/recommendedRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-requires-failure",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-unknown-field",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/unknown",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/unknown",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-contractVersion",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/contractVersion",
+        "value": "2.0"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "unsupported_version"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-capturedAtUtc",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/capturedAtUtc",
+        "value": "2026-02-30T00:00:00Z"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/capturedAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-timeZone",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/timeZone",
+        "value": "Mars/Olympus"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/timeZone",
+        "code": "invalid_timezone"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-seed",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/seed",
+        "value": null
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-durationMinutes",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-durationMinutes",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": 0
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "us009-scenario-invalid-durationMinutes",
+    "definition": "ScenarioSnapshot",
+    "example": "scenario-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": 10081
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "us009-simulation-response-failed-without-failure",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/status",
+        "value": "failed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "us009-optimization-response-failed-without-failure",
+    "definition": "OptimizationResponse",
+    "example": "optimization-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/status",
+        "value": "failed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "us009-response-requires-simulatedMinutes",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/simulatedMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/simulatedMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-response-completed-zero-minutes",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/simulatedMinutes",
+        "value": 0
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/simulatedMinutes",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "us009-response-snapshot-past-simulated-time",
+    "definition": "SimulationResponse",
+    "example": "simulation-response",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/elapsedMinutes",
+        "value": 61
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/elapsedMinutes",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "us009-failed-simulation-response",
+    "definition": "SimulationResponse",
+    "example": "simulation-response-failed",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "us009-zone-required-version",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "us009-zone-unsupported-version",
+    "definition": "ZoneSnapshot",
+    "example": "zone-snapshot",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/contractVersion",
+        "value": "2.0"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "unsupported_version"
+      }
+    ]
+  },
+  {
+    "name": "us009-failed-optimization-response",
+    "definition": "OptimizationResponse",
+    "example": "optimization-failed",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  }
+]

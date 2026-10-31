@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/events/v1/contract.schema.json",
+  "title": "AeroSynapse scheduled operational events",
+  "description": "Additive extension of simpy-kpi-1.0. Requests without events keep their v1 semantics. Fields required by each type, references and timeline contradictions are semantic checks shared by both services.",
+  "$defs": {
+    "ScheduledEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "An operational event acting at the start of a virtual minute, before any arrival, grant or completion at that minute.",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "flight_change",
+            "corridor_closure",
+            "checkpoint_unavailable",
+            "staff_reduction",
+            "resume",
+            "passenger_surge"
+          ],
+          "description": "Simultaneous events apply in this enum order, then by eventId."
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10079,
+          "description": "Virtual minute since startsAtUtc; must precede durationMinutes."
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "zoneId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "passenger_surge: extra synthetic passengers."
+        },
+        "windowMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "passenger_surge: arrivals spread evenly over [minute, minute+windowMinutes)."
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "staff_reduction: operators on duty from this minute; must be lower than the staff in effect."
+        },
+        "delayMinutes": {
+          "type": "integer",
+          "minimum": -1440,
+          "maximum": 1440,
+          "description": "flight_change: shift of the effective boarding close; nonzero."
+        }
+      },
+      "required": [
+        "eventId",
+        "type",
+        "minute"
+      ]
+    },
+    "AppliedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Execution log entry; sequence is the deterministic application order.",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "flight_change",
+            "corridor_closure",
+            "checkpoint_unavailable",
+            "staff_reduction",
+            "resume",
+            "passenger_surge"
+          ]
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10079
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "eventId",
+        "type",
+        "minute",
+        "sequence"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0",
+  "optimizationId": "70000000-0000-0000-0000-000000000005",
+  "status": "failed",
+  "objective": "minimizeMeanWaitMinutes",
+  "baselineRunId": "70000000-0000-0000-0000-000000000001",
+  "baselineScore": null,
+  "candidates": [],
+  "recommendedRunId": null,
+  "failure": {
+    "code": "optimizer_error",
+    "message": "The comparison could not be completed."
+  }
+}

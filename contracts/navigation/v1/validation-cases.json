@@ -1,0 +1,308 @@
+[
+  {
+    "name": "valid-preview",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "valid-routed-simulation",
+    "example": "routed-simulation-request",
+    "definition": "RoutedSimulationRequest",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "valid-preview-result",
+    "example": "preview-result",
+    "definition": "NavigationResult",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "valid-assessed-result",
+    "example": "assessed-result",
+    "definition": "NavigationResult",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "valid-routed-response",
+    "example": "routed-simulation-response",
+    "definition": "RoutedSimulationResponse",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "closed-corridor-is-a-valid-input",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/closedZoneIds",
+        "value": [
+          "60000000-0000-0000-0000-000000000701"
+        ]
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "positive-edge-time",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/graph/edges/0/travelSeconds",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/graph/edges/0/travelSeconds",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "edge-distance-nonnegative",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/graph/edges/0/distanceMeters",
+        "value": -1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/graph/edges/0/distanceMeters",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "edge-must-reference-zone",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/graph/edges/0/toZoneId",
+        "value": "60000000-0000-0000-0000-000000009999"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/graph/edges/0/toZoneId",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "unique-edge-ids",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/graph/edges/1/id",
+        "value": "60000000-0000-0000-0000-000000000801"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/graph/edges/1/id",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "closure-must-reference-zone",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/closedZoneIds",
+        "value": [
+          "60000000-0000-0000-0000-000000009999"
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/closedZoneIds/0",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "closure-must-reference-edge",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/closedEdgeIds",
+        "value": [
+          "60000000-0000-0000-0000-000000009999"
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/closedEdgeIds/0",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "access-filter-types",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/accessProfiles/0/requireStepFree",
+        "value": "yes"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/accessProfiles/0/requireStepFree",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "walking-factor-bounded",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/accessProfiles/0/walkingMultiplier",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/accessProfiles/0/walkingMultiplier",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "access-tags-unique",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/accessProfiles/0/accessTags",
+        "value": [
+          "staff",
+          "staff"
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/accessProfiles/0/accessTags/1",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "gate-binding-refers-to-gate-zone",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/gateBindings/0/zoneId",
+        "value": "60000000-0000-0000-0000-000000000701"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/gateBindings/0/zoneId",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "flight-gate-set-matches-population",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/flightGates/0/flightId",
+        "value": "70000000-0000-0000-0000-000000000002"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/flightGates",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "unknown-renderer-field",
+    "example": "preview-request",
+    "definition": "NavigationPreviewRequest",
+    "mutations": [
+      {
+        "path": "/navigation/graph/nodes/0/frameRate",
+        "value": 60
+      }
+    ],
+    "errors": [
+      {
+        "field": "/navigation/graph/nodes/0/frameRate",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "result-total-consistent",
+    "example": "preview-result",
+    "definition": "NavigationResult",
+    "mutations": [
+      {
+        "path": "/routedCount",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "result-page-not-outside-population",
+    "example": "preview-result",
+    "definition": "NavigationResult",
+    "mutations": [
+      {
+        "path": "/offset",
+        "value": 3
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "profiled-contract-remains-strict",
+    "example": "routed-simulation-request",
+    "definition": "ProfiledSimulationRequest",
+    "mutations": [],
+    "errors": [
+      {
+        "field": "/navigation",
+        "code": "unknown_field"
+      }
+    ]
+  }
+]

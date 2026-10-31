@@ -1,0 +1,339 @@
+{
+  "request": {
+    "constraints": {
+      "contractVersion": "1.0",
+      "scenarioId": "70000000-0000-0000-0000-000000000002",
+      "scenarioRevision": 1,
+      "availableStaff": 3,
+      "timeLimitSeconds": 5,
+      "staffPools": [
+        {
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "availableStaff": 3
+        }
+      ],
+      "checkpoints": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "minimumStaff": 0,
+          "maximumStaff": 3,
+          "physicalLimit": 2,
+          "requiredOpen": false,
+          "closed": false,
+          "changeCost": 10,
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "currentStaff": 0,
+          "demandMilli": 6000,
+          "capacityMilli": 3000
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "minimumStaff": 0,
+          "maximumStaff": 3,
+          "physicalLimit": 3,
+          "requiredOpen": false,
+          "closed": false,
+          "changeCost": 10,
+          "terminalId": "60000000-0000-0000-0000-000000000002",
+          "currentStaff": 3,
+          "demandMilli": 1000,
+          "capacityMilli": 1000
+        }
+      ]
+    },
+    "candidateCount": 4,
+    "durationMinutes": 60,
+    "options": {
+      "weights": {
+        "time": 40,
+        "cost": 40,
+        "risk": 20
+      },
+      "normalization": {
+        "timeMinutes": 10,
+        "costPoints": 1000,
+        "riskFraction": 0.1
+      },
+      "operationalBudget": 10000,
+      "staffMinuteCost": 1,
+      "maxMeanWaitMinutes": 10080,
+      "maxP95WaitMinutes": 10080,
+      "maxBoardingRisk": 1
+    }
+  },
+  "status": "complete",
+  "formula": "sum(round(1000000 * (wT * pressureMinutes/Tref + wC * operatingPoints/Cref + wR * shortageFraction/Rref) / (wT+wC+wR)))",
+  "candidates": [
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "score": 40
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 6000,
+          "changePenalty": 0
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 1000,
+          "changePenalty": 30
+        }
+      ],
+      "score": 7030
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 1000,
+          "changePenalty": 30
+        }
+      ],
+      "score": 1050
+    },
+    {
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 3000,
+          "unmetDemandMilli": 3000,
+          "changePenalty": 10
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 2000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 10
+        }
+      ],
+      "score": 3020
+    }
+  ],
+  "solves": [
+    {
+      "profile": "selected",
+      "weights": {
+        "time": 40,
+        "cost": 40,
+        "risk": 20
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 1288000,
+      "bestBound": 1288000,
+      "proxyTimeMinutes": 30.0,
+      "proxyRisk": 0.0,
+      "operationalCost": 220,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "wallTimeSeconds": 0.00625005
+    },
+    {
+      "profile": "cost",
+      "weights": {
+        "time": 0,
+        "cost": 1,
+        "risk": 0
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 30000,
+      "bestBound": 30000,
+      "proxyTimeMinutes": 60.0,
+      "proxyRisk": 1.0,
+      "operationalCost": 30,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 6000,
+          "changePenalty": 0
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 1000,
+          "changePenalty": 30
+        }
+      ],
+      "wallTimeSeconds": 0.00334337
+    },
+    {
+      "profile": "time",
+      "weights": {
+        "time": 1,
+        "cost": 0,
+        "risk": 0
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 3000000,
+      "bestBound": 3000000,
+      "proxyTimeMinutes": 30.0,
+      "proxyRisk": 0.0,
+      "operationalCost": 220,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "wallTimeSeconds": 0.002200435
+    },
+    {
+      "profile": "risk",
+      "weights": {
+        "time": 0,
+        "cost": 0,
+        "risk": 1
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 0,
+      "bestBound": 0,
+      "proxyTimeMinutes": 30.0,
+      "proxyRisk": 0.0,
+      "operationalCost": 220,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 1000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        }
+      ],
+      "wallTimeSeconds": 0.001985808
+    },
+    {
+      "profile": "exploration-1",
+      "weights": {
+        "time": 40,
+        "cost": 40,
+        "risk": 20
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 1725142,
+      "bestBound": 1725142,
+      "proxyTimeMinutes": 34.285714285714285,
+      "proxyRisk": 0.14285714285714285,
+      "operationalCost": 170,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 6000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 20
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 0,
+          "estimatedCapacityMilli": 0,
+          "unmetDemandMilli": 1000,
+          "changePenalty": 30
+        }
+      ],
+      "wallTimeSeconds": 0.002301201
+    },
+    {
+      "profile": "exploration-2",
+      "weights": {
+        "time": 40,
+        "cost": 40,
+        "risk": 20
+      },
+      "solverStatus": "OPTIMAL",
+      "attempted": true,
+      "scaledObjective": 2422857,
+      "bestBound": 2422857,
+      "proxyTimeMinutes": 37.14285714285714,
+      "proxyRisk": 0.42857142857142855,
+      "operationalCost": 200,
+      "assignments": [
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000101",
+          "staffCount": 1,
+          "estimatedCapacityMilli": 3000,
+          "unmetDemandMilli": 3000,
+          "changePenalty": 10
+        },
+        {
+          "checkpointId": "60000000-0000-0000-0000-000000000102",
+          "staffCount": 2,
+          "estimatedCapacityMilli": 2000,
+          "unmetDemandMilli": 0,
+          "changePenalty": 10
+        }
+      ],
+      "wallTimeSeconds": 0.001771991
+    }
+  ],
+  "wallTimeSeconds": 0.028698465999923428
+}

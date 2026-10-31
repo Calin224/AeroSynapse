@@ -1,0 +1,141 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "kind": "simulated_estimate",
+  "formula": "Q[t+1]=max(0,Q[t]+arrivals-capacity)",
+  "fromMinute": 0,
+  "toMinute": 15,
+  "stepMinutes": 1,
+  "periodStartUtc": "2026-10-11T06:00:00Z",
+  "periodEndUtc": "2026-10-11T06:15:00Z",
+  "queueUnit": "passengers",
+  "flowUnit": "passengers/minute",
+  "timeUnit": "simulated minutes",
+  "queueThresholdPassengers": 0,
+  "observationSource": "captured_snapshot",
+  "arrivalSource": "planned_passenger_profiles",
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "initialQueuePassengers": 0,
+      "points": [
+        {
+          "minute": 1,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 2,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 3,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 4,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 5,
+          "arrivals": 2.0,
+          "capacity": 1.0,
+          "queuePassengers": 1.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 6,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 7,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 8,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 9,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 10,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 11,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 12,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 13,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 14,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        },
+        {
+          "minute": 15,
+          "arrivals": 0.0,
+          "capacity": 1.0,
+          "queuePassengers": 0.0,
+          "availableStaff": 1
+        }
+      ],
+      "alert": {
+        "minute": 5,
+        "queuePassengers": 1.0,
+        "thresholdPassengers": 0
+      },
+      "mitigation": {
+        "extraStaff": 1,
+        "peakQueuePassengers": 0.0
+      },
+      "serviceRatePerStaffMinute": 1.0,
+      "serviceRateSource": "sampled_service_mean"
+    }
+  ]
+}

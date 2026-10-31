@@ -1,0 +1,412 @@
+[
+  {
+    "name": "empty-90-minute-run",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "mathematical-integer-demand",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/passengerCount",
+        "value": 1.0
+      },
+      {
+        "path": "/arrivalRatePerMinute",
+        "value": 1.0
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "profiled-routed-run",
+    "definition": "SimPySimulationRequest",
+    "example": "simpy-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "captured-engine-version",
+    "definition": "SimPyScenarioSnapshot",
+    "example": "simpy-snapshot",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "complete-process-report",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "negative-demand",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/passengerCount",
+        "value": -1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "zero-rate-nonempty-demand",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/passengerCount",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/arrivalRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "unknown-engine",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/engine",
+        "value": "simpy-unknown"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/engine",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "inconsistent-batch-total",
+    "definition": "SimPySimulationRequest",
+    "example": "simpy-request",
+    "mutations": [
+      {
+        "path": "/passengerCount",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "missing-profiles-for-navigation",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/navigation",
+        "value": {
+          "navigationVersion": "1.0",
+          "graph": {
+            "nodes": [
+              {
+                "id": "60000000-0000-0000-0000-000000000101",
+                "name": "Control",
+                "kind": "Security",
+                "x": 0,
+                "y": 0,
+                "z": 0,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000701",
+                "name": "Coridor principal",
+                "kind": "Walkway",
+                "x": 50,
+                "y": 0,
+                "z": 0,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000702",
+                "name": "Alternativ\u0103",
+                "kind": "Stairs",
+                "x": 50,
+                "y": 0,
+                "z": 50,
+                "isActive": true,
+                "isStepFree": false,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000201",
+                "name": "Poarta",
+                "kind": "Gate",
+                "x": 100,
+                "y": 0,
+                "z": 0,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              }
+            ],
+            "edges": [
+              {
+                "id": "60000000-0000-0000-0000-000000000801",
+                "fromZoneId": "60000000-0000-0000-0000-000000000101",
+                "toZoneId": "60000000-0000-0000-0000-000000000701",
+                "distanceMeters": 50,
+                "travelSeconds": 60,
+                "isBidirectional": false,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000802",
+                "fromZoneId": "60000000-0000-0000-0000-000000000701",
+                "toZoneId": "60000000-0000-0000-0000-000000000201",
+                "distanceMeters": 50,
+                "travelSeconds": 60,
+                "isBidirectional": false,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000803",
+                "fromZoneId": "60000000-0000-0000-0000-000000000101",
+                "toZoneId": "60000000-0000-0000-0000-000000000702",
+                "distanceMeters": 70,
+                "travelSeconds": 90,
+                "isBidirectional": false,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              },
+              {
+                "id": "60000000-0000-0000-0000-000000000804",
+                "fromZoneId": "60000000-0000-0000-0000-000000000702",
+                "toZoneId": "60000000-0000-0000-0000-000000000201",
+                "distanceMeters": 70,
+                "travelSeconds": 90,
+                "isBidirectional": false,
+                "isActive": true,
+                "isStepFree": true,
+                "requiredTags": []
+              }
+            ]
+          },
+          "checkpointBindings": [
+            {
+              "resourceId": "60000000-0000-0000-0000-000000000101",
+              "zoneId": "60000000-0000-0000-0000-000000000101"
+            }
+          ],
+          "gateBindings": [
+            {
+              "resourceId": "60000000-0000-0000-0000-000000000201",
+              "zoneId": "60000000-0000-0000-0000-000000000201"
+            }
+          ],
+          "accessProfiles": [
+            {
+              "groupKind": "solo",
+              "requireStepFree": false,
+              "accessTags": [],
+              "forbiddenZoneIds": [],
+              "walkingMultiplier": 1
+            },
+            {
+              "groupKind": "family",
+              "requireStepFree": false,
+              "accessTags": [],
+              "forbiddenZoneIds": [],
+              "walkingMultiplier": 1
+            },
+            {
+              "groupKind": "business",
+              "requireStepFree": false,
+              "accessTags": [],
+              "forbiddenZoneIds": [],
+              "walkingMultiplier": 1
+            },
+            {
+              "groupKind": "tour",
+              "requireStepFree": false,
+              "accessTags": [],
+              "forbiddenZoneIds": [],
+              "walkingMultiplier": 1
+            }
+          ],
+          "closedZoneIds": [],
+          "closedEdgeIds": [],
+          "flightGates": [
+            {
+              "flightId": "70000000-0000-0000-0000-000000000001",
+              "gateId": "60000000-0000-0000-0000-000000000201"
+            }
+          ]
+        }
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerGeneration",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "resource-capacity-bound",
+    "definition": "SimPySimulationRequest",
+    "example": "empty-request",
+    "mutations": [
+      {
+        "path": "/checkpoints/0/staffCount",
+        "value": 10001
+      }
+    ],
+    "errors": [
+      {
+        "field": "/checkpoints/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "capacity-exceeded",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/checkpoints/0/peakBusy",
+        "value": 2
+      }
+    ],
+    "errors": [
+      {
+        "field": "/checkpoints/0",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "security-bypass",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/passengers/0/securityClearedMinute",
+        "value": 0.5
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengers/0",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "invalid-stage-transition",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/passengers/0/stage",
+        "value": "queued"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/atGateCount",
+        "code": "invalid_result"
+      },
+      {
+        "field": "/checkpoints/0",
+        "code": "invalid_result"
+      },
+      {
+        "field": "/passengers/0",
+        "code": "invalid_result"
+      },
+      {
+        "field": "/queuedCount",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "inconsistent-totals",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/atGateCount",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "",
+        "code": "invalid_result"
+      },
+      {
+        "field": "/atGateCount",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "false-boarding-risk",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/passengers/0/boardingRisk",
+        "value": "late"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengers/0",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "duplicate-passenger",
+    "definition": "ProcessResult",
+    "example": "process-result",
+    "mutations": [
+      {
+        "path": "/passengers/1/id",
+        "value": "demo-pax-70000000000000000000000000000001-000001"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengers",
+        "code": "invalid_result"
+      }
+    ]
+  }
+]

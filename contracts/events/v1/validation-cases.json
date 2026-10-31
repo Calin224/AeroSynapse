@@ -1,0 +1,654 @@
+[
+  {
+    "name": "all-event-types",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "resume-without-closure",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "resume",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/checkpointId",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "double-unavailable",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          },
+          {
+            "eventId": "90000000-0000-0000-0000-000000000002",
+            "type": "checkpoint_unavailable",
+            "minute": 20,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/1/checkpointId",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "staff-not-reduced",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "staff_reduction",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "staffCount": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/staffCount",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "reopen-open-corridor",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "resume",
+            "minute": 10,
+            "zoneId": "60000000-0000-0000-0000-000000000701"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/zoneId",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "boarding-already-closed",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "flight_change",
+            "minute": 85,
+            "flightId": "70000000-0000-0000-0000-000000000001",
+            "delayMinutes": 5
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/delayMinutes",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "deadline-in-the-past",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "flight_change",
+            "minute": 50,
+            "flightId": "70000000-0000-0000-0000-000000000001",
+            "delayMinutes": -60
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/delayMinutes",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "simultaneous-close-and-resume-are-ordered",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "resume",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          },
+          {
+            "eventId": "90000000-0000-0000-0000-000000000002",
+            "type": "checkpoint_unavailable",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "missing-type-field",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "staff_reduction",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/staffCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "foreign-field",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "zoneId": "60000000-0000-0000-0000-000000000701"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/zoneId",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "resume-without-target",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "resume",
+            "minute": 10
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "minute-at-horizon",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": 90,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/minute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "surge-beyond-horizon",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 88,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 5,
+            "windowMinutes": 5
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/windowMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "unknown-checkpoint",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000999"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/checkpointId",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "zero-delay",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "flight_change",
+            "minute": 10,
+            "flightId": "70000000-0000-0000-0000-000000000001",
+            "delayMinutes": 0
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/delayMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "unknown-type",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "gate_change",
+            "minute": 10
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/type",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "negative-minute",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": -1,
+            "checkpointId": "60000000-0000-0000-0000-000000000101"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/minute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "null-target",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "checkpoint_unavailable",
+            "minute": 10,
+            "checkpointId": null
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/checkpointId",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "duplicate-event-identifier",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 3,
+            "windowMinutes": 1
+          },
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 20,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 3,
+            "windowMinutes": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/1/eventId",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "negative-staff",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "staff_reduction",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 3,
+            "windowMinutes": 1,
+            "staffCount": -1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "empty-surge",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 0,
+            "windowMinutes": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "oversized-surge",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 10001,
+            "windowMinutes": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "zero-window",
+    "definition": "KpiSimulationRequest",
+    "example": "event-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000001",
+            "type": "passenger_surge",
+            "minute": 10,
+            "checkpointId": "60000000-0000-0000-0000-000000000101",
+            "passengerCount": 3,
+            "windowMinutes": 0
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/windowMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "staff-schedule",
+    "definition": "KpiSimulationRequest",
+    "example": "schedule-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "staff-reduction-on-a-schedule",
+    "definition": "KpiSimulationRequest",
+    "example": "schedule-request",
+    "mutations": [
+      {
+        "path": "/events",
+        "value": [
+          {
+            "eventId": "90000000-0000-0000-0000-000000000901",
+            "type": "staff_reduction",
+            "minute": 40,
+            "checkpointId": "60000000-0000-0000-0000-000000000102",
+            "staffCount": 1
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/events/0/checkpointId",
+        "code": "event_conflict"
+      }
+    ]
+  },
+  {
+    "name": "staff-schedule-starts-late",
+    "definition": "KpiSimulationRequest",
+    "example": "schedule-request",
+    "mutations": [
+      {
+        "path": "/staffSchedules",
+        "value": [
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000102",
+            "steps": [
+              {
+                "startMinute": 5,
+                "staffCount": 3
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/staffSchedules/0/steps",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "staff-schedule-below-nominal",
+    "definition": "KpiSimulationRequest",
+    "example": "schedule-request",
+    "mutations": [
+      {
+        "path": "/staffSchedules",
+        "value": [
+          {
+            "checkpointId": "60000000-0000-0000-0000-000000000102",
+            "steps": [
+              {
+                "startMinute": 0,
+                "staffCount": 2
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/staffSchedules/0/steps",
+        "code": "comparison_mismatch"
+      }
+    ]
+  }
+]

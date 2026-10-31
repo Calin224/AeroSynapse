@@ -1,0 +1,12 @@
+{
+  "contractVersion": "1.0",
+  "code": "validation_failed",
+  "message": "Invalid contract request.",
+  "errors": [
+    {
+      "field": "/durationMinutes",
+      "code": "out_of_range",
+      "message": "Value is outside the allowed range."
+    }
+  ]
+}

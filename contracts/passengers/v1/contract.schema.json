@@ -1,0 +1,826 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.example/contracts/passengers/1.0/contract.schema.json",
+  "title": "Synthetic passenger generator 1.0 and profiled execution envelopes",
+  "$defs": {
+    "PassengerDistribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "constant",
+            "uniform",
+            "normal",
+            "exponential",
+            "triangular"
+          ]
+        },
+        "minimum": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "maximum": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "mean": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "stdDev": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "mode": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        }
+      },
+      "required": [
+        "kind",
+        "minimum",
+        "maximum",
+        "mean",
+        "stdDev",
+        "mode"
+      ]
+    },
+    "PassengerGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "solo",
+            "family",
+            "business",
+            "tour"
+          ]
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "minSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "maxSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "serviceMultiplier": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10
+        },
+        "travelMultiplier": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "kind",
+        "weight",
+        "minSize",
+        "maxSize",
+        "serviceMultiplier",
+        "travelMultiplier"
+      ]
+    },
+    "PassengerSurge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "startsMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endsMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "share": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "startsMinute",
+        "endsMinute",
+        "share"
+      ]
+    },
+    "PassengerBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "countMode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "subset"
+          ]
+        },
+        "modeledCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "arrival": {
+          "$ref": "#/$defs/PassengerDistribution"
+        },
+        "service": {
+          "$ref": "#/$defs/PassengerDistribution"
+        },
+        "travel": {
+          "$ref": "#/$defs/PassengerDistribution"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerGroup"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "surges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerSurge"
+          },
+          "minItems": 0,
+          "maxItems": 16
+        },
+        "checkpointMode": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "spread"
+          ],
+          "description": "Optional; absent means fixed. spread assigns each group to one of the open checkpoints in its flight's checkpointRoutes."
+        }
+      },
+      "required": [
+        "flightId",
+        "checkpointId",
+        "countMode",
+        "modeledCount",
+        "arrival",
+        "service",
+        "travel",
+        "groups",
+        "surges"
+      ]
+    },
+    "PassengerSegment": {
+      "type": "object",
+      "description": "Synthetic passenger type chosen per group. The kind is only a statistics label; behaviour comes from the explicit fields.",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "holdBaggage",
+            "reducedMobility",
+            "transfer"
+          ]
+        },
+        "share": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "Probability that a group belongs to this type; shares total 1."
+        },
+        "holdBaggage": {
+          "type": "boolean",
+          "description": "Routing rule: visit bagDrop before control."
+        },
+        "control": {
+          "type": "string",
+          "enum": [
+            "security",
+            "assistedSecurity",
+            "transferSecurity"
+          ],
+          "description": "Routing rule: the flight checkpoint queue or a dedicated control lane at that checkpoint."
+        },
+        "serviceMultiplier": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10,
+          "description": "Applied to every stage service."
+        },
+        "travelMultiplier": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10,
+          "description": "Applied to the walk from control to the gate."
+        },
+        "transferMinutes": {
+          "$ref": "#/$defs/PassengerDistribution",
+          "description": "Optional airside walk, in minutes, before the first stage."
+        }
+      },
+      "required": [
+        "kind",
+        "share",
+        "holdBaggage",
+        "control",
+        "serviceMultiplier",
+        "travelMultiplier"
+      ]
+    },
+    "PassengerStage": {
+      "type": "object",
+      "description": "Queue stage outside the layout checkpoints. Service is in minutes per passenger.",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bagDrop",
+            "assistedSecurity",
+            "transferSecurity"
+          ]
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Parallel servers; zero closes the stage."
+        },
+        "service": {
+          "$ref": "#/$defs/PassengerDistribution"
+        }
+      },
+      "required": [
+        "kind",
+        "staffCount",
+        "service"
+      ]
+    },
+    "PassengerStageClosure": {
+      "type": "object",
+      "description": "Blocks new service starts at a stage; security blocks every checkpoint.",
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "security",
+            "bagDrop",
+            "assistedSecurity",
+            "transferSecurity"
+          ]
+        },
+        "startsMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endsMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        }
+      },
+      "required": [
+        "stage",
+        "startsMinute",
+        "endsMinute"
+      ]
+    },
+    "PassengerFlow": {
+      "type": "object",
+      "description": "Alternative synthetic routes. Absent means every passenger follows security to gate.",
+      "additionalProperties": false,
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerSegment"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerStage"
+          },
+          "minItems": 0,
+          "maxItems": 3
+        },
+        "closures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerStageClosure"
+          },
+          "minItems": 0,
+          "maxItems": 16
+        }
+      },
+      "required": [
+        "segments",
+        "stages",
+        "closures"
+      ]
+    },
+    "PassengerGenerationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generatorVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "batches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerBatch"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "flow": {
+          "$ref": "#/$defs/PassengerFlow"
+        }
+      },
+      "required": [
+        "generatorVersion",
+        "batches"
+      ]
+    },
+    "PassengerCheckpointRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "routeId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "routeTravelMinutes": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 240
+        }
+      },
+      "required": [
+        "checkpointId",
+        "routeId",
+        "routeTravelMinutes"
+      ]
+    },
+    "PassengerFlightInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flightId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "passengerCapacity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "boardingCloseMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "isCancelled": {
+          "type": "boolean"
+        },
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "routeId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "routeTravelMinutes": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 240
+        },
+        "checkpointRoutes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerCheckpointRoute"
+          },
+          "minItems": 1,
+          "maxItems": 1000,
+          "description": "Present only for spread batches: every checkpoint with a route to the flight gate, including checkpointId/routeId."
+        }
+      },
+      "required": [
+        "flightId",
+        "passengerCapacity",
+        "boardingCloseMinute",
+        "isCancelled",
+        "checkpointId",
+        "routeId",
+        "routeTravelMinutes"
+      ]
+    },
+    "PassengerGenerationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generatorVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "flights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerFlightInput"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "batches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PassengerBatch"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "isSynthetic": {
+          "type": "boolean",
+          "const": true
+        },
+        "flow": {
+          "$ref": "#/$defs/PassengerFlow"
+        }
+      },
+      "required": [
+        "generatorVersion",
+        "seed",
+        "durationMinutes",
+        "checkpoints",
+        "flights",
+        "batches",
+        "isSynthetic"
+      ]
+    },
+    "ProfiledSimulationRequest": {
+      "type": "object",
+      "description": "Version 1 queue simulation input, copied from frozen inputs. No live database references are resolved by validation.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Total demand; arrivals stop when this count is reached."
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers entering the simulation per minute."
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "passengerGeneration"
+      ]
+    },
+    "ProfiledScenarioSnapshot": {
+      "type": "object",
+      "description": "Versioned frozen queue simulation inputs. Independent of a run; ToSimulationRequest assigns runId without reading mutable data. capturedAtUtc records capture time, not simulation start.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Captured scenario revision."
+        },
+        "layoutVersionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "startsAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "IANA display time zone, e.g. UTC or Europe/Bucharest; all instants stay UTC."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080,
+          "description": "Simulation horizon in minutes, 1 minute = 60 seconds."
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Explicit reproducibility seed; no implicit default in v1."
+        },
+        "passengerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Total demand; arrivals stop when this count is reached."
+        },
+        "arrivalRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers entering the simulation per minute."
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "capturedAtUtc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+          "description": "Gregorian UTC timestamp, uppercase T/Z, at most 6 fractional digits; no leap seconds."
+        },
+        "passengerGeneration": {
+          "$ref": "#/$defs/PassengerGenerationRequest"
+        }
+      },
+      "required": [
+        "contractVersion",
+        "scenarioId",
+        "scenarioRevision",
+        "layoutVersionId",
+        "startsAtUtc",
+        "timeZone",
+        "durationMinutes",
+        "seed",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "capturedAtUtc",
+        "passengerGeneration"
+      ]
+    },
+    "ProfiledOptimizationRequest": {
+      "type": "object",
+      "description": "Compare explicit candidates with the baseline; run IDs are unique and layout, horizon, time zone, demand and seed match.",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Wire protocol version; every envelope must explicitly provide it."
+        },
+        "optimizationId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "objective": {
+          "type": "string",
+          "enum": [
+            "minimizeMeanWaitMinutes",
+            "maximizeThroughputPerMinute"
+          ]
+        },
+        "baseline": {
+          "$ref": "#/$defs/ProfiledSimulationRequest"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProfiledSimulationRequest"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "contractVersion",
+        "optimizationId",
+        "objective",
+        "baseline",
+        "candidates"
+      ]
+    },
+    "Checkpoint": {
+      "type": "object",
+      "description": "Frozen checkpoint inputs. A checkpoint ID occurs only once.",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          },
+          "description": "Nonempty UUID in lowercase canonical D format."
+        },
+        "serviceRatePerMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "description": "Passengers processed per minute per allocated staff member."
+        },
+        "staffCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Allocated people; zero closes the checkpoint."
+        }
+      },
+      "required": [
+        "checkpointId",
+        "serviceRatePerMinute",
+        "staffCount"
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "constraints": {
+    "contractVersion": "1.0",
+    "scenarioId": "70000000-0000-0000-0000-000000000002",
+    "scenarioRevision": 1,
+    "availableStaff": 3,
+    "timeLimitSeconds": 5,
+    "staffPools": [
+      {
+        "terminalId": "60000000-0000-0000-0000-000000000002",
+        "availableStaff": 3
+      }
+    ],
+    "checkpoints": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "minimumStaff": 0,
+        "maximumStaff": 3,
+        "physicalLimit": 2,
+        "requiredOpen": false,
+        "closed": false,
+        "changeCost": 10,
+        "terminalId": "60000000-0000-0000-0000-000000000002",
+        "currentStaff": 0,
+        "demandMilli": 6000,
+        "capacityMilli": 3000
+      },
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000102",
+        "minimumStaff": 0,
+        "maximumStaff": 3,
+        "physicalLimit": 3,
+        "requiredOpen": false,
+        "closed": false,
+        "changeCost": 10,
+        "terminalId": "60000000-0000-0000-0000-000000000002",
+        "currentStaff": 3,
+        "demandMilli": 1000,
+        "capacityMilli": 1000
+      }
+    ]
+  },
+  "candidateCount": 4,
+  "durationMinutes": 60,
+  "options": {
+    "weights": {
+      "time": 40,
+      "cost": 40,
+      "risk": 20
+    },
+    "normalization": {
+      "timeMinutes": 10,
+      "costPoints": 1000,
+      "riskFraction": 0.1
+    },
+    "operationalBudget": 10000,
+    "staffMinuteCost": 1,
+    "maxMeanWaitMinutes": 10080,
+    "maxP95WaitMinutes": 10080,
+    "maxBoardingRisk": 1
+  }
+}

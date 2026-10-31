@@ -1,0 +1,990 @@
+{
+  "contractVersion": "1.0",
+  "engine": "energy-analytics-1.0",
+  "synthetic": true,
+  "request": {
+    "contractVersion": "1.0",
+    "synthetic": true,
+    "seed": 54,
+    "durationMinutes": 60,
+    "passengerCount": 200,
+    "arrivalRatePerMinute": 8.0,
+    "checkpointPowerKw": 1.5,
+    "tariffRonPerKwh": 1.2,
+    "energyBudgetKwh": 6.0,
+    "sensitivityPercent": 20.0,
+    "checkpoints": [
+      {
+        "id": "00000000-0000-0000-0000-000000000054",
+        "label": "Synthetic checkpoint A",
+        "minUnits": 0,
+        "maxUnits": 4,
+        "baselineUnits": 1,
+        "candidateUnits": 2,
+        "serviceRatePerMinute": 2.0
+      }
+    ],
+    "loads": [
+      {
+        "id": "lights",
+        "kind": "lighting",
+        "units": 10,
+        "powerKw": 0.05,
+        "baselineActiveMinutes": 60.0,
+        "candidateActiveMinutes": 30.0
+      },
+      {
+        "id": "resource",
+        "kind": "resource",
+        "units": 1,
+        "powerKw": 0.4,
+        "baselineActiveMinutes": 30.0,
+        "candidateActiveMinutes": 15.0
+      }
+    ]
+  },
+  "effectiveCoefficients": [
+    {
+      "id": "checkpointPowerKw",
+      "kind": "checkpoint",
+      "powerKw": 1.5,
+      "source": "configured-assumption"
+    },
+    {
+      "id": "lights",
+      "kind": "lighting",
+      "powerKw": 0.05,
+      "source": "configured-assumption"
+    },
+    {
+      "id": "resource",
+      "kind": "resource",
+      "powerKw": 0.4,
+      "source": "configured-assumption"
+    }
+  ],
+  "baseline": {
+    "variant": "baseline",
+    "assignment": [
+      {
+        "checkpointId": "00000000-0000-0000-0000-000000000054",
+        "activeUnits": 1
+      }
+    ],
+    "energy": {
+      "totalKwh": 2.2,
+      "costRon": 2.64,
+      "withinBudget": true,
+      "items": [
+        {
+          "id": "00000000-0000-0000-0000-000000000054",
+          "kind": "checkpoint",
+          "powerKw": 1.5,
+          "source": "configured-assumption",
+          "units": 1,
+          "activeMinutes": 60.0,
+          "kwh": 1.5
+        },
+        {
+          "id": "lights",
+          "kind": "lighting",
+          "powerKw": 0.05,
+          "source": "configured-assumption",
+          "units": 10,
+          "activeMinutes": 60.0,
+          "kwh": 0.5
+        },
+        {
+          "id": "resource",
+          "kind": "resource",
+          "powerKw": 0.4,
+          "source": "configured-assumption",
+          "units": 1,
+          "activeMinutes": 30.0,
+          "kwh": 0.2
+        }
+      ]
+    },
+    "traffic": {
+      "populationCount": 200,
+      "arrivedCount": 200,
+      "notArrivedCount": 0,
+      "processedCount": 118,
+      "unprocessedCount": 82,
+      "queuedCount": 81,
+      "processingCount": 1,
+      "throughputPerMinute": 1.9666666666666666,
+      "meanWaitMinutes": 23.247134063512,
+      "p95WaitMinutes": 40.539376010232
+    },
+    "populationFingerprint": "706b7ecb6516361b7e2cf4486148f5d21264b8949f05a3d94b44779be74b628f",
+    "simulationRunId": "6513ce57-2177-512b-abc1-9222306cd9f8",
+    "simulationEngine": "simpy-kpi-1.0",
+    "simulationLibraryVersion": "4.1.2",
+    "snapshots": [
+      {
+        "minute": 0,
+        "queuedCount": 0,
+        "processedCount": 0,
+        "energyKwhCumulative": 0.0
+      },
+      {
+        "minute": 1,
+        "queuedCount": 4,
+        "processedCount": 1,
+        "energyKwhCumulative": 0.04
+      },
+      {
+        "minute": 2,
+        "queuedCount": 8,
+        "processedCount": 4,
+        "energyKwhCumulative": 0.08
+      },
+      {
+        "minute": 3,
+        "queuedCount": 13,
+        "processedCount": 4,
+        "energyKwhCumulative": 0.12
+      },
+      {
+        "minute": 4,
+        "queuedCount": 14,
+        "processedCount": 6,
+        "energyKwhCumulative": 0.16
+      },
+      {
+        "minute": 5,
+        "queuedCount": 23,
+        "processedCount": 7,
+        "energyKwhCumulative": 0.2
+      },
+      {
+        "minute": 6,
+        "queuedCount": 28,
+        "processedCount": 7,
+        "energyKwhCumulative": 0.24
+      },
+      {
+        "minute": 7,
+        "queuedCount": 34,
+        "processedCount": 10,
+        "energyKwhCumulative": 0.27999999999999997
+      },
+      {
+        "minute": 8,
+        "queuedCount": 39,
+        "processedCount": 12,
+        "energyKwhCumulative": 0.32
+      },
+      {
+        "minute": 9,
+        "queuedCount": 48,
+        "processedCount": 14,
+        "energyKwhCumulative": 0.36
+      },
+      {
+        "minute": 10,
+        "queuedCount": 55,
+        "processedCount": 14,
+        "energyKwhCumulative": 0.4
+      },
+      {
+        "minute": 11,
+        "queuedCount": 62,
+        "processedCount": 15,
+        "energyKwhCumulative": 0.44
+      },
+      {
+        "minute": 12,
+        "queuedCount": 71,
+        "processedCount": 15,
+        "energyKwhCumulative": 0.48
+      },
+      {
+        "minute": 13,
+        "queuedCount": 74,
+        "processedCount": 18,
+        "energyKwhCumulative": 0.52
+      },
+      {
+        "minute": 14,
+        "queuedCount": 81,
+        "processedCount": 20,
+        "energyKwhCumulative": 0.5599999999999999
+      },
+      {
+        "minute": 15,
+        "queuedCount": 92,
+        "processedCount": 23,
+        "energyKwhCumulative": 0.6
+      },
+      {
+        "minute": 16,
+        "queuedCount": 102,
+        "processedCount": 24,
+        "energyKwhCumulative": 0.64
+      },
+      {
+        "minute": 17,
+        "queuedCount": 111,
+        "processedCount": 25,
+        "energyKwhCumulative": 0.6799999999999999
+      },
+      {
+        "minute": 18,
+        "queuedCount": 115,
+        "processedCount": 29,
+        "energyKwhCumulative": 0.72
+      },
+      {
+        "minute": 19,
+        "queuedCount": 115,
+        "processedCount": 30,
+        "energyKwhCumulative": 0.76
+      },
+      {
+        "minute": 20,
+        "queuedCount": 123,
+        "processedCount": 30,
+        "energyKwhCumulative": 0.8
+      },
+      {
+        "minute": 21,
+        "queuedCount": 133,
+        "processedCount": 30,
+        "energyKwhCumulative": 0.8400000000000001
+      },
+      {
+        "minute": 22,
+        "queuedCount": 138,
+        "processedCount": 31,
+        "energyKwhCumulative": 0.88
+      },
+      {
+        "minute": 23,
+        "queuedCount": 151,
+        "processedCount": 32,
+        "energyKwhCumulative": 0.9199999999999999
+      },
+      {
+        "minute": 24,
+        "queuedCount": 154,
+        "processedCount": 38,
+        "energyKwhCumulative": 0.96
+      },
+      {
+        "minute": 25,
+        "queuedCount": 157,
+        "processedCount": 42,
+        "energyKwhCumulative": 1.0
+      },
+      {
+        "minute": 26,
+        "queuedCount": 155,
+        "processedCount": 44,
+        "energyKwhCumulative": 1.04
+      },
+      {
+        "minute": 27,
+        "queuedCount": 154,
+        "processedCount": 45,
+        "energyKwhCumulative": 1.08
+      },
+      {
+        "minute": 28,
+        "queuedCount": 153,
+        "processedCount": 46,
+        "energyKwhCumulative": 1.1199999999999999
+      },
+      {
+        "minute": 29,
+        "queuedCount": 150,
+        "processedCount": 49,
+        "energyKwhCumulative": 1.16
+      },
+      {
+        "minute": 30,
+        "queuedCount": 149,
+        "processedCount": 50,
+        "energyKwhCumulative": 1.2
+      },
+      {
+        "minute": 31,
+        "queuedCount": 148,
+        "processedCount": 51,
+        "energyKwhCumulative": 1.2333333333333334
+      },
+      {
+        "minute": 32,
+        "queuedCount": 147,
+        "processedCount": 52,
+        "energyKwhCumulative": 1.2666666666666666
+      },
+      {
+        "minute": 33,
+        "queuedCount": 142,
+        "processedCount": 57,
+        "energyKwhCumulative": 1.3
+      },
+      {
+        "minute": 34,
+        "queuedCount": 142,
+        "processedCount": 57,
+        "energyKwhCumulative": 1.3333333333333333
+      },
+      {
+        "minute": 35,
+        "queuedCount": 139,
+        "processedCount": 60,
+        "energyKwhCumulative": 1.3666666666666667
+      },
+      {
+        "minute": 36,
+        "queuedCount": 134,
+        "processedCount": 65,
+        "energyKwhCumulative": 1.4
+      },
+      {
+        "minute": 37,
+        "queuedCount": 132,
+        "processedCount": 67,
+        "energyKwhCumulative": 1.4333333333333333
+      },
+      {
+        "minute": 38,
+        "queuedCount": 129,
+        "processedCount": 70,
+        "energyKwhCumulative": 1.4666666666666666
+      },
+      {
+        "minute": 39,
+        "queuedCount": 129,
+        "processedCount": 70,
+        "energyKwhCumulative": 1.5
+      },
+      {
+        "minute": 40,
+        "queuedCount": 127,
+        "processedCount": 72,
+        "energyKwhCumulative": 1.5333333333333332
+      },
+      {
+        "minute": 41,
+        "queuedCount": 124,
+        "processedCount": 75,
+        "energyKwhCumulative": 1.5666666666666667
+      },
+      {
+        "minute": 42,
+        "queuedCount": 121,
+        "processedCount": 78,
+        "energyKwhCumulative": 1.6
+      },
+      {
+        "minute": 43,
+        "queuedCount": 115,
+        "processedCount": 84,
+        "energyKwhCumulative": 1.6333333333333333
+      },
+      {
+        "minute": 44,
+        "queuedCount": 113,
+        "processedCount": 86,
+        "energyKwhCumulative": 1.6666666666666667
+      },
+      {
+        "minute": 45,
+        "queuedCount": 111,
+        "processedCount": 88,
+        "energyKwhCumulative": 1.7
+      },
+      {
+        "minute": 46,
+        "queuedCount": 108,
+        "processedCount": 91,
+        "energyKwhCumulative": 1.7333333333333334
+      },
+      {
+        "minute": 47,
+        "queuedCount": 104,
+        "processedCount": 95,
+        "energyKwhCumulative": 1.7666666666666666
+      },
+      {
+        "minute": 48,
+        "queuedCount": 101,
+        "processedCount": 98,
+        "energyKwhCumulative": 1.8
+      },
+      {
+        "minute": 49,
+        "queuedCount": 97,
+        "processedCount": 102,
+        "energyKwhCumulative": 1.8333333333333335
+      },
+      {
+        "minute": 50,
+        "queuedCount": 96,
+        "processedCount": 103,
+        "energyKwhCumulative": 1.8666666666666667
+      },
+      {
+        "minute": 51,
+        "queuedCount": 96,
+        "processedCount": 103,
+        "energyKwhCumulative": 1.9
+      },
+      {
+        "minute": 52,
+        "queuedCount": 95,
+        "processedCount": 104,
+        "energyKwhCumulative": 1.9333333333333333
+      },
+      {
+        "minute": 53,
+        "queuedCount": 94,
+        "processedCount": 105,
+        "energyKwhCumulative": 1.9666666666666666
+      },
+      {
+        "minute": 54,
+        "queuedCount": 91,
+        "processedCount": 108,
+        "energyKwhCumulative": 2.0
+      },
+      {
+        "minute": 55,
+        "queuedCount": 89,
+        "processedCount": 110,
+        "energyKwhCumulative": 2.033333333333333
+      },
+      {
+        "minute": 56,
+        "queuedCount": 86,
+        "processedCount": 113,
+        "energyKwhCumulative": 2.0666666666666664
+      },
+      {
+        "minute": 57,
+        "queuedCount": 84,
+        "processedCount": 115,
+        "energyKwhCumulative": 2.1
+      },
+      {
+        "minute": 58,
+        "queuedCount": 83,
+        "processedCount": 116,
+        "energyKwhCumulative": 2.1333333333333333
+      },
+      {
+        "minute": 59,
+        "queuedCount": 81,
+        "processedCount": 118,
+        "energyKwhCumulative": 2.166666666666667
+      },
+      {
+        "minute": 60,
+        "queuedCount": 81,
+        "processedCount": 118,
+        "energyKwhCumulative": 2.2
+      }
+    ]
+  },
+  "candidate": {
+    "variant": "candidate",
+    "assignment": [
+      {
+        "checkpointId": "00000000-0000-0000-0000-000000000054",
+        "activeUnits": 2
+      }
+    ],
+    "energy": {
+      "totalKwh": 3.35,
+      "costRon": 4.02,
+      "withinBudget": true,
+      "items": [
+        {
+          "id": "00000000-0000-0000-0000-000000000054",
+          "kind": "checkpoint",
+          "powerKw": 1.5,
+          "source": "configured-assumption",
+          "units": 2,
+          "activeMinutes": 60.0,
+          "kwh": 3.0
+        },
+        {
+          "id": "lights",
+          "kind": "lighting",
+          "powerKw": 0.05,
+          "source": "configured-assumption",
+          "units": 10,
+          "activeMinutes": 30.0,
+          "kwh": 0.25
+        },
+        {
+          "id": "resource",
+          "kind": "resource",
+          "powerKw": 0.4,
+          "source": "configured-assumption",
+          "units": 1,
+          "activeMinutes": 15.0,
+          "kwh": 0.1
+        }
+      ]
+    },
+    "traffic": {
+      "populationCount": 200,
+      "arrivedCount": 200,
+      "notArrivedCount": 0,
+      "processedCount": 200,
+      "unprocessedCount": 0,
+      "queuedCount": 0,
+      "processingCount": 0,
+      "throughputPerMinute": 3.3333333333333335,
+      "meanWaitMinutes": 12.738700741308,
+      "p95WaitMinutes": 26.584129354436
+    },
+    "populationFingerprint": "706b7ecb6516361b7e2cf4486148f5d21264b8949f05a3d94b44779be74b628f",
+    "simulationRunId": "b4e1f233-bf99-5dcd-b4c5-678c350954cd",
+    "simulationEngine": "simpy-kpi-1.0",
+    "simulationLibraryVersion": "4.1.2",
+    "snapshots": [
+      {
+        "minute": 0,
+        "queuedCount": 0,
+        "processedCount": 0,
+        "energyKwhCumulative": 0.0
+      },
+      {
+        "minute": 1,
+        "queuedCount": 1,
+        "processedCount": 3,
+        "energyKwhCumulative": 0.065
+      },
+      {
+        "minute": 2,
+        "queuedCount": 6,
+        "processedCount": 5,
+        "energyKwhCumulative": 0.13
+      },
+      {
+        "minute": 3,
+        "queuedCount": 8,
+        "processedCount": 8,
+        "energyKwhCumulative": 0.195
+      },
+      {
+        "minute": 4,
+        "queuedCount": 8,
+        "processedCount": 11,
+        "energyKwhCumulative": 0.26
+      },
+      {
+        "minute": 5,
+        "queuedCount": 15,
+        "processedCount": 14,
+        "energyKwhCumulative": 0.325
+      },
+      {
+        "minute": 6,
+        "queuedCount": 20,
+        "processedCount": 14,
+        "energyKwhCumulative": 0.39
+      },
+      {
+        "minute": 7,
+        "queuedCount": 25,
+        "processedCount": 18,
+        "energyKwhCumulative": 0.45499999999999996
+      },
+      {
+        "minute": 8,
+        "queuedCount": 27,
+        "processedCount": 23,
+        "energyKwhCumulative": 0.52
+      },
+      {
+        "minute": 9,
+        "queuedCount": 33,
+        "processedCount": 28,
+        "energyKwhCumulative": 0.585
+      },
+      {
+        "minute": 10,
+        "queuedCount": 38,
+        "processedCount": 30,
+        "energyKwhCumulative": 0.65
+      },
+      {
+        "minute": 11,
+        "queuedCount": 40,
+        "processedCount": 36,
+        "energyKwhCumulative": 0.7150000000000001
+      },
+      {
+        "minute": 12,
+        "queuedCount": 46,
+        "processedCount": 39,
+        "energyKwhCumulative": 0.78
+      },
+      {
+        "minute": 13,
+        "queuedCount": 49,
+        "processedCount": 42,
+        "energyKwhCumulative": 0.845
+      },
+      {
+        "minute": 14,
+        "queuedCount": 54,
+        "processedCount": 46,
+        "energyKwhCumulative": 0.9099999999999999
+      },
+      {
+        "minute": 15,
+        "queuedCount": 65,
+        "processedCount": 49,
+        "energyKwhCumulative": 0.975
+      },
+      {
+        "minute": 16,
+        "queuedCount": 72,
+        "processedCount": 53,
+        "energyKwhCumulative": 1.0333333333333334
+      },
+      {
+        "minute": 17,
+        "queuedCount": 78,
+        "processedCount": 57,
+        "energyKwhCumulative": 1.0916666666666666
+      },
+      {
+        "minute": 18,
+        "queuedCount": 79,
+        "processedCount": 64,
+        "energyKwhCumulative": 1.15
+      },
+      {
+        "minute": 19,
+        "queuedCount": 74,
+        "processedCount": 70,
+        "energyKwhCumulative": 1.2083333333333333
+      },
+      {
+        "minute": 20,
+        "queuedCount": 79,
+        "processedCount": 73,
+        "energyKwhCumulative": 1.2666666666666666
+      },
+      {
+        "minute": 21,
+        "queuedCount": 85,
+        "processedCount": 77,
+        "energyKwhCumulative": 1.325
+      },
+      {
+        "minute": 22,
+        "queuedCount": 83,
+        "processedCount": 85,
+        "energyKwhCumulative": 1.3833333333333333
+      },
+      {
+        "minute": 23,
+        "queuedCount": 92,
+        "processedCount": 90,
+        "energyKwhCumulative": 1.4416666666666667
+      },
+      {
+        "minute": 24,
+        "queuedCount": 94,
+        "processedCount": 97,
+        "energyKwhCumulative": 1.5
+      },
+      {
+        "minute": 25,
+        "queuedCount": 96,
+        "processedCount": 102,
+        "energyKwhCumulative": 1.5583333333333333
+      },
+      {
+        "minute": 26,
+        "queuedCount": 94,
+        "processedCount": 104,
+        "energyKwhCumulative": 1.6166666666666667
+      },
+      {
+        "minute": 27,
+        "queuedCount": 92,
+        "processedCount": 106,
+        "energyKwhCumulative": 1.675
+      },
+      {
+        "minute": 28,
+        "queuedCount": 85,
+        "processedCount": 113,
+        "energyKwhCumulative": 1.7333333333333332
+      },
+      {
+        "minute": 29,
+        "queuedCount": 83,
+        "processedCount": 115,
+        "energyKwhCumulative": 1.7916666666666665
+      },
+      {
+        "minute": 30,
+        "queuedCount": 76,
+        "processedCount": 122,
+        "energyKwhCumulative": 1.85
+      },
+      {
+        "minute": 31,
+        "queuedCount": 76,
+        "processedCount": 122,
+        "energyKwhCumulative": 1.9000000000000001
+      },
+      {
+        "minute": 32,
+        "queuedCount": 74,
+        "processedCount": 124,
+        "energyKwhCumulative": 1.9500000000000002
+      },
+      {
+        "minute": 33,
+        "queuedCount": 73,
+        "processedCount": 125,
+        "energyKwhCumulative": 2.0
+      },
+      {
+        "minute": 34,
+        "queuedCount": 67,
+        "processedCount": 131,
+        "energyKwhCumulative": 2.05
+      },
+      {
+        "minute": 35,
+        "queuedCount": 63,
+        "processedCount": 135,
+        "energyKwhCumulative": 2.1
+      },
+      {
+        "minute": 36,
+        "queuedCount": 59,
+        "processedCount": 139,
+        "energyKwhCumulative": 2.15
+      },
+      {
+        "minute": 37,
+        "queuedCount": 51,
+        "processedCount": 147,
+        "energyKwhCumulative": 2.2
+      },
+      {
+        "minute": 38,
+        "queuedCount": 49,
+        "processedCount": 149,
+        "energyKwhCumulative": 2.25
+      },
+      {
+        "minute": 39,
+        "queuedCount": 48,
+        "processedCount": 150,
+        "energyKwhCumulative": 2.3
+      },
+      {
+        "minute": 40,
+        "queuedCount": 45,
+        "processedCount": 153,
+        "energyKwhCumulative": 2.35
+      },
+      {
+        "minute": 41,
+        "queuedCount": 39,
+        "processedCount": 159,
+        "energyKwhCumulative": 2.4
+      },
+      {
+        "minute": 42,
+        "queuedCount": 34,
+        "processedCount": 164,
+        "energyKwhCumulative": 2.45
+      },
+      {
+        "minute": 43,
+        "queuedCount": 31,
+        "processedCount": 167,
+        "energyKwhCumulative": 2.5
+      },
+      {
+        "minute": 44,
+        "queuedCount": 26,
+        "processedCount": 172,
+        "energyKwhCumulative": 2.5500000000000003
+      },
+      {
+        "minute": 45,
+        "queuedCount": 25,
+        "processedCount": 173,
+        "energyKwhCumulative": 2.6
+      },
+      {
+        "minute": 46,
+        "queuedCount": 23,
+        "processedCount": 175,
+        "energyKwhCumulative": 2.65
+      },
+      {
+        "minute": 47,
+        "queuedCount": 20,
+        "processedCount": 178,
+        "energyKwhCumulative": 2.7
+      },
+      {
+        "minute": 48,
+        "queuedCount": 15,
+        "processedCount": 183,
+        "energyKwhCumulative": 2.75
+      },
+      {
+        "minute": 49,
+        "queuedCount": 14,
+        "processedCount": 184,
+        "energyKwhCumulative": 2.8000000000000003
+      },
+      {
+        "minute": 50,
+        "queuedCount": 12,
+        "processedCount": 186,
+        "energyKwhCumulative": 2.85
+      },
+      {
+        "minute": 51,
+        "queuedCount": 3,
+        "processedCount": 195,
+        "energyKwhCumulative": 2.9
+      },
+      {
+        "minute": 52,
+        "queuedCount": 0,
+        "processedCount": 198,
+        "energyKwhCumulative": 2.95
+      },
+      {
+        "minute": 53,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.0
+      },
+      {
+        "minute": 54,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.0500000000000003
+      },
+      {
+        "minute": 55,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.1
+      },
+      {
+        "minute": 56,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.15
+      },
+      {
+        "minute": 57,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.2
+      },
+      {
+        "minute": 58,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.25
+      },
+      {
+        "minute": 59,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.3000000000000003
+      },
+      {
+        "minute": 60,
+        "queuedCount": 0,
+        "processedCount": 200,
+        "energyKwhCumulative": 3.35
+      }
+    ]
+  },
+  "sensitivity": [
+    {
+      "coefficientId": "checkpointPowerKw",
+      "parameter": "powerKw",
+      "lowerValue": 1.2000000000000002,
+      "baseValue": 1.5,
+      "upperValue": 1.7999999999999998,
+      "lowerTotalKwh": 2.75,
+      "baseTotalKwh": 3.35,
+      "upperTotalKwh": 3.95,
+      "lowerCostRon": 3.3,
+      "baseCostRon": 4.02,
+      "upperCostRon": 4.74
+    },
+    {
+      "coefficientId": "lights",
+      "parameter": "powerKw",
+      "lowerValue": 0.04000000000000001,
+      "baseValue": 0.05,
+      "upperValue": 0.06,
+      "lowerTotalKwh": 3.3000000000000003,
+      "baseTotalKwh": 3.35,
+      "upperTotalKwh": 3.4,
+      "lowerCostRon": 3.96,
+      "baseCostRon": 4.02,
+      "upperCostRon": 4.08
+    },
+    {
+      "coefficientId": "resource",
+      "parameter": "powerKw",
+      "lowerValue": 0.32000000000000006,
+      "baseValue": 0.4,
+      "upperValue": 0.48,
+      "lowerTotalKwh": 3.33,
+      "baseTotalKwh": 3.35,
+      "upperTotalKwh": 3.37,
+      "lowerCostRon": 3.996,
+      "baseCostRon": 4.02,
+      "upperCostRon": 4.044
+    },
+    {
+      "coefficientId": "tariffRonPerKwh",
+      "parameter": "tariffRonPerKwh",
+      "lowerValue": 0.96,
+      "baseValue": 1.2,
+      "upperValue": 1.44,
+      "lowerTotalKwh": 3.35,
+      "baseTotalKwh": 3.35,
+      "upperTotalKwh": 3.35,
+      "lowerCostRon": 3.2159999999999997,
+      "baseCostRon": 4.02,
+      "upperCostRon": 4.823999999999999
+    }
+  ],
+  "assumptions": [
+    "Exclusively synthetic demonstration; estimates do not represent the airport's actual consumption or tariff.",
+    "Every coefficient and any supplied tariff is an assumption, never a measurement or telemetry.",
+    "Missing power uses a default assumption: checkpoint 1.5 kW/unit, lighting 0.05 kW/unit, resource 0.4 kW/unit.",
+    "Active checkpoint units draw constant power for the entire horizon; zero units consume zero energy.",
+    "Lighting and resource loads draw constant power from minute 0 until their configured active duration; no standby, startup or traffic-dependent demand is modeled.",
+    "Same seed, checkpoint IDs, arrival rate and service rates produce the same synthetic arrivals and service inputs across compared capacities. Demand is assigned round-robin by checkpoint ID; no cross-checkpoint rerouting is modeled.",
+    "Traffic uses the existing simpy-kpi-1.0 engine. Wait mean and nearest-rank p95 include completed service only, and remain null if none complete. Unprocessed demand includes people who have not arrived by the horizon.",
+    "Sensitivity is a one-at-a-time arithmetic estimate on the candidate with traffic held fixed, not a forecast or a probabilistic confidence interval.",
+    "kWh and the hard budget use decimal arithmetic from configured decimal values before JSON number conversion; no tolerance permits an over-budget assignment."
+  ],
+  "formulas": {
+    "energy": "E [kWh] = sum(units * power [kW/unit] * activeMinutes [min] / 60).",
+    "cost": "Cost [RON] = E [kWh] * tariff [RON/kWh]; absent tariff yields no monetary estimate.",
+    "sensitivity": "One coefficient at a time at base * (1 +/- sensitivityPercent/100); other coefficients, schedules and traffic held fixed."
+  }
+}

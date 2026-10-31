@@ -1,0 +1,25 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "status": "completed",
+  "metrics": [
+    {
+      "zoneId": "70000000-0000-0000-0000-000000000101",
+      "recordedAtUtc": "2026-10-11T06:30:00Z",
+      "meanWaitMinutes": 2.5,
+      "throughputPerMinute": 1.5,
+      "processedPassengers": 45
+    }
+  ],
+  "snapshots": [
+    {
+      "zoneId": "70000000-0000-0000-0000-000000000101",
+      "elapsedMinutes": 30,
+      "queuedPassengers": 15,
+      "processedPassengers": 45,
+      "contractVersion": "1.0"
+    }
+  ],
+  "failure": null,
+  "simulatedMinutes": 60
+}

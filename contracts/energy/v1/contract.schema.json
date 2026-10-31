@@ -1,0 +1,877 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/energy/v1/contract.schema.json",
+  "$ref": "#/$defs/EnergyRequest",
+  "$defs": {
+    "Checkpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "minUnits": {
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Minunits",
+          "type": "integer"
+        },
+        "maxUnits": {
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Maxunits",
+          "type": "integer"
+        },
+        "baselineUnits": {
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Baselineunits",
+          "type": "integer"
+        },
+        "candidateUnits": {
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Candidateunits",
+          "type": "integer"
+        },
+        "serviceRatePerMinute": {
+          "maximum": 1000,
+          "minimum": 1e-06,
+          "title": "Servicerateperminute",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "minUnits",
+        "maxUnits",
+        "baselineUnits",
+        "candidateUnits",
+        "serviceRatePerMinute"
+      ],
+      "title": "Checkpoint",
+      "type": "object"
+    },
+    "Load": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "lighting",
+            "resource"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "units": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Units",
+          "type": "integer"
+        },
+        "powerKw": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Powerkw"
+        },
+        "baselineActiveMinutes": {
+          "maximum": 180,
+          "minimum": 0,
+          "title": "Baselineactiveminutes",
+          "type": "number"
+        },
+        "candidateActiveMinutes": {
+          "maximum": 180,
+          "minimum": 0,
+          "title": "Candidateactiveminutes",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "units",
+        "baselineActiveMinutes",
+        "candidateActiveMinutes"
+      ],
+      "title": "Load",
+      "type": "object"
+    },
+    "EnergyRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "seed": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "durationMinutes": {
+          "maximum": 180,
+          "minimum": 1,
+          "title": "Durationminutes",
+          "type": "integer"
+        },
+        "passengerCount": {
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Passengercount",
+          "type": "integer"
+        },
+        "arrivalRatePerMinute": {
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "minimum": 1e-06,
+              "type": "number"
+            }
+          ],
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Arrivalrateperminute",
+          "type": "number"
+        },
+        "checkpointPowerKw": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpointpowerkw"
+        },
+        "tariffRonPerKwh": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tariffronperkwh"
+        },
+        "energyBudgetKwh": {
+          "anyOf": [
+            {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Energybudgetkwh"
+        },
+        "sensitivityPercent": {
+          "default": 20,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Sensitivitypercent",
+          "type": "number"
+        },
+        "checkpoints": {
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Checkpoints",
+          "type": "array"
+        },
+        "loads": {
+          "items": {
+            "$ref": "#/$defs/Load"
+          },
+          "maxItems": 16,
+          "title": "Loads",
+          "type": "array"
+        }
+      },
+      "required": [
+        "synthetic",
+        "seed",
+        "durationMinutes",
+        "passengerCount",
+        "arrivalRatePerMinute",
+        "checkpoints",
+        "loads"
+      ],
+      "title": "EnergyRequest",
+      "type": "object"
+    },
+    "Assignment": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "title": "Checkpointid",
+          "type": "string"
+        },
+        "activeUnits": {
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Activeunits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checkpointId",
+        "activeUnits"
+      ],
+      "title": "Assignment",
+      "type": "object"
+    },
+    "Coefficient": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "checkpoint",
+            "lighting",
+            "resource"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "powerKw": {
+          "minimum": 0,
+          "title": "Powerkw",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "configured-assumption",
+            "default-assumption"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "powerKw",
+        "source"
+      ],
+      "title": "Coefficient",
+      "type": "object"
+    },
+    "Energy": {
+      "additionalProperties": false,
+      "properties": {
+        "totalKwh": {
+          "minimum": 0,
+          "title": "Totalkwh",
+          "type": "number"
+        },
+        "costRon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Costron"
+        },
+        "withinBudget": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Withinbudget"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/EnergyItem"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "totalKwh",
+        "costRon",
+        "withinBudget",
+        "items"
+      ],
+      "title": "Energy",
+      "type": "object"
+    },
+    "EnergyItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "checkpoint",
+            "lighting",
+            "resource"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "powerKw": {
+          "minimum": 0,
+          "title": "Powerkw",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "configured-assumption",
+            "default-assumption"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "units": {
+          "minimum": 0,
+          "title": "Units",
+          "type": "integer"
+        },
+        "activeMinutes": {
+          "minimum": 0,
+          "title": "Activeminutes",
+          "type": "number"
+        },
+        "kwh": {
+          "minimum": 0,
+          "title": "Kwh",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "powerKw",
+        "source",
+        "units",
+        "activeMinutes",
+        "kwh"
+      ],
+      "title": "EnergyItem",
+      "type": "object"
+    },
+    "EnergyScenario": {
+      "additionalProperties": false,
+      "properties": {
+        "variant": {
+          "enum": [
+            "baseline",
+            "candidate",
+            "optimized"
+          ],
+          "title": "Variant",
+          "type": "string"
+        },
+        "assignment": {
+          "items": {
+            "$ref": "#/$defs/Assignment"
+          },
+          "title": "Assignment",
+          "type": "array"
+        },
+        "energy": {
+          "$ref": "#/$defs/Energy"
+        },
+        "traffic": {
+          "$ref": "#/$defs/Traffic"
+        },
+        "populationFingerprint": {
+          "title": "Populationfingerprint",
+          "type": "string"
+        },
+        "simulationRunId": {
+          "title": "Simulationrunid",
+          "type": "string"
+        },
+        "simulationEngine": {
+          "const": "simpy-kpi-1.0",
+          "title": "Simulationengine",
+          "type": "string"
+        },
+        "simulationLibraryVersion": {
+          "title": "Simulationlibraryversion",
+          "type": "string"
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/Snapshot"
+          },
+          "title": "Snapshots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "variant",
+        "assignment",
+        "energy",
+        "traffic",
+        "populationFingerprint",
+        "simulationRunId",
+        "simulationEngine",
+        "simulationLibraryVersion",
+        "snapshots"
+      ],
+      "title": "EnergyScenario",
+      "type": "object"
+    },
+    "Formulas": {
+      "additionalProperties": false,
+      "properties": {
+        "energy": {
+          "title": "Energy",
+          "type": "string"
+        },
+        "cost": {
+          "title": "Cost",
+          "type": "string"
+        },
+        "sensitivity": {
+          "title": "Sensitivity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "energy",
+        "cost",
+        "sensitivity"
+      ],
+      "title": "Formulas",
+      "type": "object"
+    },
+    "Sensitivity": {
+      "additionalProperties": false,
+      "properties": {
+        "coefficientId": {
+          "title": "Coefficientid",
+          "type": "string"
+        },
+        "parameter": {
+          "enum": [
+            "powerKw",
+            "tariffRonPerKwh"
+          ],
+          "title": "Parameter",
+          "type": "string"
+        },
+        "lowerValue": {
+          "title": "Lowervalue",
+          "type": "number"
+        },
+        "baseValue": {
+          "title": "Basevalue",
+          "type": "number"
+        },
+        "upperValue": {
+          "title": "Uppervalue",
+          "type": "number"
+        },
+        "lowerTotalKwh": {
+          "title": "Lowertotalkwh",
+          "type": "number"
+        },
+        "baseTotalKwh": {
+          "title": "Basetotalkwh",
+          "type": "number"
+        },
+        "upperTotalKwh": {
+          "title": "Uppertotalkwh",
+          "type": "number"
+        },
+        "lowerCostRon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lowercostron"
+        },
+        "baseCostRon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Basecostron"
+        },
+        "upperCostRon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Uppercostron"
+        }
+      },
+      "required": [
+        "coefficientId",
+        "parameter",
+        "lowerValue",
+        "baseValue",
+        "upperValue",
+        "lowerTotalKwh",
+        "baseTotalKwh",
+        "upperTotalKwh",
+        "lowerCostRon",
+        "baseCostRon",
+        "upperCostRon"
+      ],
+      "title": "Sensitivity",
+      "type": "object"
+    },
+    "Snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "maximum": 180,
+          "minimum": 0,
+          "title": "Minute",
+          "type": "integer"
+        },
+        "queuedCount": {
+          "minimum": 0,
+          "title": "Queuedcount",
+          "type": "integer"
+        },
+        "processedCount": {
+          "minimum": 0,
+          "title": "Processedcount",
+          "type": "integer"
+        },
+        "energyKwhCumulative": {
+          "minimum": 0,
+          "title": "Energykwhcumulative",
+          "type": "number"
+        }
+      },
+      "required": [
+        "minute",
+        "queuedCount",
+        "processedCount",
+        "energyKwhCumulative"
+      ],
+      "title": "Snapshot",
+      "type": "object"
+    },
+    "Traffic": {
+      "additionalProperties": false,
+      "properties": {
+        "populationCount": {
+          "minimum": 0,
+          "title": "Populationcount",
+          "type": "integer"
+        },
+        "arrivedCount": {
+          "minimum": 0,
+          "title": "Arrivedcount",
+          "type": "integer"
+        },
+        "notArrivedCount": {
+          "minimum": 0,
+          "title": "Notarrivedcount",
+          "type": "integer"
+        },
+        "processedCount": {
+          "minimum": 0,
+          "title": "Processedcount",
+          "type": "integer"
+        },
+        "unprocessedCount": {
+          "minimum": 0,
+          "title": "Unprocessedcount",
+          "type": "integer"
+        },
+        "queuedCount": {
+          "minimum": 0,
+          "title": "Queuedcount",
+          "type": "integer"
+        },
+        "processingCount": {
+          "minimum": 0,
+          "title": "Processingcount",
+          "type": "integer"
+        },
+        "throughputPerMinute": {
+          "minimum": 0,
+          "title": "Throughputperminute",
+          "type": "number"
+        },
+        "meanWaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Meanwaitminutes"
+        },
+        "p95WaitMinutes": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P95Waitminutes"
+        }
+      },
+      "required": [
+        "populationCount",
+        "arrivedCount",
+        "notArrivedCount",
+        "processedCount",
+        "unprocessedCount",
+        "queuedCount",
+        "processingCount",
+        "throughputPerMinute",
+        "meanWaitMinutes",
+        "p95WaitMinutes"
+      ],
+      "title": "Traffic",
+      "type": "object"
+    },
+    "EnergyComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "engine": {
+          "const": "energy-analytics-1.0",
+          "default": "energy-analytics-1.0",
+          "title": "Engine",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "request": {
+          "$ref": "#/$defs/EnergyRequest"
+        },
+        "effectiveCoefficients": {
+          "items": {
+            "$ref": "#/$defs/Coefficient"
+          },
+          "title": "Effectivecoefficients",
+          "type": "array"
+        },
+        "baseline": {
+          "$ref": "#/$defs/EnergyScenario"
+        },
+        "candidate": {
+          "$ref": "#/$defs/EnergyScenario"
+        },
+        "sensitivity": {
+          "items": {
+            "$ref": "#/$defs/Sensitivity"
+          },
+          "title": "Sensitivity",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "formulas": {
+          "$ref": "#/$defs/Formulas"
+        }
+      },
+      "required": [
+        "synthetic",
+        "request",
+        "effectiveCoefficients",
+        "baseline",
+        "candidate",
+        "sensitivity",
+        "assumptions",
+        "formulas"
+      ],
+      "title": "EnergyComparison",
+      "type": "object"
+    },
+    "OptimizeResult": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "optimal",
+            "infeasible"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "method": {
+          "const": "bounded-enumeration-simpy-1.0",
+          "default": "bounded-enumeration-simpy-1.0",
+          "title": "Method",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/EnergyRequest"
+        },
+        "effectiveCoefficients": {
+          "items": {
+            "$ref": "#/$defs/Coefficient"
+          },
+          "title": "Effectivecoefficients",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "formulas": {
+          "$ref": "#/$defs/Formulas"
+        },
+        "configurationCount": {
+          "minimum": 1,
+          "title": "Configurationcount",
+          "type": "integer"
+        },
+        "feasibleCount": {
+          "minimum": 0,
+          "title": "Feasiblecount",
+          "type": "integer"
+        },
+        "evaluatedCount": {
+          "minimum": 0,
+          "title": "Evaluatedcount",
+          "type": "integer"
+        },
+        "best": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnergyScenario"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/EnergyScenario"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "synthetic",
+        "status",
+        "request",
+        "effectiveCoefficients",
+        "assumptions",
+        "formulas",
+        "configurationCount",
+        "feasibleCount",
+        "evaluatedCount",
+        "best",
+        "candidates",
+        "diagnostics"
+      ],
+      "title": "OptimizeResult",
+      "type": "object"
+    }
+  }
+}

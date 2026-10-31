@@ -1,0 +1,646 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/forecast/v1",
+  "$defs": {
+    "QueueForecastOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fromMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10065
+        },
+        "horizonMinutes": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 30
+        },
+        "queueThresholdPassengers": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "fromMinute",
+        "horizonMinutes",
+        "queueThresholdPassengers"
+      ]
+    },
+    "QueueForecastBacklog": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "queuedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "notArrivedPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "checkpointId",
+        "queuedPassengers",
+        "notArrivedPassengers"
+      ]
+    },
+    "QueueForecastRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "simulation": {
+          "$ref": "#/$defs/KpiSimulationRequest"
+        },
+        "options": {
+          "$ref": "#/$defs/QueueForecastOptions"
+        },
+        "backlogs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueueForecastBacklog"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "observationSource": {
+          "enum": [
+            "live_simulation",
+            "captured_snapshot"
+          ]
+        }
+      },
+      "required": [
+        "simulation",
+        "options",
+        "backlogs",
+        "observationSource"
+      ]
+    },
+    "QueueForecastPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "arrivals": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "capacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1e+16
+        },
+        "queuePassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "availableStaff": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "minute",
+        "arrivals",
+        "capacity",
+        "queuePassengers",
+        "availableStaff"
+      ]
+    },
+    "QueueForecastAlert": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "queuePassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "thresholdPassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "minute",
+        "queuePassengers",
+        "thresholdPassengers"
+      ]
+    },
+    "QueueForecastMitigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Smallest number of extra operators on staffed lanes that keeps every estimated minute at or below the threshold; null values mean staffing alone cannot (closed or unstaffed lanes).",
+      "properties": {
+        "extraStaff": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "peakQueuePassengers": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000000000000.0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "extraStaff",
+        "peakQueuePassengers"
+      ]
+    },
+    "QueueForecastSeries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "initialQueuePassengers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueueForecastPoint"
+          },
+          "minItems": 15,
+          "maxItems": 30
+        },
+        "alert": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QueueForecastAlert"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mitigation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QueueForecastMitigation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null when alerts are disabled."
+        },
+        "serviceRatePerStaffMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000000000.0
+        },
+        "serviceRateSource": {
+          "enum": [
+            "sampled_service_mean",
+            "configured_service_rate"
+          ]
+        }
+      },
+      "required": [
+        "checkpointId",
+        "initialQueuePassengers",
+        "points",
+        "alert",
+        "mitigation",
+        "serviceRatePerStaffMinute",
+        "serviceRateSource"
+      ]
+    },
+    "QueueForecastResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "runId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "kind": {
+          "const": "simulated_estimate"
+        },
+        "formula": {
+          "const": "Q[t+1]=max(0,Q[t]+arrivals-capacity)"
+        },
+        "fromMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10065
+        },
+        "toMinute": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 10080
+        },
+        "stepMinutes": {
+          "const": 1
+        },
+        "periodStartUtc": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+        },
+        "periodEndUtc": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+        },
+        "queueUnit": {
+          "const": "passengers"
+        },
+        "flowUnit": {
+          "const": "passengers/minute"
+        },
+        "timeUnit": {
+          "const": "simulated minutes"
+        },
+        "queueThresholdPassengers": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "arrivalSource": {
+          "enum": [
+            "planned_passenger_profiles",
+            "configured_arrival_rate"
+          ]
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueueForecastSeries"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "observationSource": {
+          "enum": [
+            "live_simulation",
+            "captured_snapshot"
+          ]
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "kind",
+        "formula",
+        "fromMinute",
+        "toMinute",
+        "stepMinutes",
+        "periodStartUtc",
+        "periodEndUtc",
+        "queueUnit",
+        "flowUnit",
+        "timeUnit",
+        "queueThresholdPassengers",
+        "arrivalSource",
+        "checkpoints",
+        "observationSource"
+      ]
+    },
+    "QueueForecastLiveOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "horizonMinutes": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 30
+        },
+        "queueThresholdPassengers": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "horizonMinutes",
+        "queueThresholdPassengers"
+      ]
+    },
+    "QueuePredictor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "ml",
+            "deterministic"
+          ]
+        },
+        "modelVersion": {
+          "type": "string",
+          "pattern": "^(us036-fluid-1\\.0|us038-[a-z0-9.-]+\\+[0-9a-f]{16})$"
+        },
+        "estimator": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "datasetVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^us038-synthetic-[0-9]+\\.[0-9]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "datasetHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trainingDataSource": {
+          "anyOf": [
+            {
+              "const": "synthetic_simpy_simulation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "const": "Q[t+1]=max(0,Q[t]+arrivals-capacity)"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fallbackReason": {
+          "anyOf": [
+            {
+              "enum": [
+                "predictor_disabled",
+                "model_warming",
+                "model_unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "modelVersion",
+        "estimator",
+        "datasetVersion",
+        "datasetHash",
+        "trainingDataSource",
+        "formula",
+        "fallbackReason"
+      ]
+    },
+    "QueuePredictionInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lowerPassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "upperPassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "nominalCoverage": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      },
+      "required": [
+        "lowerPassengers",
+        "upperPassengers",
+        "nominalCoverage"
+      ]
+    },
+    "QueuePredictionCheckpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "deterministicQueuePassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "predictedQueuePassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "predictionInterval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QueuePredictionInterval"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exceedanceProbability": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "checkpointId",
+        "deterministicQueuePassengers",
+        "predictedQueuePassengers",
+        "predictionInterval",
+        "exceedanceProbability"
+      ]
+    },
+    "QueuePredictionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "runId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "kind": {
+          "const": "simulated_estimate"
+        },
+        "validity": {
+          "const": "synthetic_only: no operational accuracy is claimed without authorised real data"
+        },
+        "fromMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10065
+        },
+        "toMinute": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 10080
+        },
+        "queueThresholdPassengers": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observationSource": {
+          "enum": [
+            "live_simulation",
+            "captured_snapshot"
+          ]
+        },
+        "predictor": {
+          "$ref": "#/$defs/QueuePredictor"
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueuePredictionCheckpoint"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "kind",
+        "validity",
+        "fromMinute",
+        "toMinute",
+        "queueThresholdPassengers",
+        "observationSource",
+        "predictor",
+        "checkpoints"
+      ]
+    }
+  }
+}

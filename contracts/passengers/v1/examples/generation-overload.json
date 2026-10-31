@@ -1,0 +1,166 @@
+{
+  "generatorVersion": "1.0",
+  "seed": 42,
+  "durationMinutes": 90,
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "serviceRatePerMinute": 7,
+      "staffCount": 2
+    },
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000102",
+      "serviceRatePerMinute": 8,
+      "staffCount": 2
+    }
+  ],
+  "flights": [
+    {
+      "flightId": "70000000-0000-0000-0000-000000000001",
+      "passengerCapacity": 100,
+      "boardingCloseMinute": 55,
+      "isCancelled": false,
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "routeId": "60000000-0000-0000-0000-000000000400",
+      "routeTravelMinutes": 1.5
+    },
+    {
+      "flightId": "70000000-0000-0000-0000-000000000002",
+      "passengerCapacity": 80,
+      "boardingCloseMinute": 65,
+      "isCancelled": false,
+      "checkpointId": "60000000-0000-0000-0000-000000000102",
+      "routeId": "60000000-0000-0000-0000-000000000406",
+      "routeTravelMinutes": 2
+    }
+  ],
+  "batches": [
+    {
+      "flightId": "70000000-0000-0000-0000-000000000001",
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "countMode": "full",
+      "modeledCount": 100,
+      "arrival": {
+        "kind": "normal",
+        "minimum": 0,
+        "maximum": 45,
+        "mean": 22.5,
+        "stdDev": 7.5,
+        "mode": 22.5
+      },
+      "service": {
+        "kind": "exponential",
+        "minimum": 0.05,
+        "maximum": 10,
+        "mean": 1,
+        "stdDev": 1,
+        "mode": 1
+      },
+      "travel": {
+        "kind": "uniform",
+        "minimum": 0.8,
+        "maximum": 1.3,
+        "mean": 1,
+        "stdDev": 1,
+        "mode": 1
+      },
+      "groups": [
+        {
+          "kind": "solo",
+          "weight": 0.65,
+          "minSize": 1,
+          "maxSize": 1,
+          "serviceMultiplier": 1,
+          "travelMultiplier": 1
+        },
+        {
+          "kind": "family",
+          "weight": 0.25,
+          "minSize": 2,
+          "maxSize": 4,
+          "serviceMultiplier": 1.2,
+          "travelMultiplier": 1.15
+        },
+        {
+          "kind": "business",
+          "weight": 0.1,
+          "minSize": 1,
+          "maxSize": 1,
+          "serviceMultiplier": 0.8,
+          "travelMultiplier": 0.9
+        }
+      ],
+      "surges": [
+        {
+          "startsMinute": 20,
+          "endsMinute": 20.2,
+          "share": 1
+        }
+      ]
+    },
+    {
+      "flightId": "70000000-0000-0000-0000-000000000002",
+      "checkpointId": "60000000-0000-0000-0000-000000000102",
+      "countMode": "full",
+      "modeledCount": 80,
+      "arrival": {
+        "kind": "normal",
+        "minimum": 0,
+        "maximum": 55,
+        "mean": 27.5,
+        "stdDev": 9.166666666666666,
+        "mode": 27.5
+      },
+      "service": {
+        "kind": "exponential",
+        "minimum": 0.05,
+        "maximum": 10,
+        "mean": 1,
+        "stdDev": 1,
+        "mode": 1
+      },
+      "travel": {
+        "kind": "uniform",
+        "minimum": 0.8,
+        "maximum": 1.3,
+        "mean": 1,
+        "stdDev": 1,
+        "mode": 1
+      },
+      "groups": [
+        {
+          "kind": "solo",
+          "weight": 0.65,
+          "minSize": 1,
+          "maxSize": 1,
+          "serviceMultiplier": 1,
+          "travelMultiplier": 1
+        },
+        {
+          "kind": "family",
+          "weight": 0.25,
+          "minSize": 2,
+          "maxSize": 4,
+          "serviceMultiplier": 1.2,
+          "travelMultiplier": 1.15
+        },
+        {
+          "kind": "business",
+          "weight": 0.1,
+          "minSize": 1,
+          "maxSize": 1,
+          "serviceMultiplier": 0.8,
+          "travelMultiplier": 0.9
+        }
+      ],
+      "surges": [
+        {
+          "startsMinute": 20,
+          "endsMinute": 20.2,
+          "share": 1
+        }
+      ]
+    }
+  ],
+  "isSynthetic": true
+}

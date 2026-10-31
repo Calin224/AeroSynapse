@@ -1,0 +1,57 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "status": "completed",
+  "metrics": [
+    {
+      "zoneId": "70000000-0000-0000-0000-000000000101",
+      "recordedAtUtc": "2026-10-11T07:30:00Z",
+      "meanWaitMinutes": 0.0,
+      "throughputPerMinute": 0.0,
+      "processedPassengers": 0
+    }
+  ],
+  "snapshots": [
+    {
+      "zoneId": "70000000-0000-0000-0000-000000000101",
+      "elapsedMinutes": 90.0,
+      "queuedPassengers": 0,
+      "processedPassengers": 0,
+      "contractVersion": "1.0"
+    }
+  ],
+  "failure": null,
+  "simulatedMinutes": 90.0,
+  "processResult": {
+    "processVersion": "1.0",
+    "engine": "simpy-1.0",
+    "mode": "aggregate",
+    "horizonMinutes": 90,
+    "populationCount": 0,
+    "arrivedCount": 0,
+    "notArrivedCount": 0,
+    "deadlineMissedCount": 0,
+    "checkpoints": [
+      {
+        "checkpointId": "70000000-0000-0000-0000-000000000101",
+        "capacity": 1,
+        "peakBusy": 0,
+        "peakQueue": 0,
+        "arrivedCount": 0,
+        "queuedCount": 0,
+        "processingCount": 0,
+        "processedCount": 0,
+        "meanWaitMinutes": 0
+      }
+    ],
+    "passengers": [],
+    "offset": 0,
+    "returnedCount": 0,
+    "hasMore": false,
+    "queuedCount": 0,
+    "processingCount": 0,
+    "walkingCount": 0,
+    "atGateCount": 0,
+    "unreachableCount": 0
+  }
+}

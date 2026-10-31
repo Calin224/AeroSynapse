@@ -1,0 +1,830 @@
+[
+  {
+    "name": "full-batches",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "temporary-overload",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-overload",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "explicit-subset",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/countMode",
+        "value": "subset"
+      },
+      {
+        "path": "/batches/0/modeledCount",
+        "value": 25
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "negative-seed",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/seed",
+        "value": -1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "boolean-seed",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/seed",
+        "value": true
+      }
+    ],
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "real-data-rejected",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/isSynthetic",
+        "value": false
+      }
+    ],
+    "errors": [
+      {
+        "field": "/isSynthetic",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "full-count-mismatch",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/modeledCount",
+        "value": 99
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/modeledCount",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "subset-must-be-smaller",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/countMode",
+        "value": "subset"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/modeledCount",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "cancelled-flight-has-no-passengers",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/flights/1/isCancelled",
+        "value": true
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/1/modeledCount",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "arrival-after-boarding",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/arrival/maximum",
+        "value": 60
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/arrival/maximum",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "normal-deviation-positive",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/arrival/stdDev",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/arrival/stdDev",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "invalid-group-weight-total",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/groups/0/weight",
+        "value": 0.1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/groups",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "group-sizes-ordered",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/groups/1/maxSize",
+        "value": 1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/groups/1/maxSize",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "unknown-personal-field",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/passengerName",
+        "value": "Example"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/passengerName",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "surge-outside-arrivals",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/surges",
+        "value": [
+          {
+            "startsMinute": 20,
+            "endsMinute": 60,
+            "share": 0.7
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/surges/0",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "operational-service-limit",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/checkpoints/0/serviceRatePerMinute",
+        "value": 1e-06
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/service/maximum",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "positive-route-duration",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/flights/0/routeTravelMinutes",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flights/0/routeTravelMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "population-budget",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/flights/0/passengerCapacity",
+        "value": 100000
+      },
+      {
+        "path": "/flights/1/passengerCapacity",
+        "value": 100000
+      },
+      {
+        "path": "/batches/0/modeledCount",
+        "value": 100000
+      },
+      {
+        "path": "/batches/1/modeledCount",
+        "value": 100000
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "unsupported-generator-version",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/generatorVersion",
+        "value": "2.0"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/generatorVersion",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "profiled-simulation",
+    "definition": "ProfiledSimulationRequest",
+    "example": "profiled-simulation-request",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "profile-seed-mismatch",
+    "definition": "ProfiledSimulationRequest",
+    "example": "profiled-simulation-request",
+    "mutations": [
+      {
+        "path": "/passengerGeneration/seed",
+        "value": 43
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerGeneration/seed",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "profile-count-mismatch",
+    "definition": "ProfiledSimulationRequest",
+    "example": "profiled-simulation-request",
+    "mutations": [
+      {
+        "path": "/passengerCount",
+        "value": 999
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "profile-checkpoint-mismatch",
+    "definition": "ProfiledSimulationRequest",
+    "example": "profiled-simulation-request",
+    "mutations": [
+      {
+        "path": "/passengerGeneration/checkpoints/0/staffCount",
+        "value": 0
+      }
+    ],
+    "errors": [
+      {
+        "field": "/passengerGeneration/checkpoints",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "travel-product-must-not-underflow",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/flights/0/routeTravelMinutes",
+        "value": 5e-324
+      },
+      {
+        "path": "/batches/0/travel/minimum",
+        "value": 0.01
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/travel/minimum",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "alternative-flows",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "profiled-alternative-flows",
+    "definition": "ProfiledSimulationRequest",
+    "example": "profiled-simulation-request",
+    "mutations": [
+      {
+        "path": "/passengerGeneration/flow",
+        "value": {
+          "segments": [
+            {
+              "kind": "standard",
+              "share": 1,
+              "holdBaggage": false,
+              "control": "security",
+              "serviceMultiplier": 1,
+              "travelMultiplier": 1
+            }
+          ],
+          "stages": [],
+          "closures": [
+            {
+              "stage": "security",
+              "startsMinute": 20,
+              "endsMinute": 30
+            }
+          ]
+        }
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "type-shares-total-one",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/segments/0/share",
+        "value": 0.5
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "duplicate-type",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/segments/1/kind",
+        "value": "standard"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/1/kind",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "type-labels-are-closed",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/segments/0/kind",
+        "value": "vip"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/0/kind",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "no-personal-type-attributes",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/segments/0/nationality",
+        "value": "RO"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/0/nationality",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "hold-baggage-routes-through-bag-drop",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/stages",
+        "value": [
+          {
+            "kind": "assistedSecurity",
+            "staffCount": 1,
+            "service": {
+              "kind": "uniform",
+              "minimum": 1,
+              "maximum": 3,
+              "mean": 2,
+              "stdDev": 0.5,
+              "mode": 2
+            }
+          },
+          {
+            "kind": "transferSecurity",
+            "staffCount": 1,
+            "service": {
+              "kind": "exponential",
+              "minimum": 0.1,
+              "maximum": 4,
+              "mean": 0.4,
+              "stdDev": 0.4,
+              "mode": 0.4
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/1/holdBaggage",
+        "code": "invalid_value"
+      },
+      {
+        "field": "/flow/segments/2/holdBaggage",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "blocked-stage-must-exist",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/stages",
+        "value": [
+          {
+            "kind": "bagDrop",
+            "staffCount": 3,
+            "service": {
+              "kind": "triangular",
+              "minimum": 0.5,
+              "maximum": 3,
+              "mean": 1.2,
+              "stdDev": 0.5,
+              "mode": 1
+            }
+          },
+          {
+            "kind": "assistedSecurity",
+            "staffCount": 1,
+            "service": {
+              "kind": "uniform",
+              "minimum": 1,
+              "maximum": 3,
+              "mean": 2,
+              "stdDev": 0.5,
+              "mode": 2
+            }
+          }
+        ]
+      },
+      {
+        "path": "/flow/closures",
+        "value": [
+          {
+            "stage": "transferSecurity",
+            "startsMinute": 10,
+            "endsMinute": 20
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/3/control",
+        "code": "invalid_value"
+      },
+      {
+        "field": "/flow/closures/0/stage",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "closure-within-horizon",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/closures",
+        "value": [
+          {
+            "stage": "security",
+            "startsMinute": 80,
+            "endsMinute": 95
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/closures/0",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "transfer-walk-limit",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/segments/3/transferMinutes/maximum",
+        "value": 300
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/segments/3/transferMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "stage-service-limit",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/stages/1/service/maximum",
+        "value": 200
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/stages/1/service/maximum",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "negative-stage-staff",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-flows",
+    "mutations": [
+      {
+        "path": "/flow/stages/0/staffCount",
+        "value": -1
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flow/stages/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "spread-over-open-checkpoints",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [],
+    "errors": []
+  },
+  {
+    "name": "spread-needs-checkpoint-routes",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/checkpointMode",
+        "value": "spread"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/checkpointMode",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "checkpoint-routes-need-spread",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/batches/0/checkpointMode",
+        "value": "fixed"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/checkpointMode",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "checkpoint-mode-is-closed",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-request",
+    "mutations": [
+      {
+        "path": "/batches/0/checkpointMode",
+        "value": "nearest"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/checkpointMode",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "spread-routes-include-home",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/flights/0/checkpointRoutes/0/routeId",
+        "value": "60000000-0000-0000-0000-000000000401"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flights/0/checkpointRoutes",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "spread-route-checkpoint-known",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/flights/0/checkpointRoutes/1/checkpointId",
+        "value": "60000000-0000-0000-0000-000000000103"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flights/0/checkpointRoutes/1/checkpointId",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "spread-route-checkpoint-unique",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/flights/0/checkpointRoutes/1/checkpointId",
+        "value": "60000000-0000-0000-0000-000000000101"
+      }
+    ],
+    "errors": [
+      {
+        "field": "/flights/0/checkpointRoutes/1/checkpointId",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "spread-service-limit-covers-every-checkpoint",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/checkpoints/1/serviceRatePerMinute",
+        "value": 1e-06
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/service/maximum",
+        "code": "out_of_range"
+      },
+      {
+        "field": "/batches/1/service/maximum",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "spread-travel-limit-covers-every-route",
+    "definition": "PassengerGenerationRequest",
+    "example": "generation-spread",
+    "mutations": [
+      {
+        "path": "/flights/0/checkpointRoutes/1/routeTravelMinutes",
+        "value": 200
+      }
+    ],
+    "errors": [
+      {
+        "field": "/batches/0/travel/maximum",
+        "code": "out_of_range"
+      }
+    ]
+  }
+]

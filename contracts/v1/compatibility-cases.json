@@ -1,0 +1,4179 @@
+[
+  {
+    "name": "valid simulation-request",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown SimulationRequest",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/contractVersion",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/runId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationRequest/runId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/scenarioId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/scenarioId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationRequest/scenarioId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/scenarioId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/scenarioRevision",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/scenarioRevision"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioRevision",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/scenarioRevision",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/scenarioRevision",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioRevision",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/scenarioRevision",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/scenarioRevision",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/scenarioRevision",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/layoutVersionId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/layoutVersionId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/layoutVersionId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationRequest/layoutVersionId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/layoutVersionId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/layoutVersionId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/startsAtUtc",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/startsAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationRequest/startsAtUtc",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/startsAtUtc",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/timeZone",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/timeZone"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/timeZone",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/durationMinutes",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/durationMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/durationMinutes",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/durationMinutes",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/seed",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/seed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/seed",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/seed",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/seed",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/seed",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/passengerCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/passengerCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/passengerCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/passengerCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/passengerCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/passengerCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/arrivalRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/arrivalRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/arrivalRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/arrivalRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/arrivalRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/arrivalRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/arrivalRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/arrivalRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/arrivalRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/checkpoints",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/checkpoints"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown SimulationRequest/checkpoints/0",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/checkpoints/0/checkpointId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/checkpoints/0/checkpointId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/checkpointId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationRequest/checkpoints/0/checkpointId",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/checkpointId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/checkpointId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/checkpoints/0/serviceRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/checkpoints/0/serviceRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/serviceRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/checkpoints/0/serviceRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/serviceRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/serviceRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/checkpoints/0/serviceRatePerMinute",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/serviceRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/serviceRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationRequest/checkpoints/0/staffCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/checkpoints/0/staffCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/staffCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationRequest/checkpoints/0/staffCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/staffCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/staffCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationRequest/checkpoints/0/staffCount",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0/staffCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "valid optimization-request",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown OptimizationRequest",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/contractVersion",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/optimizationId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/optimizationId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/optimizationId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/optimizationId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/objective",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/objective"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/objective",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown OptimizationRequest/baseline",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/contractVersion",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/runId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/baseline/runId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/scenarioId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/scenarioId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/scenarioId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/baseline/scenarioId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/scenarioId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/scenarioId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/scenarioRevision"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/scenarioRevision",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/scenarioRevision",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/scenarioRevision",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/scenarioRevision",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/scenarioRevision",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/layoutVersionId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/layoutVersionId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/layoutVersionId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/baseline/layoutVersionId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/layoutVersionId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/layoutVersionId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/startsAtUtc",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/startsAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/startsAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/baseline/startsAtUtc",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/startsAtUtc",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/timeZone",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/timeZone"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/timeZone",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/durationMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/durationMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/durationMinutes",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/durationMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/durationMinutes",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/durationMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/seed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/seed",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/seed",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/seed",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/seed",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/passengerCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/passengerCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/passengerCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/passengerCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/passengerCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/arrivalRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/arrivalRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/arrivalRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/arrivalRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/arrivalRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/arrivalRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/checkpoints",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/checkpoints"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown OptimizationRequest/baseline/checkpoints/0",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/checkpoints/0/checkpointId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/checkpoints/0/checkpointId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/checkpointId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/baseline/checkpoints/0/checkpointId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/checkpointId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/checkpointId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/checkpoints/0/serviceRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/serviceRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/serviceRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/serviceRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/serviceRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/serviceRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/baseline/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baseline/checkpoints/0/staffCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/staffCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/baseline/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/staffCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/staffCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/baseline/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baseline/checkpoints/0/staffCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baseline/checkpoints/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown OptimizationRequest/candidates/0",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/contractVersion",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/runId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/candidates/0/runId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/scenarioId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/scenarioId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/scenarioId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/candidates/0/scenarioId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/scenarioId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/scenarioId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/scenarioRevision"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/scenarioRevision",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/scenarioRevision",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/scenarioRevision",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/scenarioRevision",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/scenarioRevision",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/scenarioRevision",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/layoutVersionId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/layoutVersionId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/layoutVersionId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/candidates/0/layoutVersionId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/layoutVersionId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/layoutVersionId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/startsAtUtc",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/startsAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/startsAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/candidates/0/startsAtUtc",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/startsAtUtc",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/timeZone",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/timeZone"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/timeZone",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/durationMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/durationMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/durationMinutes",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/durationMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/durationMinutes",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/durationMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/seed"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/seed",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/seed",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/seed",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/seed",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/passengerCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/passengerCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/passengerCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/passengerCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/passengerCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/passengerCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/arrivalRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/arrivalRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/arrivalRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/arrivalRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/arrivalRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/arrivalRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/checkpoints",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/checkpoints"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown OptimizationRequest/candidates/0/checkpoints/0",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/checkpoints/0/checkpointId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/checkpoints/0/checkpointId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/checkpointId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationRequest/candidates/0/checkpoints/0/checkpointId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/checkpointId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/checkpointId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/checkpoints/0/serviceRatePerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/serviceRatePerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/serviceRatePerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/serviceRatePerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/checkpoints/0/serviceRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/serviceRatePerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/serviceRatePerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationRequest/candidates/0/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/checkpoints/0/staffCount"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/staffCount",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationRequest/candidates/0/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/staffCount",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/staffCount",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationRequest/candidates/0/checkpoints/0/staffCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/checkpoints/0/staffCount",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/checkpoints/0/staffCount",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "valid simulation-result",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown SimulationResult",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/contractVersion",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/runId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationResult/runId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/status",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown SimulationResult/metrics/0",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics/0/zoneId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics/0/zoneId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/zoneId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationResult/metrics/0/zoneId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/zoneId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/zoneId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics/0/recordedAtUtc",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics/0/recordedAtUtc"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/recordedAtUtc",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationResult/metrics/0/recordedAtUtc",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/recordedAtUtc",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/recordedAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics/0/meanWaitMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics/0/meanWaitMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/meanWaitMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/metrics/0/meanWaitMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/meanWaitMinutes",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/meanWaitMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/metrics/0/meanWaitMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/meanWaitMinutes",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/meanWaitMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics/0/throughputPerMinute",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics/0/throughputPerMinute"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/throughputPerMinute",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/metrics/0/throughputPerMinute",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/throughputPerMinute",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/throughputPerMinute",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/metrics/0/throughputPerMinute",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/throughputPerMinute",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/throughputPerMinute",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics/0/processedPassengers"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/processedPassengers",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/metrics/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/processedPassengers",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/processedPassengers",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/metrics/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics/0/processedPassengers",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics/0/processedPassengers",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown SimulationResult/snapshots/0",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots/0/zoneId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots/0/zoneId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/zoneId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationResult/snapshots/0/zoneId",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/zoneId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/zoneId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots/0/elapsedMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots/0/elapsedMinutes"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/elapsedMinutes",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/snapshots/0/elapsedMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/elapsedMinutes",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/elapsedMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/snapshots/0/elapsedMinutes",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/elapsedMinutes",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/elapsedMinutes",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots/0/queuedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots/0/queuedPassengers"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/queuedPassengers",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/snapshots/0/queuedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/queuedPassengers",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/queuedPassengers",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/snapshots/0/queuedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/queuedPassengers",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/queuedPassengers",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots/0/processedPassengers"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/processedPassengers",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type SimulationResult/snapshots/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/processedPassengers",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/processedPassengers",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds SimulationResult/snapshots/0/processedPassengers",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/snapshots/0/processedPassengers",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots/0/processedPassengers",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/failure",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "valid optimization-result",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown OptimizationResult",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/contractVersion",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/optimizationId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/optimizationId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationResult/optimizationId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/optimizationId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/status",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/objective",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/objective"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/objective",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/baselineRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationResult/baselineRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baselineRunId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineRunId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/baselineScore",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineScore"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineScore",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/candidates",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unknown OptimizationResult/candidates/0",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/candidates/0/runId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationResult/candidates/0/runId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/candidates/0/score",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/score"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/score",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationResult/candidates/0/score",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/score",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/score",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationResult/candidates/0/score",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/score",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/score",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/candidates/0/rank",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates/0/rank"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/rank",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "type OptimizationResult/candidates/0/rank",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/rank",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/rank",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "bounds OptimizationResult/candidates/0/rank",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/rank",
+        "value": -1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/rank",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/recommendedRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/recommendedRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/recommendedRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/failure",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "valid simulation-failed",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown SimulationResult",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/contractVersion",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/runId",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/runId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format SimulationResult/runId",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/runId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/status",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/metrics",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/metrics"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/snapshots",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/snapshots"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/snapshots",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing SimulationResult/failure",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "valid optimization-failed",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [],
+    "status": 200,
+    "errors": []
+  },
+  {
+    "name": "unknown OptimizationResult",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/extra",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/extra",
+        "code": "unknown_field"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/contractVersion",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/contractVersion"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/optimizationId",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/optimizationId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationResult/optimizationId",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/optimizationId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/optimizationId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/status",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/status"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/status",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/objective",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/objective"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/objective",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/baselineRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "format OptimizationResult/baselineRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baselineRunId",
+        "value": "private-value"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineRunId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/baselineScore",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/baselineScore"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineScore",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/candidates",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/candidates"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/recommendedRunId",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/recommendedRunId"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/recommendedRunId",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "missing OptimizationResult/failure",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "remove",
+        "path": "/failure"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "required"
+      }
+    ]
+  },
+  {
+    "name": "unsupported version",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/contractVersion",
+        "value": "2.0"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/contractVersion",
+        "code": "unsupported_version"
+      }
+    ]
+  },
+  {
+    "name": "wrong timezone",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/timeZone",
+        "value": "Eastern Standard Time"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/timeZone",
+        "code": "invalid_timezone"
+      }
+    ]
+  },
+  {
+    "name": "unknown timezone",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/timeZone",
+        "value": "Nowhere/Private"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/timeZone",
+        "code": "invalid_timezone"
+      }
+    ]
+  },
+  {
+    "name": "invalid calendar",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/startsAtUtc",
+        "value": "2026-02-30T06:00:00Z"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "timestamp overflow",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/startsAtUtc",
+        "value": "9999-12-31T23:59:00Z"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "UTC offset rejected",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/startsAtUtc",
+        "value": "2026-10-11T09:00:00+03:00"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/startsAtUtc",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "subminute rejected",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/durationMinutes",
+        "value": 0.5
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/durationMinutes",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "boolean rejected",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/seed",
+        "value": true
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/seed",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "null collection",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints",
+        "value": null
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "null child",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints/0",
+        "value": null
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/0",
+        "code": "invalid_type"
+      }
+    ]
+  },
+  {
+    "name": "zero uuid",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/runId",
+        "value": "00000000-0000-0000-0000-000000000000"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "empty uuid",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/runId",
+        "value": ""
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/runId",
+        "code": "invalid_format"
+      }
+    ]
+  },
+  {
+    "name": "missing candidates",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates",
+        "value": []
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "out_of_range"
+      }
+    ]
+  },
+  {
+    "name": "candidate equals baseline",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/runId",
+        "value": "70000000-0000-0000-0000-000000000001"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/runId",
+        "code": "duplicate_id"
+      }
+    ]
+  },
+  {
+    "name": "mismatched layoutVersionId",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/layoutVersionId",
+        "value": "70000000-0000-0000-0000-000000000009"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/layoutVersionId",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched startsAtUtc",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/startsAtUtc",
+        "value": "2026-10-11T07:00:00Z"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/startsAtUtc",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched timeZone",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/timeZone",
+        "value": "UTC"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/timeZone",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched durationMinutes",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/durationMinutes",
+        "value": 30
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/durationMinutes",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched seed",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/seed",
+        "value": 43
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/seed",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched passengerCount",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/passengerCount",
+        "value": 150
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/passengerCount",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "mismatched arrivalRatePerMinute",
+    "definition": "OptimizationRequest",
+    "example": "optimization-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/arrivalRatePerMinute",
+        "value": 3
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/arrivalRatePerMinute",
+        "code": "comparison_mismatch"
+      }
+    ]
+  },
+  {
+    "name": "completed error",
+    "definition": "SimulationResult",
+    "example": "simulation-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/failure",
+        "value": {
+          "code": "engine_error",
+          "message": "Stopped."
+        }
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "failed metrics",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/metrics",
+        "value": [
+          {
+            "zoneId": "70000000-0000-0000-0000-000000000101",
+            "recordedAtUtc": "2026-10-11T06:30:00Z",
+            "meanWaitMinutes": 2.5,
+            "throughputPerMinute": 1.5,
+            "processedPassengers": 45
+          }
+        ]
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/metrics",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "failed missing reason",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/failure",
+        "value": null
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "empty failure reason",
+    "definition": "SimulationResult",
+    "example": "simulation-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/failure/message",
+        "value": " "
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/failure/message",
+        "code": "invalid_value"
+      }
+    ]
+  },
+  {
+    "name": "failed recommended",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/recommendedRunId",
+        "value": "70000000-0000-0000-0000-000000000004"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/recommendedRunId",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "failed score",
+    "definition": "OptimizationResult",
+    "example": "optimization-failed",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/baselineScore",
+        "value": 1
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/baselineScore",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "incorrect winner",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/recommendedRunId",
+        "value": "70000000-0000-0000-0000-000000000001"
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/recommendedRunId",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "missing comparison",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates",
+        "value": []
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "noncontiguous rank",
+    "definition": "OptimizationResult",
+    "example": "optimization-result",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/candidates/0/rank",
+        "value": 2
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/candidates/0/rank",
+        "code": "invalid_result"
+      }
+    ]
+  },
+  {
+    "name": "duplicate checkpoint",
+    "definition": "SimulationRequest",
+    "example": "simulation-request",
+    "mutations": [
+      {
+        "op": "set",
+        "path": "/checkpoints",
+        "value": [
+          {
+            "checkpointId": "70000000-0000-0000-0000-000000000101",
+            "serviceRatePerMinute": 1.5,
+            "staffCount": 1
+          },
+          {
+            "checkpointId": "70000000-0000-0000-0000-000000000101",
+            "serviceRatePerMinute": 1.5,
+            "staffCount": 1
+          }
+        ]
+      }
+    ],
+    "status": 422,
+    "errors": [
+      {
+        "field": "/checkpoints/1/checkpointId",
+        "code": "duplicate_id"
+      }
+    ]
+  }
+]

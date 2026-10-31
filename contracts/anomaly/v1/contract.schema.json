@@ -1,0 +1,1224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerosynapse.local/contracts/anomaly/v1",
+  "$defs": {
+    "AnomalySettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "upperQuantile": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 0.995
+        },
+        "windowMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "minExceedances": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "minExcessPassengers": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "upperQuantile",
+        "windowMinutes",
+        "minExceedances",
+        "minExcessPassengers"
+      ]
+    },
+    "AnomalySeries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "queued": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "arrived": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "staff": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        }
+      },
+      "required": [
+        "queued",
+        "arrived",
+        "staff"
+      ]
+    },
+    "AnomalyReplicationRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "runId",
+        "seed"
+      ]
+    },
+    "AnomalyCheckpointInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "observed": {
+          "$ref": "#/$defs/AnomalySeries"
+        },
+        "replications": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalySeries"
+          },
+          "minItems": 5,
+          "maxItems": 25
+        }
+      },
+      "required": [
+        "checkpointId",
+        "observed",
+        "replications"
+      ]
+    },
+    "AnomalyDetectionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "dataScope": {
+          "const": "aggregate_synthetic"
+        },
+        "runId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "intervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "minutes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        },
+        "simulation": {
+          "$ref": "#/$defs/KpiSimulationRequest"
+        },
+        "replicationRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyReplicationRun"
+          },
+          "minItems": 5,
+          "maxItems": 25
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyCheckpointInput"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "contractVersion",
+        "dataScope",
+        "runId",
+        "intervalMinutes",
+        "minutes",
+        "settings",
+        "simulation",
+        "replicationRuns",
+        "checkpoints"
+      ]
+    },
+    "AnomalyExplanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookbackStartMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "contributions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "demand": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "capacity": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "backlog": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "demand",
+            "capacity",
+            "backlog"
+          ]
+        },
+        "explained": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "observedExcess": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "residual": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "arrivalsObserved": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "arrivalsExpected": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "staffMinutesObserved": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "staffMinutesExpected": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "backlogObserved": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "backlogExpected": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "serviceRatePerStaffMinute": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 100000
+            }
+          },
+          "required": [
+            "arrivalsObserved",
+            "arrivalsExpected",
+            "staffMinutesObserved",
+            "staffMinutesExpected",
+            "backlogObserved",
+            "backlogExpected",
+            "serviceRatePerStaffMinute"
+          ]
+        }
+      },
+      "required": [
+        "lookbackStartMinute",
+        "contributions",
+        "explained",
+        "observedExcess",
+        "residual",
+        "inputs"
+      ]
+    },
+    "AnomalyEpisode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onsetMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "triggerMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "peakMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "peakObserved": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "peakMedian": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "peakUpper": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "minPValue": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "exceedingSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10081
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnomalyExplanation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "onsetMinute",
+        "triggerMinute",
+        "endMinute",
+        "peakMinute",
+        "peakObserved",
+        "peakMedian",
+        "peakUpper",
+        "minPValue",
+        "exceedingSamples",
+        "explanation"
+      ]
+    },
+    "AnomalyCheckpointResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "serviceRatePerStaffMinute": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "observed": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "median": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "lower": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "upper": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "pValue": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "exceeds": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "episodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyEpisode"
+          },
+          "maxItems": 10081
+        }
+      },
+      "required": [
+        "checkpointId",
+        "serviceRatePerStaffMinute",
+        "observed",
+        "median",
+        "lower",
+        "upper",
+        "pValue",
+        "exceeds",
+        "episodes"
+      ]
+    },
+    "AnomalyNullCalibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicationCount": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 25
+        },
+        "replicationsWithAlerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "alerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "alertsPerReplicationHour": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "method": {
+          "const": "leave_one_out"
+        }
+      },
+      "required": [
+        "replicationCount",
+        "replicationsWithAlerts",
+        "alerts",
+        "alertsPerReplicationHour",
+        "method"
+      ]
+    },
+    "AnomalyDetectionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "runId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "kind": {
+          "const": "anomaly_screening"
+        },
+        "dataScope": {
+          "const": "aggregate_synthetic"
+        },
+        "detectorVersion": {
+          "const": "us039-envelope-window-1.0"
+        },
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        },
+        "intervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "minutes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
+          },
+          "minItems": 2,
+          "maxItems": 10081
+        },
+        "replicationRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyReplicationRun"
+          },
+          "minItems": 5,
+          "maxItems": 25
+        },
+        "replicationCount": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 25
+        },
+        "minimumPValue": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "windowSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "replications_share_the_captured_plan",
+              "empirical_quantiles_nearest_rank",
+              "upper_tail_only",
+              "minutes_are_not_independent_window_rule",
+              "fluid_model_explains_factors",
+              "aggregate_counts_only"
+            ]
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "uniqueItems": true
+        },
+        "nullCalibration": {
+          "$ref": "#/$defs/AnomalyNullCalibration"
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyCheckpointResult"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "contractVersion",
+        "runId",
+        "kind",
+        "dataScope",
+        "detectorVersion",
+        "settings",
+        "intervalMinutes",
+        "minutes",
+        "replicationRuns",
+        "replicationCount",
+        "minimumPValue",
+        "windowSamples",
+        "assumptions",
+        "nullCalibration",
+        "checkpoints"
+      ]
+    },
+    "AnomalyCaseLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "normal",
+            "staff_reduction",
+            "checkpoint_unavailable",
+            "passenger_surge"
+          ]
+        },
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "onsetMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "effectEndMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "impactPassengers": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "impactBucket": {
+          "enum": [
+            "under_5",
+            "5_to_20",
+            "over_20"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "AnomalyCaseEpisode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "not": {
+            "const": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        "onsetMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "endMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "peakMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "minPValue": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "checkpointId",
+        "onsetMinute",
+        "endMinute",
+        "peakMinute",
+        "minPValue"
+      ]
+    },
+    "AnomalyEvaluationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "caseKey": {
+          "type": "string",
+          "pattern": "^test-[0-9]{2}-[0-9]{2}$"
+        },
+        "scenario": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "label": {
+          "$ref": "#/$defs/AnomalyCaseLabel"
+        },
+        "outcome": {
+          "enum": [
+            "true_positive",
+            "false_negative",
+            "false_positive",
+            "true_negative"
+          ]
+        },
+        "delayMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preOnsetAlerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "episodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyCaseEpisode"
+          },
+          "maxItems": 100000
+        }
+      },
+      "required": [
+        "caseKey",
+        "scenario",
+        "label",
+        "outcome",
+        "delayMinutes",
+        "preOnsetAlerts",
+        "episodes"
+      ]
+    },
+    "AnomalySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "confusion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "true_positive": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "false_negative": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "false_positive": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "true_negative": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            }
+          },
+          "required": [
+            "true_positive",
+            "false_negative",
+            "false_positive",
+            "true_negative"
+          ]
+        },
+        "recall": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "falsePositiveRate": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "precision": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "medianDelayMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preOnsetAlerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "confusion",
+        "recall",
+        "falsePositiveRate",
+        "precision",
+        "medianDelayMinutes",
+        "preOnsetAlerts"
+      ]
+    },
+    "AnomalySweepPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        },
+        "recall": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "falsePositiveRate": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "precision": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "settings",
+        "recall",
+        "falsePositiveRate",
+        "precision"
+      ]
+    },
+    "AnomalyEvaluationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        }
+      },
+      "required": [
+        "settings"
+      ]
+    },
+    "AnomalyEvaluationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "ready",
+            "warming",
+            "unavailable"
+          ]
+        },
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "dataScope": {
+          "const": "aggregate_synthetic"
+        },
+        "testSetVersion": {
+          "const": "us039-synthetic-1.0"
+        },
+        "testSetHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        },
+        "windowSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "replicationsPerScenario": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 25
+        },
+        "scenarios": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "confusion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "true_positive": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "false_negative": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "false_positive": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "true_negative": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            }
+          },
+          "required": [
+            "true_positive",
+            "false_negative",
+            "false_positive",
+            "true_negative"
+          ]
+        },
+        "recall": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "falsePositiveRate": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "precision": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "medianDelayMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preOnsetAlerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "byKind": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "staff_reduction": {
+              "$ref": "#/$defs/AnomalySummary"
+            },
+            "checkpoint_unavailable": {
+              "$ref": "#/$defs/AnomalySummary"
+            },
+            "passenger_surge": {
+              "$ref": "#/$defs/AnomalySummary"
+            }
+          },
+          "required": []
+        },
+        "byImpact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "under_5": {
+              "$ref": "#/$defs/AnomalySummary"
+            },
+            "5_to_20": {
+              "$ref": "#/$defs/AnomalySummary"
+            },
+            "over_20": {
+              "$ref": "#/$defs/AnomalySummary"
+            }
+          },
+          "required": []
+        },
+        "nullCheck": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "leaveOneOutAlarmRate": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "heldOutFalsePositiveRate": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "leaveOneOutAlarmRate",
+            "heldOutFalsePositiveRate"
+          ]
+        },
+        "sweep": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalySweepPoint"
+          },
+          "maxItems": 1000
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AnomalyEvaluationCase"
+          },
+          "maxItems": 100000
+        }
+      },
+      "required": [
+        "status",
+        "contractVersion",
+        "dataScope"
+      ]
+    },
+    "AnomalyCaseRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "settings": {
+          "$ref": "#/$defs/AnomalySettings"
+        },
+        "caseKey": {
+          "type": "string",
+          "pattern": "^test-[0-9]{2}-[0-9]{2}$"
+        }
+      },
+      "required": [
+        "settings",
+        "caseKey"
+      ]
+    },
+    "AnomalyCaseResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "ready",
+            "warming",
+            "unavailable"
+          ]
+        },
+        "contractVersion": {
+          "const": "1.0"
+        },
+        "dataScope": {
+          "const": "aggregate_synthetic"
+        },
+        "caseKey": {
+          "type": "string",
+          "pattern": "^test-[0-9]{2}-[0-9]{2}$"
+        },
+        "label": {
+          "$ref": "#/$defs/AnomalyCaseLabel"
+        },
+        "outcome": {
+          "enum": [
+            "true_positive",
+            "false_negative",
+            "false_positive",
+            "true_negative"
+          ]
+        },
+        "delayMinutes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preOnsetAlerts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "detection": {
+          "$ref": "#/$defs/AnomalyDetectionResult"
+        }
+      },
+      "required": [
+        "status",
+        "contractVersion",
+        "dataScope"
+      ]
+    }
+  }
+}

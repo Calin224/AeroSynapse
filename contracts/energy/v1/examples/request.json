@@ -1,0 +1,41 @@
+{
+  "contractVersion": "1.0",
+  "synthetic": true,
+  "seed": 54,
+  "durationMinutes": 60,
+  "passengerCount": 200,
+  "arrivalRatePerMinute": 8.0,
+  "checkpointPowerKw": 1.5,
+  "tariffRonPerKwh": 1.2,
+  "energyBudgetKwh": 6.0,
+  "sensitivityPercent": 20.0,
+  "checkpoints": [
+    {
+      "id": "00000000-0000-0000-0000-000000000054",
+      "label": "Synthetic checkpoint A",
+      "minUnits": 0,
+      "maxUnits": 4,
+      "baselineUnits": 1,
+      "candidateUnits": 2,
+      "serviceRatePerMinute": 2.0
+    }
+  ],
+  "loads": [
+    {
+      "id": "lights",
+      "kind": "lighting",
+      "units": 10,
+      "powerKw": 0.05,
+      "baselineActiveMinutes": 60.0,
+      "candidateActiveMinutes": 30.0
+    },
+    {
+      "id": "resource",
+      "kind": "resource",
+      "units": 1,
+      "powerKw": 0.4,
+      "baselineActiveMinutes": 30.0,
+      "candidateActiveMinutes": 15.0
+    }
+  ]
+}
