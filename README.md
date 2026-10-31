@@ -31,7 +31,12 @@ npm test -- --watch=false
 npm run build
 ```
 
+Vizualizarea 3D încarcă modelele GLB ale aeroportului, cu moduri Interior / Exterior,
+filtre de resurse și selecție de zone. Exteriorul folosește două niveluri de detaliu,
+încărcate la cerere. Verifică modelele cu `npm run verify:assets` din directorul clientului.
+
 Detalii despre organizare, fixture-uri și gestionarea resurselor 3D: [AeroSynapse.Client/README.md](AeroSynapse.Client/README.md).
+Dimensiuni, identificatori și proveniență: [modelele aeroportului](docs/airport-3d-assets.md).
 
 ## Pornire backend
 

@@ -1,21 +1,84 @@
 {
-  "airport": "Craiova International", "code": "CRA / LRCV",
+  "airport": "Modelul aeroportului furnizat",
+  "code": "AEROSYNAPSE / DEMO",
   "metrics": [
-    { "label": "Aeronave în model", "value": "04", "detail": "Poziții demonstrative", "icon": "pi-send" },
-    { "label": "Porți disponibile", "value": "06", "detail": "Configurație ilustrativă", "icon": "pi-building" },
-    { "label": "Piste în model", "value": "01", "detail": "Orientare 09 / 27", "icon": "pi-arrows-h" },
-    { "label": "Sursă de date", "value": "Demo", "detail": "Snapshot local · fără telemetrie", "icon": "pi-database" }
+    {
+      "label": "Aeronave în model",
+      "value": "04",
+      "detail": "Poziții demonstrative",
+      "icon": "pi-send"
+    },
+    {
+      "label": "Porți disponibile",
+      "value": "05",
+      "detail": "G-1…G-5 · identificatori stabili",
+      "icon": "pi-building"
+    },
+    {
+      "label": "Controale securitate",
+      "value": "03",
+      "detail": "CP-1…CP-3 · synthetic",
+      "icon": "pi-arrows-h"
+    },
+    {
+      "label": "Sursă de date",
+      "value": "Demo",
+      "detail": "Snapshot local · fără telemetrie",
+      "icon": "pi-database"
+    }
   ],
   "flights": [
-    { "id": "AS 201", "destination": "București", "gate": "Poarta A1", "status": "La poartă" },
-    { "id": "AS 305", "destination": "Londra", "gate": "Poarta A2", "status": "Îmbarcare" },
-    { "id": "AS 412", "destination": "Roma", "gate": "Poarta A3", "status": "La poartă" },
-    { "id": "AS 508", "destination": "Milano", "gate": "Taxiway", "status": "Rulare" }
+    {
+      "id": "AS 201",
+      "destination": "București",
+      "gate": "G-1",
+      "status": "La poartă"
+    },
+    {
+      "id": "AS 305",
+      "destination": "Londra",
+      "gate": "G-2",
+      "status": "Îmbarcare"
+    },
+    {
+      "id": "AS 412",
+      "destination": "Roma",
+      "gate": "G-3",
+      "status": "La poartă"
+    },
+    {
+      "id": "AS 508",
+      "destination": "Milano",
+      "gate": "Platformă demo",
+      "status": "Rulare"
+    }
   ],
-  "scene": { "aircraft": [
-    { "id": "AS 201", "x": -12, "z": 8, "heading": 0 },
-    { "id": "AS 305", "x": 0, "z": 8, "heading": 0 },
-    { "id": "AS 412", "x": 12, "z": 8, "heading": 0 },
-    { "id": "AS 508", "x": 24, "z": -7, "heading": 90 }
-  ] }
+  "scene": {
+    "aircraft": [
+      {
+        "id": "AS 201",
+        "x": -52.72474670410156,
+        "z": 12.626266479492188,
+        "heading": 0
+      },
+      {
+        "id": "AS 412",
+        "x": -119.41236877441406,
+        "z": -108.45732879638672,
+        "heading": 0
+      },
+      {
+        "id": "AS 305",
+        "x": -47.09125518798828,
+        "z": -91.2107162475586,
+        "heading": 0
+      },
+      {
+        "id": "AS 508",
+        "x": -65.65470123291016,
+        "z": 95.22508239746094,
+        "heading": 0
+      }
+    ]
+  }
 }

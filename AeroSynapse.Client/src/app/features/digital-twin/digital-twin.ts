@@ -13,7 +13,14 @@ import {
 import { ButtonModule } from 'primeng/button';
 import { DataState } from '../../shared/ui/data-state';
 import { ThreeTwinRenderer } from './three-twin-renderer';
-import { TwinRenderer, TwinScene } from './twin-model';
+import {
+  TwinDisplayMode,
+  TwinRenderer,
+  TwinResource,
+  TwinResources,
+  TwinScene,
+  TwinSelection,
+} from './twin-model';
 
 export const TWIN_RENDERER_FACTORY = new InjectionToken<
   (host: HTMLElement, onError: () => void) => TwinRenderer
@@ -21,14 +28,13 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
   providedIn: 'root',
   factory: () => (host, onError) => new ThreeTwinRenderer(host, onError),
 });
-
 @Component({
   selector: 'app-digital-twin',
   imports: [ButtonModule, DataState],
-  template: ` <div class="viewport" [attr.aria-busy]="status() === 'loading'">
+  template: ` <div class="viewport" [attr.aria-busy]="status() === 'loading' || assetLoading()">
     <div #host class="canvas-host" [class.hidden]="status() === 'error'"></div>
     @if (status() === 'loading') {
-      <div class="overlay"><app-data-state status="loading" label="scena 3D" /></div>
+      <div class="overlay"><app-data-state status="loading" label="terminalul 3D" /></div>
     }
     @if (status() === 'error') {
       <div class="overlay">
@@ -40,7 +46,7 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
       </div>
     }
     @if (status() === 'ready') {
-      <div class="scene-label"><span class="status-dot"></span> CRA / AIRPORT MODEL</div>
+      <div class="scene-label">AEROPORTUL TĂU · DEMO SYNTHETIC</div>
       <div class="camera-action">
         <p-button
           label="Resetează camera"
@@ -50,9 +56,85 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
           (onClick)="resetCamera()"
         />
       </div>
+      <div class="scene-tools">
+        <div class="mode-controls" aria-label="Mod de afișare">
+          <button
+            type="button"
+            [attr.aria-pressed]="mode() === 'interior'"
+            (click)="setMode('interior')"
+          >
+            Interior
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="mode() === 'exterior'"
+            (click)="setMode('exterior')"
+          >
+            Exterior
+          </button>
+          @if (mode() === 'exterior') {
+            <label
+              ><input
+                type="checkbox"
+                [checked]="resources().aircraft"
+                (change)="toggleResource('aircraft', $event)"
+              />
+              Aeronave</label
+            >
+            <label
+              ><input
+                type="checkbox"
+                [checked]="resources().baggage"
+                (change)="toggleResource('baggage', $event)"
+              />
+              Bagaje</label
+            >
+            <label
+              ><input
+                type="checkbox"
+                [checked]="resources().vehicles"
+                (change)="toggleResource('vehicles', $event)"
+              />
+              Vehicule</label
+            >
+            <label
+              ><input
+                type="checkbox"
+                [checked]="resources().runway"
+                (change)="toggleResource('runway', $event)"
+              />
+              Pistă</label
+            >
+          }
+        </div>
+        <div class="zone-control">
+          <label for="{{ zoneSelectId }}">Selectează zonă</label>
+          <select
+            [id]="zoneSelectId"
+            [value]="selection()?.entityId ?? ''"
+            (change)="selectZone($event)"
+          >
+            <option value="">Click pe model sau alege o zonă</option>
+            @for (zone of zones(); track zone.entityId) {
+              <option [value]="zone.entityId">{{ zone.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (selection(); as selected) {
+        <div class="selection" aria-live="polite">
+          <strong>{{ selected.label }}</strong> <span>synthetic · {{ selected.zoneType }}</span
+          ><code>zoneId: {{ selected.zoneId }}</code> <code>entityId: {{ selected.entityId }}</code>
+        </div>
+      }
+      @if (assetLoading()) {
+        <div class="asset-status" role="status">Se încarcă resursele exterioare…</div>
+      }
+      @if (assetError()) {
+        <div class="asset-status" role="status">{{ assetError() }}</div>
+      }
       <div class="legend">
-        <span><b class="airport-key"></b> Infrastructură</span
-        ><span><b class="aircraft-key"></b> Aeronave</span>
+        3 controale · 5 porți · Geometrie și mișcări demonstrative. Nu reproduce Craiova.
       </div>
     }
   </div>`,
@@ -62,7 +144,7 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
     }
     .viewport {
       position: relative;
-      height: 440px;
+      height: 540px;
       background: #0e1b27;
     }
     .canvas-host {
@@ -84,7 +166,7 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
       position: absolute;
       top: 20px;
       left: 20px;
-      font-size: 9px;
+      font-size: 10px;
       letter-spacing: 1.4px;
       color: #a8c4ce;
       pointer-events: none;
@@ -94,67 +176,202 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
       top: 16px;
       right: 16px;
     }
+    .scene-tools {
+      position: absolute;
+      top: 64px;
+      left: 16px;
+      right: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .mode-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button,
+    select {
+      background: #132c3d;
+      color: #dceef2;
+      border: 1px solid #456371;
+      border-radius: 5px;
+      padding: 7px 10px;
+      font: inherit;
+      font-size: 12px;
+    }
+    button[aria-pressed='true'] {
+      background: #125951;
+      border-color: #5ee2d3;
+    }
+    button:focus-visible,
+    select:focus-visible,
+    input:focus-visible {
+      outline: 2px solid #5ee2d3;
+      outline-offset: 2px;
+    }
+    .mode-controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #dceef2;
+      background: #132c3dcc;
+      padding: 5px;
+      font-size: 12px;
+    }
+    .zone-control {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 11px;
+      color: #a8c4ce;
+    }
+    .zone-control select {
+      max-width: 250px;
+    }
+    .selection {
+      position: absolute;
+      bottom: 52px;
+      left: 16px;
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      background: #102635ed;
+      border: 1px solid #456371;
+      color: #dceef2;
+      font-size: 11px;
+      max-width: calc(100% - 32px);
+    }
+    code {
+      overflow-wrap: anywhere;
+      font-size: 10px;
+    }
     .legend {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
-      display: flex;
-      gap: 18px;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
       font-size: 10px;
       color: #a8c4ce;
       pointer-events: none;
     }
-    b {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      margin-right: 6px;
-      border-radius: 2px;
-    }
-    .airport-key {
-      background: #658696;
-    }
-    .aircraft-key {
-      background: #e8f2f4;
+    .asset-status {
+      position: absolute;
+      bottom: 32px;
+      right: 16px;
+      padding: 7px;
+      background: #102635ed;
+      color: #e8c47c;
+      font-size: 11px;
+      max-width: 75%;
     }
     @media (max-width: 650px) {
       .viewport {
-        height: 340px;
+        height: 520px;
       }
       .scene-label {
-        top: 68px;
+        top: 62px;
+      }
+      .scene-tools {
+        top: 88px;
+      }
+      .zone-control {
+        flex-wrap: wrap;
+      }
+      .selection {
+        bottom: 64px;
       }
     }
   `,
 })
 export class DigitalTwin {
+  private static instance = 0;
+  protected readonly zoneSelectId = `twin-zone-${++DigitalTwin.instance}`;
   readonly scene = input.required<TwinScene>();
   protected readonly status = signal<'loading' | 'ready' | 'error'>('loading');
+  protected readonly mode = signal<TwinDisplayMode>('interior');
+  protected readonly resources = signal<TwinResources>({
+    aircraft: true,
+    baggage: true,
+    vehicles: true,
+    runway: false,
+  });
+  protected readonly selection = signal<TwinSelection | null>(null);
+  protected readonly zones = signal<TwinSelection[]>([]);
+  protected readonly assetLoading = signal(false);
+  protected readonly assetError = signal('');
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private readonly createRenderer = inject(TWIN_RENDERER_FACTORY);
   private renderer?: TwinRenderer;
+  private modeVersion = 0;
 
   constructor() {
-    afterNextRender(() => this.initialize());
+    afterNextRender(() => void this.initialize());
     effect(() => {
       const scene = this.scene();
       this.renderer?.setScene(scene);
     });
     inject(DestroyRef).onDestroy(() => this.releaseRenderer());
   }
-
-  protected initialize(): void {
+  protected async initialize(): Promise<void> {
     this.releaseRenderer();
     this.status.set('loading');
+    this.mode.set('interior');
+    this.assetError.set('');
+    this.assetLoading.set(false);
+    this.selection.set(null);
+    let renderer: TwinRenderer | undefined;
     try {
-      this.renderer = this.createRenderer(this.host().nativeElement, () => this.fail());
-      this.renderer.setScene(this.scene());
-      if (this.renderer) this.status.set('ready');
+      renderer = this.createRenderer(this.host().nativeElement, () => this.fail());
+      this.renderer = renderer;
+      renderer.setSelectionHandler?.((value) => this.selection.set(value));
+      renderer.setAssetStatusHandler?.((value) => {
+        if (this.renderer !== renderer) return;
+        this.assetLoading.set(value.loading);
+        this.assetError.set(value.error ?? '');
+        this.refreshZones();
+      });
+      renderer.setResources?.(this.resources());
+      renderer.setScene(this.scene());
+      if (renderer.ready) await renderer.ready;
+      if (this.renderer === renderer) {
+        this.refreshZones();
+        this.status.set('ready');
+      }
     } catch {
-      this.fail();
+      if (!renderer || this.renderer === renderer) this.fail();
     }
   }
-
+  protected async setMode(mode: TwinDisplayMode): Promise<void> {
+    const version = ++this.modeVersion;
+    this.mode.set(mode);
+    this.assetError.set('');
+    try {
+      await this.renderer?.setDisplayMode?.(mode);
+    } catch {
+      if (version === this.modeVersion) {
+        this.mode.set('interior');
+        this.assetError.set(
+          'Contextul exterior nu s-a încărcat. Poți reîncerca; terminalul rămâne disponibil.',
+        );
+      }
+    }
+    if (version === this.modeVersion) this.refreshZones();
+  }
+  protected toggleResource(resource: TwinResource, event: Event): void {
+    this.resources.update((value) => ({
+      ...value,
+      [resource]: (event.target as HTMLInputElement).checked,
+    }));
+    this.renderer?.setResources?.(this.resources());
+    this.refreshZones();
+  }
+  protected selectZone(event: Event): void {
+    this.renderer?.selectEntity?.((event.target as HTMLSelectElement).value);
+  }
+  private refreshZones(): void {
+    this.zones.set(this.renderer?.getSelectableZones?.() ?? []);
+  }
   protected resetCamera(): void {
     this.renderer?.resetCamera();
   }
@@ -165,6 +382,7 @@ export class DigitalTwin {
   private releaseRenderer(): void {
     const renderer = this.renderer;
     this.renderer = undefined;
+    ++this.modeVersion;
     renderer?.dispose();
   }
 }

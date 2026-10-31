@@ -1,0 +1,2563 @@
+{
+  "version": 2,
+  "model": "user-supplied-airport",
+  "sceneId": "60000000-0000-0000-0000-000000000001",
+  "terminalId": "60000000-0000-0000-0000-000000000002",
+  "synthetic": true,
+  "status": "synthetic",
+  "disclaimer": "DEMO SYNTHETIC — modelul aeroportului furnizat de utilizator; nu reproduce exact Craiova. Pozițiile și mișcările de simulare sunt demonstrative.",
+  "license": "User supplied source; original license not identified. No CC0 reassignment.",
+  "units": "meters",
+  "blenderUp": "Z",
+  "gltfUp": "Y",
+  "transform": "Three.js (x,y,z) = Blender (x,z,-y); original world coordinates and scale retained",
+  "terminalDimensionsMeters": {
+    "width": 112.20938873291016,
+    "depth": 210.02178955078125,
+    "roofHeight": 33.10105965286493
+  },
+  "terminalBoundsBlenderMeters": [
+    [
+      -87.6846694946289,
+      -67.43992614746094,
+      0.012042306363582611
+    ],
+    [
+      24.52471923828125,
+      142.5818634033203,
+      33.113101959228516
+    ]
+  ],
+  "source": {
+    "file": "airport-transparent-roof-no-lounge.blend",
+    "sha256": "f502cb5d0bbd7005da808cdf073e910a8c9e1526c93c6a63e40235d0704f0bf5",
+    "sourceLicense": "unverified",
+    "geometry": "Existing supplied airport, not a procedural replacement"
+  },
+  "preservedGeometry": [
+    {
+      "source": "07.Modulo1_AIRPORT_0",
+      "faces": 6862,
+      "bboxBlenderMeters": [
+        [
+          -17.67623519897461,
+          2.565502166748047,
+          0.012045428156852722
+        ],
+        [
+          24.52471923828125,
+          72.5686264038086,
+          32.43054962158203
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2_AIRPORT_0",
+      "faces": 4590,
+      "bboxBlenderMeters": [
+        [
+          -16.054428100585938,
+          -67.43992614746094,
+          0.012042306363582611
+        ],
+        [
+          16.450502395629883,
+          2.5665361881256104,
+          26.2143611907959
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2.001_AIRPORT_0",
+      "faces": 4590,
+      "bboxBlenderMeters": [
+        [
+          -16.041221618652344,
+          72.57537841796875,
+          0.012048200704157352
+        ],
+        [
+          16.463743209838867,
+          142.5818634033203,
+          26.2143611907959
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2.002_AIRPORT_0",
+      "faces": 4590,
+      "bboxBlenderMeters": [
+        [
+          -87.6846694946289,
+          21.32469367980957,
+          0.01205290388315916
+        ],
+        [
+          -17.67822265625,
+          53.829627990722656,
+          26.214351654052734
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo1 · Transparent Roof",
+      "faces": 11832,
+      "bboxBlenderMeters": [
+        [
+          -17.633426666259766,
+          2.2554023265838623,
+          14.833550453186035
+        ],
+        [
+          24.33578109741211,
+          72.87873077392578,
+          32.0921516418457
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2 · Transparent Roof",
+      "faces": 1550,
+      "bboxBlenderMeters": [
+        [
+          -17.595245361328125,
+          -67.39361572265625,
+          13.02070426940918
+        ],
+        [
+          17.99131965637207,
+          2.5665345191955566,
+          33.113101959228516
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2.001 · Transparent Roof",
+      "faces": 1550,
+      "bboxBlenderMeters": [
+        [
+          -17.58203887939453,
+          72.57538604736328,
+          13.020713806152344
+        ],
+        [
+          18.004560470581055,
+          142.5355682373047,
+          33.113101959228516
+        ]
+      ]
+    },
+    {
+      "source": "07.Modulo2.002 · Transparent Roof",
+      "faces": 1550,
+      "bboxBlenderMeters": [
+        [
+          -87.63836669921875,
+          19.783876419067383,
+          13.02071475982666
+        ],
+        [
+          -17.678226470947266,
+          55.370445251464844,
+          33.11309051513672
+        ]
+      ]
+    },
+    {
+      "source": "LandingTrack1Straight_AIRPORT_0",
+      "faces": 342,
+      "bboxBlenderMeters": [
+        [
+          -171.03175354003906,
+          -377.0860900878906,
+          -0.00020395108731463552
+        ],
+        [
+          -89.13174438476562,
+          430.7841796875,
+          0.7000411748886108
+        ]
+      ]
+    },
+    {
+      "source": "02.ControlTower_AIRPORT_0",
+      "faces": 1650,
+      "bboxBlenderMeters": [
+        [
+          -12.225446701049805,
+          147.9657745361328,
+          -3.703655011122464e-06
+        ],
+        [
+          12.225446701049805,
+          172.4167022705078,
+          100.58511352539062
+        ]
+      ]
+    },
+    {
+      "source": "04.Hangar_AIRPORT_0",
+      "faces": 5256,
+      "bboxBlenderMeters": [
+        [
+          -43.96030044555664,
+          -138.30364990234375,
+          0.9516789317131042
+        ],
+        [
+          24.235902786254883,
+          -87.8006820678711,
+          25.61012077331543
+        ]
+      ]
+    },
+    {
+      "source": "06.Tunnel_AIRPORT_0",
+      "faces": 6860,
+      "bboxBlenderMeters": [
+        [
+          -41.003150939941406,
+          -5.707474708557129,
+          -0.0033246183302253485
+        ],
+        [
+          -35.53875732421875,
+          24.504528045654297,
+          10.721260070800781
+        ]
+      ]
+    }
+  ],
+  "removedObjects": [
+    "Cube",
+    "13.Cafe.001_AIRPORT_0",
+    "15.Advertising_AIRPORT_0",
+    "15.Advertising.001_AIRPORT_0",
+    "15.Advertising.002_AIRPORT_0",
+    "15.Advertising.003_AIRPORT_0",
+    "15.Advertising.004_AIRPORT_0",
+    "15.Advertising.005_AIRPORT_0",
+    "15.Advertising.006_AIRPORT_0",
+    "15.Advertising.007_AIRPORT_0",
+    "15.Advertising.008_AIRPORT_0",
+    "17.10.Model_AIRPORT_0",
+    "17.10.Model.001_AIRPORT_0",
+    "17.10.Model.002_AIRPORT_0",
+    "17.10.Model.003_AIRPORT_0",
+    "17.10.Model.004_AIRPORT_0",
+    "17.10.Model.005_AIRPORT_0",
+    "17.10.Model.006_AIRPORT_0",
+    "17.10.Model.007_AIRPORT_0",
+    "17.10.Model.008_AIRPORT_0",
+    "17.10.Model.009_AIRPORT_0",
+    "17.10.Model.009_AIRPORT_0.001",
+    "17.10.Model.010_AIRPORT_0",
+    "17.10.Model.010_AIRPORT_0.001",
+    "17.10.Model.011_AIRPORT_0",
+    "17.10.Model.012_AIRPORT_0",
+    "17.10.Model.013_AIRPORT_0"
+  ],
+  "optimization": [
+    {
+      "source": "09.SecurityCheck_AIRPORT_0",
+      "before": 7154,
+      "after": 1599
+    },
+    {
+      "source": "09.SecurityCheck_AIRPORT_0",
+      "before": 7138,
+      "after": 1600
+    },
+    {
+      "source": "09.SecurityCheck_AIRPORT_0",
+      "before": 7138,
+      "after": 1599
+    },
+    {
+      "source": "11.BoardingAreaDesk.001_AIRPORT_0",
+      "before": 3050,
+      "after": 1700
+    },
+    {
+      "source": "11.BoardingAreaDesk.002_AIRPORT_0",
+      "before": 3050,
+      "after": 1700
+    },
+    {
+      "source": "11.BoardingAreaDesk.003_AIRPORT_0",
+      "before": 3050,
+      "after": 1700
+    },
+    {
+      "source": "11.BoardingAreaDesk.004_AIRPORT_0",
+      "before": 3050,
+      "after": 1700
+    },
+    {
+      "source": "11.BoardingAreaDesk_AIRPORT_0",
+      "before": 3050,
+      "after": 1700
+    },
+    {
+      "source": "08.CheckInDesk_AIRPORT_0",
+      "before": 20335,
+      "after": 4999
+    },
+    {
+      "source": "03.AirplaneStairs_AIRPORT_0",
+      "before": 3520,
+      "after": 1300
+    },
+    {
+      "source": "03.AirplaneStairs.001_AIRPORT_0",
+      "before": 3520,
+      "after": 1299
+    },
+    {
+      "source": "10.Chairs_AIRPORT_0",
+      "before": 95051,
+      "after": 1245
+    },
+    {
+      "source": "10.Chairs_AIRPORT_0.001",
+      "before": 121053,
+      "after": 957
+    },
+    {
+      "source": "10.Chairs_AIRPORT_0.002",
+      "before": 117926,
+      "after": 962
+    },
+    {
+      "source": "10.Chairs_AIRPORT_0.003",
+      "before": 82722,
+      "after": 700
+    },
+    {
+      "source": "10.Chairs.001_AIRPORT_0",
+      "before": 95051,
+      "after": 1146
+    },
+    {
+      "source": "10.Chairs.001_AIRPORT_0.001",
+      "before": 121053,
+      "after": 961
+    },
+    {
+      "source": "10.Chairs.001_AIRPORT_0.002",
+      "before": 117926,
+      "after": 970
+    },
+    {
+      "source": "10.Chairs.001_AIRPORT_0.003",
+      "before": 82722,
+      "after": 700
+    },
+    {
+      "source": "10.Chairs.002_AIRPORT_0",
+      "before": 114319,
+      "after": 784
+    },
+    {
+      "source": "10.Chairs.002_AIRPORT_0.001",
+      "before": 4753,
+      "after": 700
+    },
+    {
+      "source": "10.Chairs.003_AIRPORT_0",
+      "before": 114319,
+      "after": 790
+    },
+    {
+      "source": "10.Chairs.003_AIRPORT_0.001",
+      "before": 4753,
+      "after": 699
+    },
+    {
+      "source": "12.2.BaggageClaimBand_AIRPORT_0",
+      "before": 1664,
+      "after": 900
+    },
+    {
+      "source": "12.2.BaggageClaimBand.002_AIRPORT_0",
+      "before": 1664,
+      "after": 898
+    },
+    {
+      "source": "12.2.BaggageClaimBand.003_AIRPORT_0",
+      "before": 1664,
+      "after": 900
+    },
+    {
+      "source": "12.2.BaggageClaimBand.005_AIRPORT_0",
+      "before": 1664,
+      "after": 898
+    },
+    {
+      "source": "14.Trashcan_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.001_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.002_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.003_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.004_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.005_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.006_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.007_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.008_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.009_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.010_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.011_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.012_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.013_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.014_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.015_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.016_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.017_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.018_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "14.Trashcan.019_AIRPORT_0",
+      "before": 610,
+      "after": 300
+    },
+    {
+      "source": "16.DepartureSign_AIRPORT_0",
+      "before": 7764,
+      "after": 649
+    },
+    {
+      "source": "16.DepartureSign.001_AIRPORT_0",
+      "before": 7764,
+      "after": 650
+    },
+    {
+      "source": "17.1.Model_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.001_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.002_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.003_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.004_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.005_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.006_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.007_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.008_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.009_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.1.Model.010_AIRPORT_0",
+      "before": 1248,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.001_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.002_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.003_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.004_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.005_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.006_AIRPORT_0",
+      "before": 1518,
+      "after": 299
+    },
+    {
+      "source": "17.2.Model.007_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.008_AIRPORT_0",
+      "before": 1518,
+      "after": 299
+    },
+    {
+      "source": "17.2.Model.009_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.010_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.011_AIRPORT_0",
+      "before": 1518,
+      "after": 299
+    },
+    {
+      "source": "17.2.Model.012_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.013_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.014_AIRPORT_0",
+      "before": 1518,
+      "after": 299
+    },
+    {
+      "source": "17.2.Model.015_AIRPORT_0",
+      "before": 1518,
+      "after": 299
+    },
+    {
+      "source": "17.2.Model.016_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.017_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.2.Model.018_AIRPORT_0",
+      "before": 1518,
+      "after": 300
+    },
+    {
+      "source": "17.3.Model_AIRPORT_0",
+      "before": 96152,
+      "after": 1030
+    },
+    {
+      "source": "17.3.Model.001_AIRPORT_0",
+      "before": 75548,
+      "after": 776
+    },
+    {
+      "source": "17.3.Model.002_AIRPORT_0",
+      "before": 6868,
+      "after": 300
+    },
+    {
+      "source": "17.3.Model.003_AIRPORT_0",
+      "before": 6868,
+      "after": 299
+    },
+    {
+      "source": "17.3.Model.004_AIRPORT_0",
+      "before": 6868,
+      "after": 300
+    },
+    {
+      "source": "17.3.Model.005_AIRPORT_0",
+      "before": 6868,
+      "after": 299
+    },
+    {
+      "source": "17.3.Model.006_AIRPORT_0",
+      "before": 6868,
+      "after": 299
+    },
+    {
+      "source": "17.3.Model.007_AIRPORT_0",
+      "before": 6868,
+      "after": 299
+    },
+    {
+      "source": "17.3.Model.008_AIRPORT_0",
+      "before": 6868,
+      "after": 300
+    },
+    {
+      "source": "17.3.Model.009_AIRPORT_0",
+      "before": 6868,
+      "after": 300
+    },
+    {
+      "source": "17.3.Model.010_AIRPORT_0",
+      "before": 48076,
+      "after": 498
+    },
+    {
+      "source": "17.3.Model.011_AIRPORT_0",
+      "before": 6868,
+      "after": 299
+    },
+    {
+      "source": "17.4.Model_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.4.Model.001_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.4.Model.002_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.4.Model.003_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.4.Model.004_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.4.Model.005_AIRPORT_0",
+      "before": 772,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model_AIRPORT_0",
+      "before": 8214,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model.001_AIRPORT_0",
+      "before": 8214,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model.002_AIRPORT_0",
+      "before": 2738,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model.003_AIRPORT_0",
+      "before": 2738,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model.004_AIRPORT_0",
+      "before": 2738,
+      "after": 300
+    },
+    {
+      "source": "17.5.Model.005_AIRPORT_0",
+      "before": 2738,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.001_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.002_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.003_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.004_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.005_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.006_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.007_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.6.Model.008_AIRPORT_0",
+      "before": 3124,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model.001_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model.002_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model.003_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model.004_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.7.Model.005_AIRPORT_0",
+      "before": 4584,
+      "after": 300
+    },
+    {
+      "source": "17.8.Model_AIRPORT_0",
+      "before": 22432,
+      "after": 300
+    },
+    {
+      "source": "17.8.Model.001_AIRPORT_0",
+      "before": 22432,
+      "after": 300
+    },
+    {
+      "source": "17.8.Model.002_AIRPORT_0",
+      "before": 22432,
+      "after": 300
+    },
+    {
+      "source": "17.9.1.Model_AIRPORT_0",
+      "before": 4194,
+      "after": 300
+    },
+    {
+      "source": "17.9.2.Model_AIRPORT_0",
+      "before": 334,
+      "after": 300
+    },
+    {
+      "source": "17.9.1.Model.001_AIRPORT_0",
+      "before": 466,
+      "after": 300
+    },
+    {
+      "source": "17.9.1.Model.002_AIRPORT_0",
+      "before": 466,
+      "after": 300
+    },
+    {
+      "source": "17.9.1.Model.003_AIRPORT_0",
+      "before": 2330,
+      "after": 300
+    },
+    {
+      "source": "17.9.2.Model.001_AIRPORT_0",
+      "before": 334,
+      "after": 300
+    },
+    {
+      "source": "17.9.1.Model.004_AIRPORT_0",
+      "before": 932,
+      "after": 300
+    },
+    {
+      "source": "19.Firetruck_AIRPORT_0",
+      "before": 19598,
+      "after": 1299
+    },
+    {
+      "source": "20.PassengerBus_AIRPORT_0",
+      "before": 22638,
+      "after": 1299
+    },
+    {
+      "source": "20.PassengerBus.001_AIRPORT_0",
+      "before": 22638,
+      "after": 1300
+    },
+    {
+      "source": "20.PassengerBus.002_AIRPORT_0",
+      "before": 22638,
+      "after": 1299
+    },
+    {
+      "source": "21.1.BaggageTruck_AIRPORT_0",
+      "before": 11922,
+      "after": 1299
+    },
+    {
+      "source": "21.3.BaggageTruck_AIRPORT_0",
+      "before": 4844,
+      "after": 1300
+    },
+    {
+      "source": "21.2.BaggageTruck_AIRPORT_0",
+      "before": 9112,
+      "after": 1300
+    },
+    {
+      "source": "21.2.BaggageTruck.001_AIRPORT_0",
+      "before": 9112,
+      "after": 1300
+    },
+    {
+      "source": "21.3.BaggageTruck.001_AIRPORT_0",
+      "before": 4844,
+      "after": 1300
+    },
+    {
+      "source": "21.3.BaggageTruck.002_AIRPORT_0",
+      "before": 4844,
+      "after": 1300
+    },
+    {
+      "source": "21.3.BaggageTruck.003_AIRPORT_0",
+      "before": 4844,
+      "after": 1300
+    },
+    {
+      "source": "05.Container_AIRPORT_0",
+      "before": 2632,
+      "after": 1300
+    },
+    {
+      "source": "05.Container2_AIRPORT_0",
+      "before": 2632,
+      "after": 1300
+    },
+    {
+      "source": "05.Container3_AIRPORT_0",
+      "before": 2632,
+      "after": 1300
+    },
+    {
+      "source": "05.Container4_AIRPORT_0",
+      "before": 2632,
+      "after": 1300
+    },
+    {
+      "source": "05.Container5_AIRPORT_0",
+      "before": 2632,
+      "after": 1300
+    },
+    {
+      "source": "18.1.Airplane_AIRPORT_0",
+      "before": 14353,
+      "after": 10999
+    },
+    {
+      "source": "18.2.Airplane_AIRPORT_0",
+      "before": 19252,
+      "after": 11000
+    },
+    {
+      "source": "18.3.Airplane_AIRPORT_0",
+      "before": 14472,
+      "after": 11000
+    },
+    {
+      "source": "18.4.Airplane_AIRPORT_0",
+      "before": 13942,
+      "after": 11000
+    },
+    {
+      "source": "03.AirplaneStairs_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "03.AirplaneStairs.001_AIRPORT_0",
+      "before": 1299,
+      "after": 699
+    },
+    {
+      "source": "19.Firetruck_AIRPORT_0",
+      "before": 1265,
+      "after": 700
+    },
+    {
+      "source": "20.PassengerBus_AIRPORT_0",
+      "before": 1227,
+      "after": 699
+    },
+    {
+      "source": "20.PassengerBus.001_AIRPORT_0",
+      "before": 1228,
+      "after": 700
+    },
+    {
+      "source": "20.PassengerBus.002_AIRPORT_0",
+      "before": 1227,
+      "after": 699
+    },
+    {
+      "source": "21.1.BaggageTruck_AIRPORT_0",
+      "before": 1299,
+      "after": 700
+    },
+    {
+      "source": "21.3.BaggageTruck_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "21.2.BaggageTruck_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "21.2.BaggageTruck.001_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "21.3.BaggageTruck.001_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "21.3.BaggageTruck.002_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "21.3.BaggageTruck.003_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "05.Container_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "05.Container2_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "05.Container3_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "05.Container4_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "05.Container5_AIRPORT_0",
+      "before": 1300,
+      "after": 700
+    },
+    {
+      "source": "18.1.Airplane_AIRPORT_0",
+      "before": 10999,
+      "after": 1400
+    },
+    {
+      "source": "18.2.Airplane_AIRPORT_0",
+      "before": 11000,
+      "after": 1399
+    },
+    {
+      "source": "18.3.Airplane_AIRPORT_0",
+      "before": 11000,
+      "after": 1399
+    },
+    {
+      "source": "18.4.Airplane_AIRPORT_0",
+      "before": 11000,
+      "after": 1399
+    }
+  ],
+  "performance": {
+    "maxAssetBytes": 8000000,
+    "maxTotalBytes": 14000000,
+    "maxTriangles": 180000,
+    "pixelRatioCap": 1.5,
+    "lodDistanceMeters": 260,
+    "exteriorLazy": true,
+    "detailsLazy": true
+  },
+  "assets": {
+    "terminal": {
+      "url": "models/aerosynapse/terminal.glb",
+      "bytes": 1965480,
+      "triangles": 106945,
+      "drawCallsUpperBound": 164
+    },
+    "exteriorLow": {
+      "url": "models/aerosynapse/exterior-low.glb",
+      "bytes": 668988,
+      "triangles": 32293,
+      "drawCallsUpperBound": 42
+    },
+    "exteriorDetail": {
+      "url": "models/aerosynapse/exterior-detail.glb",
+      "bytes": 1226064,
+      "triangles": 81284,
+      "drawCallsUpperBound": 42
+    }
+  },
+  "entities": [
+    {
+      "entityId": "0e2f2ab5-8a41-5551-9840-3bc75b35ad06",
+      "code": "T-DEMO",
+      "label": "Terminalul aeroportului furnizat",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [
+        "07.Modulo1_AIRPORT_0",
+        "07.Modulo2_AIRPORT_0",
+        "07.Modulo2.001_AIRPORT_0",
+        "07.Modulo2.002_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        0,
+        0,
+        0
+      ],
+      "positionThreeMeters": [
+        0,
+        0,
+        0
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "549729cb-f364-5de2-ae27-a94a0113a6ae",
+      "code": "CP-1",
+      "label": "Control securitate 1 · zona existenta",
+      "zoneId": "60000000-0000-0000-0000-000000000101",
+      "zoneType": "checkpoint",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.23,
+      "sourceObjects": [
+        "09.SecurityCheck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -0.96,
+        41.9,
+        2.23
+      ],
+      "positionThreeMeters": [
+        -0.96,
+        2.23,
+        -41.9
+      ],
+      "databaseMapping": {
+        "table": "checkpoints",
+        "id": "60000000-0000-0000-0000-000000000101"
+      }
+    },
+    {
+      "entityId": "58883908-de70-5234-9733-e12cf6332626",
+      "code": "CP-2",
+      "label": "Control securitate 2 · zona existenta",
+      "zoneId": "60000000-0000-0000-0000-000000000102",
+      "zoneType": "checkpoint",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.23,
+      "sourceObjects": [
+        "09.SecurityCheck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -0.96,
+        48.7,
+        2.23
+      ],
+      "positionThreeMeters": [
+        -0.96,
+        2.23,
+        -48.7
+      ],
+      "databaseMapping": {
+        "table": "checkpoints",
+        "id": "60000000-0000-0000-0000-000000000102"
+      }
+    },
+    {
+      "entityId": "7fe17367-08de-5e07-a722-fc90fd18d647",
+      "code": "CP-3",
+      "label": "Control securitate 3 · zona existenta",
+      "zoneId": "60000000-0000-0000-0000-000000000103",
+      "zoneType": "checkpoint",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.23,
+      "sourceObjects": [
+        "09.SecurityCheck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -0.96,
+        55.6,
+        2.23
+      ],
+      "positionThreeMeters": [
+        -0.96,
+        2.23,
+        -55.6
+      ],
+      "databaseMapping": {
+        "table": "checkpoints",
+        "id": "60000000-0000-0000-0000-000000000103"
+      }
+    },
+    {
+      "entityId": "0f251307-bf1c-5fb8-9415-fd3a4d86f8ac",
+      "code": "G-1",
+      "label": "Poarta G-1 · birou existent",
+      "zoneId": "60000000-0000-0000-0000-000000000201",
+      "zoneType": "gate",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 7.478142261505127,
+      "sourceObjects": [
+        "11.BoardingAreaDesk.001_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -16.258996963500977,
+        35.507301330566406,
+        7.478142261505127
+      ],
+      "positionThreeMeters": [
+        -16.258996963500977,
+        7.478142261505127,
+        -35.507301330566406
+      ],
+      "databaseMapping": {
+        "table": "gates",
+        "id": "60000000-0000-0000-0000-000000000201"
+      }
+    },
+    {
+      "entityId": "dea3bc62-9111-5d2f-948d-d42a99267a3b",
+      "code": "G-2",
+      "label": "Poarta G-2 · birou existent",
+      "zoneId": "60000000-0000-0000-0000-000000000202",
+      "zoneType": "gate",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 7.478142261505127,
+      "sourceObjects": [
+        "11.BoardingAreaDesk.002_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -16.258996963500977,
+        39.08602523803711,
+        7.478142261505127
+      ],
+      "positionThreeMeters": [
+        -16.258996963500977,
+        7.478142261505127,
+        -39.08602523803711
+      ],
+      "databaseMapping": {
+        "table": "gates",
+        "id": "60000000-0000-0000-0000-000000000202"
+      }
+    },
+    {
+      "entityId": "b879aac1-69da-5fce-a4fb-f7193b34836e",
+      "code": "G-3",
+      "label": "Poarta G-3 · birou existent",
+      "zoneId": "60000000-0000-0000-0000-000000000203",
+      "zoneType": "gate",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 7.478142261505127,
+      "sourceObjects": [
+        "11.BoardingAreaDesk.003_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -16.258996963500977,
+        42.144039154052734,
+        7.478142261505127
+      ],
+      "positionThreeMeters": [
+        -16.258996963500977,
+        7.478142261505127,
+        -42.144039154052734
+      ],
+      "databaseMapping": {
+        "table": "gates",
+        "id": "60000000-0000-0000-0000-000000000203"
+      }
+    },
+    {
+      "entityId": "24793d3e-184b-53e2-8608-fa47e99526e3",
+      "code": "G-4",
+      "label": "Poarta G-4 · birou existent",
+      "zoneId": "60000000-0000-0000-0000-000000000204",
+      "zoneType": "gate",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 7.478141784667969,
+      "sourceObjects": [
+        "11.BoardingAreaDesk.004_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -37.35798645019531,
+        26.055160522460938,
+        7.478141784667969
+      ],
+      "positionThreeMeters": [
+        -37.35798645019531,
+        7.478141784667969,
+        -26.055160522460938
+      ],
+      "databaseMapping": {
+        "table": "gates",
+        "id": "60000000-0000-0000-0000-000000000204"
+      }
+    },
+    {
+      "entityId": "39788837-b6c1-5cdb-bdc8-749571496d94",
+      "code": "G-5",
+      "label": "Poarta G-5 · birou existent",
+      "zoneId": "60000000-0000-0000-0000-000000000205",
+      "zoneType": "gate",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 7.478142261505127,
+      "sourceObjects": [
+        "11.BoardingAreaDesk_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -16.258996963500977,
+        32.449283599853516,
+        7.478142261505127
+      ],
+      "positionThreeMeters": [
+        -16.258996963500977,
+        7.478142261505127,
+        -32.449283599853516
+      ],
+      "databaseMapping": {
+        "table": "gates",
+        "id": "60000000-0000-0000-0000-000000000205"
+      }
+    },
+    {
+      "entityId": "c5be87d0-ec69-5681-b927-d88bb702be68",
+      "code": "CHECK-IN",
+      "label": "Check-in existent",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.200115442276001,
+      "sourceObjects": [
+        "08.CheckInDesk_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -14.184795379638672,
+        51.57814025878906,
+        2.200115442276001
+      ],
+      "positionThreeMeters": [
+        -14.184795379638672,
+        2.200115442276001,
+        -51.57814025878906
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "a417a9ac-bd9f-5027-808a-1401511102fd",
+      "code": "ENTRY",
+      "label": "Intrarea terminalului existent",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        17.2,
+        37.57,
+        0.5
+      ],
+      "positionThreeMeters": [
+        17.2,
+        0.5,
+        -37.57
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "9825112e-552d-5d2c-925d-97f812a04620",
+      "code": "CORRIDOR",
+      "label": "Circulatie in terminalul existent",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        7.5,
+        37.57,
+        0.5
+      ],
+      "positionThreeMeters": [
+        7.5,
+        0.5,
+        -37.57
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "b84d55a8-86ec-5c18-9399-100358096c1d",
+      "code": "BAGGAGE-CLAIM",
+      "label": "Benzi de bagaje existente",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        0,
+        0,
+        0
+      ],
+      "positionThreeMeters": [
+        0,
+        0,
+        0
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "e4c98c12-b9e2-5713-b292-df6fcc43df45",
+      "code": "INTERIOR-FIXTURES",
+      "label": "Echipamente si mobilier aeroportuar existente",
+      "zoneId": "60000000-0000-0000-0000-000000000002",
+      "zoneType": "terminal",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "terminal",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        0,
+        0,
+        0
+      ],
+      "positionThreeMeters": [
+        0,
+        0,
+        0
+      ],
+      "databaseMapping": {
+        "table": "terminals",
+        "id": "60000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "entityId": "cc37d43f-8f88-5c05-962f-ee4f80c9b9e2",
+      "code": "RUNWAY",
+      "label": "Pista originala · context optional",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "runway",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.3499186038970947,
+      "sourceObjects": [
+        "LandingTrack1Straight_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -130.08175659179688,
+        26.849044799804688,
+        0.3499186038970947
+      ],
+      "positionThreeMeters": [
+        -130.08175659179688,
+        0.3499186038970947,
+        -26.849044799804688
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "bc180a31-921e-5bf9-8b14-ea1fb95dce14",
+      "code": "SRC-02.ControlTower",
+      "label": "Context aeroportuar existent · 02.ControlTower",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "infrastructure",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 50.29255676269531,
+      "sourceObjects": [
+        "02.ControlTower_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        0.0,
+        160.1912384033203,
+        50.29255676269531
+      ],
+      "positionThreeMeters": [
+        0.0,
+        50.29255676269531,
+        -160.1912384033203
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "aefe9cb0-11b0-54d9-914f-ac6cbf0fde6d",
+      "code": "SRC-03.AirplaneStairs",
+      "label": "Context aeroportuar existent · 03.AirplaneStairs",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.9780266284942627,
+      "sourceObjects": [
+        "03.AirplaneStairs_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -29.067222595214844,
+        -84.02423095703125,
+        3.9780266284942627
+      ],
+      "positionThreeMeters": [
+        -29.067222595214844,
+        3.9780266284942627,
+        84.02423095703125
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "912ac479-7aeb-5c09-8dbd-a7b460e6af16",
+      "code": "SRC-03.AirplaneStairs.001",
+      "label": "Context aeroportuar existent · 03.AirplaneStairs.001",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.9780256748199463,
+      "sourceObjects": [
+        "03.AirplaneStairs.001_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -39.64847183227539,
+        82.61503601074219,
+        3.9780256748199463
+      ],
+      "positionThreeMeters": [
+        -39.64847183227539,
+        3.9780256748199463,
+        -82.61503601074219
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "0d870d7d-2a8f-57ba-a219-41c9956c7dd6",
+      "code": "SRC-04.Hangar",
+      "label": "Context aeroportuar existent · 04.Hangar",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "infrastructure",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 13.280900001525879,
+      "sourceObjects": [
+        "04.Hangar_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -9.862198829650879,
+        -113.05216979980469,
+        13.280900001525879
+      ],
+      "positionThreeMeters": [
+        -9.862198829650879,
+        13.280900001525879,
+        113.05216979980469
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "bb138bdb-6871-5e7e-8a6b-74a77c0ba919",
+      "code": "SRC-06.Tunnel",
+      "label": "Context aeroportuar existent · 06.Tunnel",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "infrastructure",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 5.3589677810668945,
+      "sourceObjects": [
+        "06.Tunnel_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -38.27095413208008,
+        9.398527145385742,
+        5.3589677810668945
+      ],
+      "positionThreeMeters": [
+        -38.27095413208008,
+        5.3589677810668945,
+        -9.398527145385742
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "d59cd89c-6f1d-582f-a51e-92466ef42ecd",
+      "code": "SRC-19.Firetruck",
+      "label": "Context aeroportuar existent · 19.Firetruck",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 1.9974405765533447,
+      "sourceObjects": [
+        "19.Firetruck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -30.32023048400879,
+        -18.64110565185547,
+        1.9974405765533447
+      ],
+      "positionThreeMeters": [
+        -30.32023048400879,
+        1.9974405765533447,
+        18.64110565185547
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "bbb2551a-9136-5124-a2cf-444bcac1ad12",
+      "code": "SRC-20.PassengerBus",
+      "label": "Context aeroportuar existent · 20.PassengerBus",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.1468937397003174,
+      "sourceObjects": [
+        "20.PassengerBus_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -27.458484649658203,
+        117.12326049804688,
+        2.1468937397003174
+      ],
+      "positionThreeMeters": [
+        -27.458484649658203,
+        2.1468937397003174,
+        -117.12326049804688
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "40ca2ae3-d114-588f-8f82-41a73b76042f",
+      "code": "SRC-20.PassengerBus.001",
+      "label": "Context aeroportuar existent · 20.PassengerBus.001",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.1468939781188965,
+      "sourceObjects": [
+        "20.PassengerBus.001_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -22.899883270263672,
+        10.371479034423828,
+        2.1468939781188965
+      ],
+      "positionThreeMeters": [
+        -22.899883270263672,
+        2.1468939781188965,
+        -10.371479034423828
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "1ffa1dc8-6e32-5d77-9d01-76be86298341",
+      "code": "SRC-20.PassengerBus.002",
+      "label": "Context aeroportuar existent · 20.PassengerBus.002",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "vehicles",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.1468942165374756,
+      "sourceObjects": [
+        "20.PassengerBus.002_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        24.633922576904297,
+        14.71232795715332,
+        2.1468942165374756
+      ],
+      "positionThreeMeters": [
+        24.633922576904297,
+        2.1468942165374756,
+        -14.71232795715332
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "9305868a-b5fb-5a0a-bf3a-130ebbd08817",
+      "code": "SRC-21.1.BaggageTruck",
+      "label": "Context aeroportuar existent · 21.1.BaggageTruck",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.314716100692749,
+      "sourceObjects": [
+        "21.1.BaggageTruck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -66.73773956298828,
+        112.09689331054688,
+        2.314716100692749
+      ],
+      "positionThreeMeters": [
+        -66.73773956298828,
+        2.314716100692749,
+        -112.09689331054688
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "85119b44-74c5-5e54-a9d5-4ffb9c6c51e7",
+      "code": "SRC-21.3.BaggageTruck",
+      "label": "Context aeroportuar existent · 21.3.BaggageTruck",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5876665711402893,
+      "sourceObjects": [
+        "21.3.BaggageTruck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -51.81535339355469,
+        124.96685791015625,
+        0.5876665711402893
+      ],
+      "positionThreeMeters": [
+        -51.81535339355469,
+        0.5876665711402893,
+        -124.96685791015625
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "16b9ef70-270e-5c96-b344-385272a81bde",
+      "code": "SRC-21.2.BaggageTruck",
+      "label": "Context aeroportuar existent · 21.2.BaggageTruck",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.3490025997161865,
+      "sourceObjects": [
+        "21.2.BaggageTruck_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -61.93938446044922,
+        116.83999633789062,
+        2.3490025997161865
+      ],
+      "positionThreeMeters": [
+        -61.93938446044922,
+        2.3490025997161865,
+        -116.83999633789062
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "8de71907-cddb-533e-bd9a-9a17c20ce534",
+      "code": "SRC-21.2.BaggageTruck.001",
+      "label": "Context aeroportuar existent · 21.2.BaggageTruck.001",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 2.3490025997161865,
+      "sourceObjects": [
+        "21.2.BaggageTruck.001_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -57.09080505371094,
+        121.164794921875,
+        2.3490025997161865
+      ],
+      "positionThreeMeters": [
+        -57.09080505371094,
+        2.3490025997161865,
+        -121.164794921875
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "42eae662-4dcd-5aec-8a30-4ccf03c949e6",
+      "code": "SRC-21.3.BaggageTruck.001",
+      "label": "Context aeroportuar existent · 21.3.BaggageTruck.001",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5876665711402893,
+      "sourceObjects": [
+        "21.3.BaggageTruck.001_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -46.25104522705078,
+        128.34645080566406,
+        0.5876665711402893
+      ],
+      "positionThreeMeters": [
+        -46.25104522705078,
+        0.5876665711402893,
+        -128.34645080566406
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "106271a2-36bb-5c54-9937-2868ce149ce9",
+      "code": "SRC-21.3.BaggageTruck.002",
+      "label": "Context aeroportuar existent · 21.3.BaggageTruck.002",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5876666307449341,
+      "sourceObjects": [
+        "21.3.BaggageTruck.002_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -40.52699279785156,
+        131.43637084960938,
+        0.5876666307449341
+      ],
+      "positionThreeMeters": [
+        -40.52699279785156,
+        0.5876666307449341,
+        -131.43637084960938
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "96b0b407-e12f-5afb-bd1f-ddfe004cd2c5",
+      "code": "SRC-21.3.BaggageTruck.003",
+      "label": "Context aeroportuar existent · 21.3.BaggageTruck.003",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.5876666307449341,
+      "sourceObjects": [
+        "21.3.BaggageTruck.003_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -34.58992004394531,
+        134.00869750976562,
+        0.5876666307449341
+      ],
+      "positionThreeMeters": [
+        -34.58992004394531,
+        0.5876666307449341,
+        -134.00869750976562
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "4f873416-4de8-51cb-8634-bbc6a224bef7",
+      "code": "SRC-05.Container",
+      "label": "Context aeroportuar existent · 05.Container",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.0138421058654785,
+      "sourceObjects": [
+        "05.Container_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -40.19306564331055,
+        131.5028076171875,
+        3.0138421058654785
+      ],
+      "positionThreeMeters": [
+        -40.19306564331055,
+        3.0138421058654785,
+        -131.5028076171875
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "f11782a3-11ea-5f19-8815-19172828c136",
+      "code": "SRC-05.Container2",
+      "label": "Context aeroportuar existent · 05.Container2",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.013841390609741,
+      "sourceObjects": [
+        "05.Container2_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -45.981468200683594,
+        128.39794921875,
+        3.013841390609741
+      ],
+      "positionThreeMeters": [
+        -45.981468200683594,
+        3.013841390609741,
+        -128.39794921875
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "3cec92e2-8959-5d16-b693-aa94f5e57b64",
+      "code": "SRC-05.Container3",
+      "label": "Context aeroportuar existent · 05.Container3",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.0138418674468994,
+      "sourceObjects": [
+        "05.Container3_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -51.55103302001953,
+        125.12907409667969,
+        3.0138418674468994
+      ],
+      "positionThreeMeters": [
+        -51.55103302001953,
+        3.0138418674468994,
+        -125.12907409667969
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "2a79e413-7310-5df3-90be-37416e9aae4c",
+      "code": "SRC-05.Container4",
+      "label": "Context aeroportuar existent · 05.Container4",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 3.013841390609741,
+      "sourceObjects": [
+        "05.Container4_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -34.14353942871094,
+        134.1740264892578,
+        3.013841390609741
+      ],
+      "positionThreeMeters": [
+        -34.14353942871094,
+        3.013841390609741,
+        -134.1740264892578
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "c3130cd0-7129-5970-8439-ccde2461c1ea",
+      "code": "SRC-05.Container5",
+      "label": "Context aeroportuar existent · 05.Container5",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "baggage",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 1.896641731262207,
+      "sourceObjects": [
+        "05.Container5_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -18.452810287475586,
+        136.32315063476562,
+        1.896641731262207
+      ],
+      "positionThreeMeters": [
+        -18.452810287475586,
+        1.896641731262207,
+        -136.32315063476562
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "398287da-bb1b-56ad-9555-96c4c7d75541",
+      "code": "AC-01",
+      "label": "Aeronava originala 1",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "aircraft",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 8.677817344665527,
+      "sourceObjects": [
+        "18.1.Airplane_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -52.72474670410156,
+        -12.626266479492188,
+        8.677817344665527
+      ],
+      "positionThreeMeters": [
+        -52.72474670410156,
+        8.677817344665527,
+        12.626266479492188
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "flightCode": "AS 201"
+    },
+    {
+      "entityId": "00eed01d-fd10-5d04-8240-e9428f8dd916",
+      "code": "AC-02",
+      "label": "Aeronava originala 2",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "aircraft",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 10.27296257019043,
+      "sourceObjects": [
+        "18.2.Airplane_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -119.41236877441406,
+        108.45732879638672,
+        10.27296257019043
+      ],
+      "positionThreeMeters": [
+        -119.41236877441406,
+        10.27296257019043,
+        -108.45732879638672
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "flightCode": "AS 412"
+    },
+    {
+      "entityId": "17bf1c5f-b344-5df8-a357-b5d6a720c948",
+      "code": "AC-03",
+      "label": "Aeronava originala 3",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "aircraft",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 8.67781925201416,
+      "sourceObjects": [
+        "18.3.Airplane_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -47.09125518798828,
+        91.2107162475586,
+        8.67781925201416
+      ],
+      "positionThreeMeters": [
+        -47.09125518798828,
+        8.67781925201416,
+        -91.2107162475586
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "flightCode": "AS 305"
+    },
+    {
+      "entityId": "64901936-cf07-5cc7-8b57-9178c1cb11c3",
+      "code": "AC-04",
+      "label": "Aeronava originala 4",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "aircraft",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 6.786960124969482,
+      "sourceObjects": [
+        "18.4.Airplane_AIRPORT_0"
+      ],
+      "positionBlenderMeters": [
+        -65.65470123291016,
+        -95.22508239746094,
+        6.786960124969482
+      ],
+      "positionThreeMeters": [
+        -65.65470123291016,
+        6.786960124969482,
+        95.22508239746094
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "flightCode": "AS 508"
+    },
+    {
+      "entityId": "e51a63c2-7619-556d-b9ee-f9d9f47e023f",
+      "code": "APRON",
+      "label": "Platforma demonstrativa peste amplasamentul modelului",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "apron",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        0,
+        0,
+        0
+      ],
+      "positionThreeMeters": [
+        0,
+        0,
+        0
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "entityId": "0b00d94c-a5c2-5784-9afc-17288fd94c4a",
+      "code": "STAND-1",
+      "label": "Stand demonstrativ 1",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "stands",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        -49,
+        -13,
+        0
+      ],
+      "positionThreeMeters": [
+        -49,
+        0,
+        13
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "gateId": "60000000-0000-0000-0000-000000000201"
+    },
+    {
+      "entityId": "2513d7c6-ef76-5841-aa0f-b84328d54221",
+      "code": "STAND-2",
+      "label": "Stand demonstrativ 2",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "stands",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        -47,
+        91,
+        0
+      ],
+      "positionThreeMeters": [
+        -47,
+        0,
+        -91
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "gateId": "60000000-0000-0000-0000-000000000202"
+    },
+    {
+      "entityId": "4256e7c5-9c49-5c58-81c1-60675b354b80",
+      "code": "STAND-3",
+      "label": "Stand demonstrativ 3",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "stands",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        -65,
+        -95,
+        0
+      ],
+      "positionThreeMeters": [
+        -65,
+        0,
+        95
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "gateId": "60000000-0000-0000-0000-000000000203"
+    },
+    {
+      "entityId": "3340116e-0d4a-509f-81d7-2942b865378c",
+      "code": "STAND-4",
+      "label": "Stand demonstrativ 4",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "stands",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        -95,
+        50,
+        0
+      ],
+      "positionThreeMeters": [
+        -95,
+        0,
+        -50
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "gateId": "60000000-0000-0000-0000-000000000204"
+    },
+    {
+      "entityId": "336bb512-a8db-5f34-9e66-41a70009ea1f",
+      "code": "STAND-5",
+      "label": "Stand demonstrativ 5",
+      "zoneId": "60000000-0000-0000-0000-000000000001",
+      "zoneType": "scene",
+      "sceneId": "60000000-0000-0000-0000-000000000001",
+      "terminalId": "60000000-0000-0000-0000-000000000002",
+      "resource": "stands",
+      "synthetic": true,
+      "status": "synthetic",
+      "clickable": true,
+      "baseHeight": 0.0,
+      "sourceObjects": [],
+      "positionBlenderMeters": [
+        -95,
+        -20,
+        0
+      ],
+      "positionThreeMeters": [
+        -95,
+        0,
+        20
+      ],
+      "databaseMapping": {
+        "table": "scenes",
+        "id": "60000000-0000-0000-0000-000000000001"
+      },
+      "gateId": "60000000-0000-0000-0000-000000000205"
+    }
+  ],
+  "compression": "EXT_meshopt_compression",
+  "simulationIsolation": "Exterior visibility and selection never modify terminal simulation inputs."
+}

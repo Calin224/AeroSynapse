@@ -41,7 +41,8 @@ indicatorii și panourile pentru desktop și telefon, fără servicii externe de
 - features/control-tower: modele, store și dashboard.
 - features/scenario: store, selecție și previzualizare de scenarii.
 - features/digital-twin: componenta Angular, contractul TwinRenderer, renderer Three.js,
-  construcția modelului aeroportuar și gestionarea resurselor GPU.
+  încărcarea modelelor GLB și gestionarea resurselor GPU.
+- public/models/aerosynapse: terminalul, exteriorul cu două niveluri de detaliu și manifestul entităților.
 - public/data: fixture-uri locale servite prin HTTP; nu reprezintă telemetrie live.
 
 Dashboardurile transmit un TwinScene rendererului. Ele nu dețin camere, materiale,
@@ -52,9 +53,15 @@ Rendererul este inițializat după render-ul Angular și rulează în afara flux
 actualizare al dashboardului. Are OrbitControls, resetarea camerei și ResizeObserver.
 La distrugere oprește bucla de animație, deconectează observerul, elimină listenerii,
 eliberează controalele, geometriile, materialele și texturile partajate, apoi
-eliberează rendererul/contextul WebGL și elimină canvasul. Înlocuirea aeronavelor
-eliberează resursele configurației anterioare. Randarea continuă este suspendată
+eliberează rendererul/contextul WebGL și elimină canvasul. Aeronavele reutilizează
+geometria modelelor la schimbarea snapshot-ului. Randarea continuă este suspendată
 când documentul este ascuns. Erorile de inițializare și pierderea contextului au retry în UI.
+
+Terminalul folosește modelul GLB cu acoperiș transparent. Modurile Interior / Exterior,
+filtrele Aeronave / Bagaje / Vehicule / Pistă și selecția prin click sau listă sunt locale
+vizualizării. Exteriorul și nivelul detaliat se încarcă la cerere; un eșec permite retry
+și păstrează modelul deja încărcat. Entitățile au identificatori stabili în manifest,
+fără a crea date în backend. Vezi [documentația modelelor 3D](../docs/airport-3d-assets.md).
 
 ## HTTP și backend viitor
 
@@ -83,6 +90,7 @@ Pentru verificare manuală:
 ```powershell
 npm.cmd test -- --watch=false
 npm.cmd run build
+npm.cmd run verify:assets
 ```
 
 TypeScript și template-urile Angular folosesc verificare strictă.
@@ -94,3 +102,5 @@ Testele Vitest verifică HTTP/interceptorul, rutele și fallbackul, loading/empt
 retry-ul, selecția de scenarii, anularea cererilor și cleanup-ul rendererului.
 Testele folosesc porturi browser simulate pentru GPU, controale și observer;
 vizualizarea reală trebuie verificată și într-un browser cu WebGL disponibil.
+Verificatorul de asset-uri importă GLB-urile prin Three.js/Meshopt fără GPU și verifică
+dimensiunile, axele, transparența, identificatorii și bugetele modelelor.

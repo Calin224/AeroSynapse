@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  Group,
   Material,
   Mesh,
   MeshStandardMaterial,
@@ -13,7 +14,32 @@ import { disposeSceneResources } from './scene-resources';
 import { GraphicsBackend, RendererDependencies, ThreeTwinRenderer } from './three-twin-renderer';
 
 describe('Three.js renderer lifecycle', () => {
-  function setup() {
+  function asset(path: string): Group {
+    const root = new Group();
+    const zone = new Group();
+    zone.userData = {
+      clickable: true,
+      synthetic: true,
+      status: 'synthetic',
+      entityId: 'zone-entity',
+      zoneId: '60000000-0000-0000-0000-000000000101',
+      zoneType: 'checkpoint',
+      label: 'CP-1',
+      resource: 'terminal',
+    };
+    if (path.includes('exterior'))
+      zone.userData = {
+        ...zone.userData,
+        entityId: 'aircraft-entity',
+        resource: 'aircraft',
+        flightCode: 'AS 201',
+        baseHeight: 8.7,
+      };
+    zone.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()));
+    root.add(zone);
+    return root;
+  }
+  function setup(loadAsset = vi.fn(async (path: string, _signal: AbortSignal) => asset(path))) {
     const canvas = document.createElement('canvas');
     const host = document.createElement('div');
     Object.defineProperties(host, { clientWidth: { value: 800 }, clientHeight: { value: 400 } });
@@ -40,13 +66,15 @@ describe('Three.js renderer lifecycle', () => {
       graphics: () => graphics,
       controls: () => controls,
       observer: () => observer,
+      loadAsset,
     };
     const onError = vi.fn();
     const renderer = new ThreeTwinRenderer(host, onError, dependencies);
-    return { host, canvas, graphics, controls, observer, renderer, onError };
+    return { host, canvas, graphics, controls, observer, renderer, onError, loadAsset };
   }
-  it('sizes the camera and releases loop, controls, observer, GPU and canvas exactly once', () => {
+  it('sizes the camera and releases loop, controls, observer, GPU and canvas exactly once', async () => {
     const { host, graphics, controls, observer, renderer } = setup();
+    await renderer.ready;
     expect(graphics.setSize).toHaveBeenCalledWith(800, 400);
     renderer.setScene({ aircraft: [{ id: 'test', x: 0, z: 0, heading: 0 }] });
     const frame = vi
@@ -107,6 +135,7 @@ describe('Three.js renderer lifecycle', () => {
             throw Error('unavailable');
           },
           observer: vi.fn(),
+          loadAsset: vi.fn(),
         }),
     ).toThrow('unavailable');
     expect(graphics.dispose).toHaveBeenCalledOnce();
@@ -126,5 +155,98 @@ describe('Three.js renderer lifecycle', () => {
     scene.add(new Mesh(geometry, [material, material]), new Mesh(geometry, material));
     disposeSceneResources(scene);
     for (const spy of spies) expect(spy).toHaveBeenCalledOnce();
+  });
+  it('loads exterior only on request, caches it, and keeps the simulation snapshot unchanged', async () => {
+    const { renderer, loadAsset, graphics } = setup();
+    await renderer.ready;
+    const data = { aircraft: [Object.freeze({ id: 'AS 201', x: -28, z: -65, heading: 0 })] };
+    renderer.setScene(data);
+    expect(loadAsset).toHaveBeenCalledTimes(1);
+    await renderer.setDisplayMode('exterior');
+    const [scene] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    let aircraft: Object3D | undefined;
+    scene.traverse((object) => {
+      if (object.userData['flightCode'] === 'AS 201') aircraft = object;
+    });
+    expect(aircraft?.position.toArray()).toEqual([-28, 8.7, -65]);
+    expect(loadAsset.mock.calls.map(([path]) => path)).toEqual([
+      'models/aerosynapse/terminal.glb',
+      'models/aerosynapse/exterior-low.glb',
+    ]);
+    await renderer.setDisplayMode('interior');
+    await renderer.setDisplayMode('exterior');
+    expect(loadAsset).toHaveBeenCalledTimes(2);
+    expect(data.aircraft[0]).toEqual({ id: 'AS 201', x: -28, z: -65, heading: 0 });
+    renderer.dispose();
+  });
+  it('emits the database zone ID and filters optional aircraft without touching terminal zones', async () => {
+    const { renderer } = setup();
+    await renderer.ready;
+    const select = vi.fn();
+    renderer.setSelectionHandler(select);
+    renderer.selectEntity('zone-entity');
+    expect(select).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        zoneId: '60000000-0000-0000-0000-000000000101',
+        synthetic: true,
+      }),
+    );
+    renderer.setScene({ aircraft: [{ id: 'AS 201', x: -28, z: -65, heading: 0 }] });
+    await renderer.setDisplayMode('exterior');
+    expect(renderer.getSelectableZones().map((zone) => zone.entityId)).toContain('aircraft-entity');
+    renderer.setResources({ aircraft: false, baggage: true, vehicles: true, runway: false });
+    expect(renderer.getSelectableZones().map((zone) => zone.entityId)).toEqual(['zone-entity']);
+    renderer.dispose();
+  });
+  it('keeps the terminal usable after exterior load failure and supports retry', async () => {
+    const loader = vi.fn(async (path: string, _signal: AbortSignal) => asset(path));
+    const { renderer, onError } = setup(loader);
+    await renderer.ready;
+    loader.mockRejectedValueOnce(new Error('offline'));
+    await expect(renderer.setDisplayMode('exterior')).rejects.toThrow('offline');
+    expect(renderer.getSelectableZones()).toHaveLength(1);
+    expect(onError).not.toHaveBeenCalled();
+    await renderer.setDisplayMode('exterior');
+    expect(loader).toHaveBeenCalledTimes(3);
+    renderer.dispose();
+  });
+  it('loads detail only near the exterior and reuses it across mode changes', async () => {
+    const { renderer, loadAsset, graphics } = setup();
+    await renderer.ready;
+    await renderer.setDisplayMode('exterior');
+    expect(loadAsset).toHaveBeenCalledTimes(2);
+    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    const frame = vi
+      .mocked(graphics.setAnimationLoop)
+      .mock.calls.find(([callback]) => typeof callback === 'function')![0]!;
+    camera.position.set(0, 70, 0);
+    frame(0, {} as XRFrame);
+    await vi.waitFor(() => expect(loadAsset).toHaveBeenCalledTimes(3));
+    expect(loadAsset.mock.calls[2][0]).toContain('exterior-detail.glb');
+    await renderer.setDisplayMode('interior');
+    await renderer.setDisplayMode('exterior');
+    camera.position.set(0, 70, 0);
+    frame(0, {} as XRFrame);
+    expect(loadAsset).toHaveBeenCalledTimes(3);
+    renderer.dispose();
+  });
+  it('disposes an asset that finishes loading after renderer destruction', async () => {
+    let finish!: (group: Group) => void;
+    const loader = vi.fn(
+      (_path: string, _signal: AbortSignal) =>
+        new Promise<Group>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { renderer } = setup(loader);
+    const late = asset('terminal');
+    const mesh = late.children[0].children[0] as Mesh;
+    const disposed = vi.spyOn(mesh.geometry, 'dispose');
+    renderer.dispose();
+    finish(late);
+    await renderer.ready;
+    expect(disposed).toHaveBeenCalledOnce();
+    expect(late.children).toHaveLength(0);
+    expect(loader.mock.calls[0][1].aborted).toBe(true);
   });
 });
