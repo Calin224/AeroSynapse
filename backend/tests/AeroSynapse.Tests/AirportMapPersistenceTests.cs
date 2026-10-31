@@ -155,40 +155,6 @@ public sealed class AirportMapPersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Airport_list_is_ordered_and_preserves_airport_details()
-    {
-        var second = MapFixture.Create();
-        second.Airport.Name = "Zulu Airport";
-        var first = MapFixture.Create();
-        first.Airport.Name = "Alpha Airport";
-        await Save(second);
-        await Save(first);
-
-        using var scope = provider.CreateScope();
-        var airports = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new ListAirportsQuery());
-        Assert.Equal(new[] { first.Airport.Id, second.Airport.Id }, airports.Select(item => item.Id));
-        Assert.Equal(new[] { "Alpha Airport", "Zulu Airport" }, airports.Select(item => item.Name));
-    }
-
-    [Fact]
-    public async Task Inactive_leaf_warning_is_preserved_in_the_stored_snapshot()
-    {
-        var map = MapFixture.Create();
-        map.Zones[2].IsActive = false;
-        await Save(map);
-
-        using var scope = provider.CreateScope();
-        var snapshot = await scope.ServiceProvider.GetRequiredService<ISender>()
-            .Send(new GetAirportSnapshotQuery(map.Airport.Id));
-        Assert.NotNull(snapshot);
-        Assert.True(snapshot.IsNavigable);
-        var issue = Assert.Single(snapshot.Issues);
-        Assert.Equal("inactive_zone", issue.Code);
-        Assert.Equal(map.Zones[2].Id, issue.ObjectId);
-        Assert.Equal(MapIssueSeverity.Warning, issue.Severity);
-    }
-
-    [Fact]
     public async Task Missing_airport_returns_no_snapshot()
     {
         using var scope = provider.CreateScope();

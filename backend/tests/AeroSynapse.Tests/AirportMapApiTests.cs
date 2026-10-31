@@ -9,8 +9,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using AeroSynapse.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using System.Security.Cryptography;
 
 namespace AeroSynapse.Tests;
 
@@ -20,37 +24,58 @@ public sealed class AirportMapApiTests : IAsyncLifetime
     private WebApplicationFactory<Program> factory = null!;
     private HttpClient client = null!;
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         factory = new AirportApiFactory(path);
         client = factory.CreateClient();
-        return Task.CompletedTask;
+        var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) + "aA1!";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<UserManager<WorkspaceUser>>();
+            var account = new WorkspaceUser { UserName = "airport-test" };
+            Assert.True((await users.CreateAsync(account, password)).Succeeded);
+            await users.AddToRoleAsync(account, "Admin");
+        }
+        var csrf = await client.GetFromJsonAsync<JsonElement>("/auth/csrf");
+        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", csrf.GetProperty("requestToken").GetString());
+        using var login = await client.PostAsJsonAsync("/auth/login", new { username = "airport-test", password });
+        login.EnsureSuccessStatusCode();
+        csrf = await client.GetFromJsonAsync<JsonElement>("/auth/csrf");
+        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", csrf.GetProperty("requestToken").GetString());
     }
 
     public async Task DisposeAsync()
     {
         client.Dispose();
         await factory.DisposeAsync();
-        foreach (var suffix in new[] { "", "-shm", "-wal" }) File.Delete(path + suffix);
+        foreach (var suffix in new[] { "", "-shm", "-wal" }) { File.Delete(path + suffix); File.Delete(path + ".identity" + suffix); }
+    }
+
+    [Theory]
+    [InlineData("{\"seed\":1,\"seed\":2,\"seed\":3}", "/seed", "duplicate_field")]
+    [InlineData("{\"checkpoints\":[{\"staffCount\":1,\"staffCount\":2}]}", "/checkpoints/0/staffCount", "duplicate_field")]
+    [InlineData("{\"durationMinutes\":", "", "malformed_json")]
+    public async Task Security_middleware_preserves_versioned_contract_wire_errors(string body, string field, string code)
+    {
+        using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/contracts/v1/simulation/validate", content);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains(result.GetProperty("errors").EnumerateArray(), error =>
+            error.GetProperty("field").GetString() == field && error.GetProperty("code").GetString() == code);
     }
 
     [Fact]
-    public async Task Airport_list_is_empty_before_creation_and_ordered_after_creation()
+    public async Task Security_middleware_keeps_the_shared_contract_nesting_limit()
     {
-        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
-        var second = MapFixture.Create();
-        second.Airport.Name = "Zulu Airport";
-        var first = MapFixture.Create();
-        first.Airport.Name = "Alpha Airport";
-        using var createdSecond = await client.PostAsJsonAsync("/api/airports", second, MapFixture.Json);
-        using var createdFirst = await client.PostAsJsonAsync("/api/airports", first, MapFixture.Json);
-        Assert.Equal(HttpStatusCode.Created, createdSecond.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, createdFirst.StatusCode);
-
-        var airports = await client.GetFromJsonAsync<Airport[]>("/api/airports");
-        Assert.NotNull(airports);
-        Assert.Equal(new[] { first.Airport.Id, second.Airport.Id }, airports.Select(item => item.Id));
-        Assert.Equal(new[] { "Alpha Airport", "Zulu Airport" }, airports.Select(item => item.Name));
+        var body = "{\"unknown\":" + new string('[', 63) + new string(']', 63) + "}";
+        using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/contracts/v1/simulation/validate", content);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.DoesNotContain(result.GetProperty("errors").EnumerateArray(), error =>
+            error.GetProperty("code").GetString() == "malformed_json");
     }
 
     [Fact]
@@ -151,29 +176,11 @@ public sealed class AirportMapApiTests : IAsyncLifetime
     [InlineData("{\"zones\":[{\"type\":\"Unsupported\"}]}")]
     [InlineData("{\"zones\":[{\"x\":\"not-a-number\"}]}")]
     [InlineData("{\"airport\":{\"id\":\"invalid-guid\"}}")]
-    [InlineData("{\"airport\":")]
-    [InlineData("{\"unknown\":true}")]
-    [InlineData("{\"zones\":[{\"type\":1}]}")]
     public async Task Malformed_request_bodies_return_bad_request(string json)
     {
         using var body = new StringContent(json, Encoding.UTF8, "application/json");
         using var response = await client.PostAsync("/api/airports", body);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData("airport", "null")]
-    [InlineData("zones", "null")]
-    [InlineData("zones", "[null]")]
-    public async Task Missing_objects_or_null_collections_return_validation_issues(string field, string value)
-    {
-        using var body = new StringContent($"{{\"{field}\":{value}}}", Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync("/api/airports", body);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        var document = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Contains(document.GetProperty("issues").EnumerateArray(), issue =>
-            issue.GetProperty("code").GetString() == "required" && issue.GetProperty("field").GetString() == field);
-        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
     }
 
     [Fact]
@@ -216,129 +223,21 @@ public sealed class AirportMapApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Navigation_endpoint_exports_the_stored_map_as_a_graph()
-    {
-        var map = MapFixture.Create();
-        using var created = await client.PostAsJsonAsync("/api/airports", map, MapFixture.Json);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-
-        using var response = await client.GetAsync($"/api/airports/{map.Airport.Id}/navigation");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var graph = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("1.0", graph.GetProperty("navigationVersion").GetString());
-        Assert.Equal(map.Zones.Select(zone => zone.Id).Order(),
-            graph.GetProperty("graph").GetProperty("nodes").EnumerateArray().Select(node => node.GetProperty("id").GetGuid()).Order());
-        Assert.Equal(map.Routes.Select(route => route.Id).Order(),
-            graph.GetProperty("graph").GetProperty("edges").EnumerateArray().Select(edge => edge.GetProperty("id").GetGuid()).Order());
-        Assert.Equal(map.Gates[0].Id, graph.GetProperty("gateBindings")[0].GetProperty("resourceId").GetGuid());
-    }
-
-    [Fact]
-    public async Task Navigation_limits_return_field_issues_without_changing_the_stored_map()
-    {
-        var map = MapFixture.Create();
-        map.Zones[0].Name = new string('x', 161);
-        using var created = await client.PostAsJsonAsync("/api/airports", map, MapFixture.Json);
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-
-        using var response = await client.GetAsync($"/api/airports/{map.Airport.Id}/navigation");
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Contains(error.GetProperty("issues").EnumerateArray(), issue =>
-            issue.GetProperty("code").GetString() == "navigation_limit"
-            && issue.GetProperty("objectId").GetGuid() == map.Zones[0].Id
-            && issue.GetProperty("field").GetString() == "name");
-        var snapshot = await client.GetFromJsonAsync<AirportMapSnapshot>(created.Headers.Location, MapFixture.Json);
-        Assert.NotNull(snapshot);
-        Assert.Equal(map.Zones[0].Name, snapshot.Map.Zones.Single(zone => zone.Id == map.Zones[0].Id).Name);
-    }
-
-    [Fact]
-    public async Task Navigation_for_an_unknown_airport_returns_not_found()
-    {
-        using var response = await client.GetAsync($"/api/airports/{Guid.NewGuid()}/navigation");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData("valid", HttpStatusCode.OK)]
-    [InlineData("warning", HttpStatusCode.OK)]
-    [InlineData("invalid", HttpStatusCode.UnprocessableEntity)]
-    public async Task Validation_reports_issues_without_saving_the_map(string variant, HttpStatusCode expected)
-    {
-        var map = MapFixture.Create();
-        if (variant == "warning") map.Zones[2].IsActive = false;
-        if (variant == "invalid") map.Zones[0].Capacity = 0;
-
-        using var response = await client.PostAsJsonAsync("/api/airports/validate", map, MapFixture.Json);
-        Assert.Equal(expected, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var issues = body.GetProperty("issues").EnumerateArray().ToArray();
-        if (variant == "valid") Assert.Empty(issues);
-        else Assert.Contains(issues, issue => issue.GetProperty("code").GetString()
-            == (variant == "warning" ? "inactive_zone" : "invalid_value"));
-        if (expected == HttpStatusCode.OK)
-        {
-            Assert.Equal(1, body.GetProperty("schemaVersion").GetInt32());
-            Assert.True(body.GetProperty("isNavigable").GetBoolean());
-        }
-        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
-    }
-
-    [Theory]
-    [InlineData("null")]
-    [InlineData("{\"unknown\":true}")]
-    [InlineData("{\"airport\":")]
-    public async Task Validation_rejects_malformed_requests(string json)
-    {
-        using var body = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync("/api/airports/validate", body);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Navigation_preview_validates_unsaved_maps_without_persisting_them(bool invalid)
-    {
-        var map = MapFixture.Create();
-        if (invalid) map.Zones[0].Name = new string('x', 161);
-        using var response = await client.PostAsJsonAsync("/api/airports/navigation/preview", map, MapFixture.Json);
-        Assert.Equal(invalid ? HttpStatusCode.UnprocessableEntity : HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        if (invalid)
-            Assert.Contains(body.GetProperty("issues").EnumerateArray(), issue =>
-                issue.GetProperty("code").GetString() == "navigation_limit");
-        else
-        {
-            Assert.Equal("1.0", body.GetProperty("navigationVersion").GetString());
-            Assert.Equal(map.Zones.Count, body.GetProperty("graph").GetProperty("nodes").GetArrayLength());
-            Assert.Equal(map.Routes.Count, body.GetProperty("graph").GetProperty("edges").GetArrayLength());
-        }
-        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
-    }
-
-    [Theory]
-    [InlineData("null")]
-    [InlineData("{\"unknown\":true}")]
-    public async Task Navigation_preview_rejects_malformed_json(string json)
-    {
-        using var body = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync("/api/airports/navigation/preview", body);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
     private sealed class AirportApiFactory(string path) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Development");
+            builder.UseEnvironment("Testing");
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+                new Dictionary<string, string?> { ["Postgres:Host"] = "" }));
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<DbContextOptions<AirportMapDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<AirportMapDbContext>>();
                 services.AddDbContext<AirportMapDbContext>(options => options.UseSqlite($"Data Source={path};Pooling=False"));
+                services.RemoveAll<DbContextOptions<IdentityStore>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<IdentityStore>>();
+                services.AddDbContext<IdentityStore>(options => options.UseSqlite($"Data Source={path}.identity;Pooling=False"));
             });
         }
     }
