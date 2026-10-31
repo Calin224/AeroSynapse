@@ -1,0 +1,2 @@
+# Standalone CI tooling; numerical/runtime dependency locks remain unchanged.
+ruff==0.14.1

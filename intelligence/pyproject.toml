@@ -1,0 +1,27 @@
+[project]
+name = "aerosynapse-intelligence"
+version = "0.1.0"
+description = "Serviciu AI izolat pentru AeroSynapse AI"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.143.0",
+    "jsonschema==4.25.1",
+    "numpy==2.5.4",
+    "ortools>=9.15.6755",
+    "pydantic>=2.14.0",
+    "psycopg[binary]==3.3.6",
+    "simpy>=4.1.2",
+    "uvicorn>=0.54.0",
+    "scikit-learn==1.9.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+]

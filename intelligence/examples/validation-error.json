@@ -1,0 +1,9 @@
+{
+  "message": "Invalid request.",
+  "errors": [
+    {
+      "field": "duration_minutes",
+      "message": "Must be greater than zero."
+    }
+  ]
+}
