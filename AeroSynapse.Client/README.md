@@ -3,6 +3,7 @@
 Aplicație Angular standalone, organizată pe feature-uri, cu PrimeNG/Aura și Three.js.
 Control Tower afișează un snapshot aeroportuar; Scenario permite selectarea unor
 configurații demonstrative, aplicate aceluiași model 3D.
+Pagina `/operations` pregătește managementul scenariilor și rulărilor persistente prin API.
 
 ## Pornire locală
 
@@ -14,7 +15,8 @@ npm.cmd ci
 npm.cmd start
 ```
 
-Rute: http://localhost:4200/control-tower și http://localhost:4200/scenario.
+Rute: http://localhost:4200/control-tower, http://localhost:4200/scenario și
+http://localhost:4200/operations.
 Ruta / redirecționează la Control Tower; adresele necunoscute afișează o pagină 404.
 
 În checkout-uri cu caracterul literal % în cale, inclusiv AeroSynapse%20AI,
@@ -49,6 +51,8 @@ selectorul de scenarii și stările loading/empty/error folosesc aceleași stilu
 - shared: resource HTTP reutilizabil, loading/empty/error cu retry și pagina 404.
 - features/control-tower: modele, store și dashboard.
 - features/scenario: store, selecție și previzualizare de scenarii.
+- features/operations: creare de scenarii, istoric de rulări, polling până la finalizare,
+  metrici, snapshot-uri și reîncercarea unei rulări eșuate.
 - features/digital-twin: componenta Angular, contractul TwinRenderer, renderer Three.js,
   încărcarea modelelor GLB și gestionarea resurselor GPU.
 - public/models/aerosynapse: terminalul, exteriorul cu două niveluri de detaliu și manifestul entităților.
@@ -91,7 +95,8 @@ fără a afișa detalii interne de la server.
 | Cerere din browser | Destinație |
 | --- | --- |
 | `/api/health` | `http://127.0.0.1:5080/health` |
-| `/api/**` | `http://127.0.0.1:5080/api/**`, cu ruta păstrată pentru hărțile aeroporturilor |
+| `/api/airports` și `/api/airports/**` | `http://127.0.0.1:5080/api/airports`, cu ruta păstrată |
+| Celelalte rute `/api/**` | `http://127.0.0.1:5080/**`, fără prefixul `/api` |
 | `/intelligence/**` | `http://127.0.0.1:8000/**`, fără prefixul `/intelligence` |
 
 Proxy-ul Angular este doar pentru dezvoltare. Găzduirea de producție trebuie să
@@ -118,6 +123,18 @@ Pentru verificare manuală:
   un motor de simulare și telemetria reală vor fi integrate separat.
 
 ## Build și teste
+
+Pagina „Scenarii și rulări” folosește contractele de management, separat de fixture-urile
+Control Tower și Scenario. Necesită `GET /scenes`, publicarea unui layout prin
+`POST /scenes/{id}/layout-versions`, `GET/POST /scenarios`, detaliile unui scenariu,
+`GET/POST /scenarios/{id}/runs`, `GET /runs/{id}` și `POST /runs/{id}/retry`.
+Browserul folosește prefixul public `/api`, eliminat de proxy pentru aceste rute.
+
+Aceste endpoint-uri de management nu sunt încă înregistrate în backendul acestui
+checkout. Până la integrarea lor, pagina afișează starea de eroare și oferă retry;
+celelalte pagini demonstrative rămân independente. Testele verifică interfața și
+contractele HTTP cu răspunsuri simulate, inclusiv publicarea layout-ului înaintea
+salvării scenariului, polling, retry cu revizia rulării și anularea cererilor la navigare.
 
 ```powershell
 npm.cmd test -- --watch=false
@@ -170,8 +187,8 @@ aceeași rețea Docker. Numele upstream trebuie să poată fi rezolvate la porni
 Serviciile API și FastAPI se pornesc separat; datele demo rămân disponibile în lipsa lor.
 Adresele `FRONTEND_*` sunt publice și nu trebuie să conțină credențiale.
 
-Nginx păstrează prefixul `/api` pentru endpoint-urile hărților, trimite `/api/health`
-la `/health` în backend și elimină prefixul `/intelligence` pentru FastAPI.
+Nginx păstrează prefixul `/api/airports` pentru endpoint-urile hărților, elimină `/api`
+pentru celelalte rute backend și elimină prefixul `/intelligence` pentru FastAPI.
 Navigarea directă către rutele SPA primește `index.html`. Fișierele statice lipsă,
 inclusiv modelele 3D și datele demonstrative, răspund cu 404.
 

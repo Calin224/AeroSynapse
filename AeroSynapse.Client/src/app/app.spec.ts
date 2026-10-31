@@ -23,7 +23,7 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('offers both feature routes in the application shell', async () => {
+  it('offers the feature routes in the application shell', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     TestBed.inject(HttpTestingController).expectOne('/api/health').flush({ status: 'Healthy' });
@@ -34,5 +34,6 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('a[href="/control-tower"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/scenario"]')).toBeTruthy();
+    expect(compiled.querySelector('a[href="/operations"]')).toBeTruthy();
   });
 });

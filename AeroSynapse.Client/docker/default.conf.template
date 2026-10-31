@@ -19,8 +19,11 @@ server {
     location = /api/health {
         proxy_pass http://${API_UPSTREAM}/health;
     }
-    location ^~ /api/ {
+    location ^~ /api/airports {
         proxy_pass http://${API_UPSTREAM};
+    }
+    location ^~ /api/ {
+        proxy_pass http://${API_UPSTREAM}/;
     }
     location ^~ /intelligence/ {
         proxy_pass http://${INTELLIGENCE_UPSTREAM}/;

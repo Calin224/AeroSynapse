@@ -20,6 +20,10 @@ Tema comună armonizează controalele PrimeNG și native, cardurile și formular
 Navigarea se adaptează de la sidebar pe desktop la o bară compactă pe tabletă și
 linkuri cu etichete pe telefon.
 
+Pagina `/operations` adaugă interfața pentru scenarii persistente, lansarea și urmărirea
+rulărilor, metrici și reîncercare după eșec. Contractele de management sunt testate cu
+răspunsuri HTTP simulate; endpoint-urile lor backend urmează să fie integrate.
+
 Din rădăcina repository-ului, cu Node.js 22.12+ sau Node.js 24 LTS și npm:
 
 ```sh

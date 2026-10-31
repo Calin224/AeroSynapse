@@ -13,6 +13,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/scenario/scenario').then((m) => m.Scenario),
   },
   {
+    path: 'operations',
+    title: 'Scenarii și rulări | AeroSynapse',
+    loadComponent: () => import('./features/operations/operations').then((m) => m.Operations),
+  },
+  {
     path: '**',
     title: 'Pagina nu există | AeroSynapse',
     loadComponent: () => import('./shared/not-found').then((m) => m.NotFound),

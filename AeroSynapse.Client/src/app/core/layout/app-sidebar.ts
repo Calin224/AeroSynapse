@@ -29,6 +29,17 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           ><span class="nav-text">Scenario</span></a
         >
       </nav>
+      <nav aria-label="Simulări">
+        <span class="nav-label" aria-hidden="true">Simulare</span>
+        <a
+          routerLink="/operations"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          title="Scenarii și rulări"
+          ><i class="pi pi-play" aria-hidden="true"></i
+          ><span class="nav-text">Scenarii și rulări</span></a
+        >
+      </nav>
       <div class="sidebar-footer">
         <span class="status-dot"></span><strong>Mediu demonstrativ</strong
         ><small>Date sintetice pentru testare</small>

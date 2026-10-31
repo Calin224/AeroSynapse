@@ -13,4 +13,7 @@ export class ApiClient {
   get<T>(path: string) {
     return this.http.get<T>(`${this.baseUrl}/${path.replace(/^\//, '')}`);
   }
+  post<T>(path: string, body: unknown = null) {
+    return this.http.post<T>(`${this.baseUrl}/${path.replace(/^\//, '')}`, body);
+  }
 }

@@ -9,6 +9,7 @@ import { ControlTower } from './features/control-tower/control-tower';
 import { Scenario } from './features/scenario/scenario';
 import { TWIN_RENDERER_FACTORY } from './features/digital-twin/digital-twin';
 import { NotFound } from './shared/not-found';
+import { Operations } from './features/operations/operations';
 
 describe('Feature routes and data states', () => {
   let http: HttpTestingController;
@@ -27,6 +28,18 @@ describe('Feature routes and data states', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('opens the operations page and explains empty airport and scenario lists', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/operations', Operations);
+    http.expectOne('/api/scenes').flush([]);
+    http.expectOne('/api/scenarios').flush([]);
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain('Scenarii și rulări');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Nu există aeroporturi operaționale configurate',
+    );
+    expect(harness.routeNativeElement?.textContent).toContain('Creează primul scenariu');
+  });
   it('redirects / to Control Tower and displays loading then empty', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/', ControlTower);
@@ -45,15 +58,13 @@ describe('Feature routes and data states', () => {
     harness.routeNativeElement
       ?.querySelector('app-data-state button')
       ?.dispatchEvent(new MouseEvent('click'));
-    http
-      .expectOne('/data/control-tower.json')
-      .flush({
-        airport: 'Demo Airport',
-        code: 'TEST',
-        metrics: [],
-        flights: [],
-        scene: { aircraft: [] },
-      });
+    http.expectOne('/data/control-tower.json').flush({
+      airport: 'Demo Airport',
+      code: 'TEST',
+      metrics: [],
+      flights: [],
+      scene: { aircraft: [] },
+    });
     harness.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Demo Airport');
   });

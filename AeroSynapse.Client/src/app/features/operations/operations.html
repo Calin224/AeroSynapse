@@ -1,0 +1,232 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">OPERAȚIUNI</p>
+    <h1>Scenarii și rulări</h1>
+    <p class="page-description">
+      Creează un scenariu, pornește simularea și consultă rezultatele salvate.
+    </p>
+  </div>
+</div>
+@if (message()) {
+  <p class="notice" role="alert">{{ message() }}</p>
+}
+<div class="management-grid">
+  <section class="panel">
+    <header class="panel-heading">
+      <div>
+        <h2>Scenariu nou</h2>
+        <p>Simulare de cozi la checkpoint-uri, cu cerere agregată de pasageri.</p>
+      </div>
+    </header>
+    <div class="panel-body">
+      @let airportState = airports.state();
+      @if (airportState.status === 'ready') {
+        <form (ngSubmit)="create()">
+          <label
+            >Aeroport<select name="airport" [(ngModel)]="airportId" required [disabled]="busy()">
+              <option value="">Alege aeroportul</option>
+              @for (airport of airportState.data; track airport.id) {
+                <option [value]="airport.id">{{ airport.name }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Cod<input name="code" [(ngModel)]="code" required maxlength="60" [disabled]="busy()"
+          /></label>
+          <label
+            >Nume<input name="name" [(ngModel)]="name" required maxlength="160" [disabled]="busy()"
+          /></label>
+          <label
+            >Descriere<input
+              name="description"
+              [(ngModel)]="description"
+              maxlength="2000"
+              [disabled]="busy()"
+          /></label>
+          <div class="numbers">
+            <label
+              >Minute simulate<input
+                type="number"
+                name="duration"
+                [(ngModel)]="duration"
+                min="1"
+                max="10080"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Pasageri<input
+                type="number"
+                name="passengers"
+                [(ngModel)]="passengers"
+                min="1"
+                max="2147483647"
+                required
+                [disabled]="busy()"
+            /></label>
+            <label
+              >Seed<input
+                type="number"
+                name="seed"
+                [(ngModel)]="seed"
+                min="0"
+                max="2147483647"
+                required
+                [disabled]="busy()"
+            /></label>
+          </div>
+          <button class="btn-primary" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Se salvează…' : 'Salvează scenariul' }}
+          </button>
+        </form>
+      } @else {
+        <app-data-state
+          [status]="airportState.status"
+          label="aeroporturile"
+          [message]="airportState.status === 'error' ? airportState.message : ''"
+          emptyMessage="Nu există aeroporturi operaționale configurate."
+          (retry)="airports.reload()"
+        />
+      }
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-heading">
+      <h2>Scenarii salvate</h2>
+      <button type="button" (click)="scenarios.reload()">Actualizează</button>
+    </div>
+    <div class="panel-body">
+      @let scenarioState = scenarios.state();
+      @if (scenarioState.status === 'ready') {
+        <div class="choices">
+          @for (scenario of scenarioState.data; track scenario.id) {
+            <button
+              type="button"
+              [class.selected]="selected()?.scenario?.id === scenario.id"
+              [disabled]="busy()"
+              (click)="select(scenario.id)"
+            >
+              <strong>{{ scenario.name }}</strong
+              ><span>{{ scenario.code }} · revizia {{ scenario.revision }}</span>
+            </button>
+          }
+        </div>
+      } @else {
+        <app-data-state
+          [status]="scenarioState.status"
+          label="scenariile"
+          [message]="scenarioState.status === 'error' ? scenarioState.message : ''"
+          emptyMessage="Creează primul scenariu pentru acest aeroport."
+          (retry)="scenarios.reload()"
+        />
+      }
+      @if (selected(); as scenario) {
+        <div class="configuration">
+          <h3>{{ scenario.scenario.name }}</h3>
+          <p>{{ scenario.scenario.description }}</p>
+          <p>
+            {{ scenario.inputs.durationMinutes }} minute ·
+            {{ scenario.inputs.flights.length }} zboruri ·
+            {{ scenario.inputs.events.length }} evenimente · seed {{ scenario.inputs.seed }}
+          </p>
+          <details>
+            <summary>Zboruri și evenimente</summary>
+            @for (flight of scenario.inputs.flights; track flight.id) {
+              <p>
+                {{ flight.code }} · {{ flight.passengerCapacity }} pasageri · plecare
+                {{ flight.departureAtUtc }}
+              </p>
+            }
+            @for (event of scenario.inputs.events; track event.id) {
+              <p>{{ event.type }} · {{ event.occurredAtUtc }}</p>
+            }
+          </details>
+          <button class="btn-primary" type="button" [disabled]="busy()" (click)="run()">
+            Pornește simularea
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+</div>
+@if (selected()) {
+  <section class="panel history">
+    <header class="panel-heading">
+      <div>
+        <h2>Rulări</h2>
+        <p>
+          Fiecare rulare păstrează configurația de la lansare. Reîncercarea folosește aceleași
+          intrări.
+        </p>
+      </div>
+    </header>
+    <div class="panel-body">
+      <div class="choices">
+        @for (run of runs(); track run.id) {
+          <button type="button" (click)="refreshRun(run.id)">
+            <strong>{{ run.status }}</strong
+            ><span
+              >Scenariu revizia {{ run.scenarioRevision }} · seed {{ run.seed }} ·
+              {{ run.id }}</span
+            >
+          </button>
+        } @empty {
+          <p>Nu există rulări pentru acest scenariu.</p>
+        }
+      </div>
+      @if (pollingError()) {
+        <p class="notice" role="alert">{{ pollingError() }}</p>
+      }
+      @if (result(); as run) {
+        <div class="panel-heading">
+          <h3>Status: {{ run.status }}</h3>
+          <button type="button" (click)="refreshRun(run.id)">Actualizează rularea</button>
+        </div>
+        @if (run.error) {
+          <p class="notice" role="alert">{{ run.error.message }} ({{ run.error.code }})</p>
+          <button class="btn-primary" type="button" [disabled]="busy()" (click)="retry()">
+            Reîncearcă rularea
+          </button>
+        }
+        @if (run.status === 'planned' || run.status === 'running') {
+          <p role="status">Simularea este în curs. Statusul se actualizează automat.</p>
+        }
+        @if (run.resultsValid) {
+          <div class="table-wrap" role="region" aria-label="Metricile rulării" tabindex="0">
+            <table>
+              <thead>
+                <tr>
+                  <th>Metrică</th>
+                  <th>Valoare</th>
+                  <th>Unitate</th>
+                  <th>Checkpoint</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (metric of run.metrics; track metric.id) {
+                  <tr>
+                    <td>{{ metricName(metric.name) }}</td>
+                    <td>{{ metric.value }}</td>
+                    <td>{{ metric.unit }}</td>
+                    <td>{{ checkpointName(metric.zoneId) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <h3>Stări ale checkpoint-urilor</h3>
+          @for (snapshot of run.snapshots; track snapshot.id) {
+            @let counts = snapshotCounts(snapshot.payloadJson);
+            <p>
+              {{ checkpointName(snapshot.zoneId) }} · {{ snapshot.recordedAtUtc }}
+              @if (counts) {
+                · minutul {{ counts.elapsedMinutes }} · {{ counts.queuedPassengers }} în coadă ·
+                {{ counts.processedPassengers }} procesați
+              }
+            </p>
+          }
+        }
+      }
+    </div>
+  </section>
+}

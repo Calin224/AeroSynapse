@@ -25,6 +25,29 @@ describe('HTTP infrastructure', () => {
     http.expectOne('https://api.example.test/data/scenarios.json').flush([]);
     expect(result).toHaveBeenCalledWith([]);
   });
+  it('explains validation fields without exposing unrelated server details', () => {
+    const onError = vi.fn();
+    api.post('scenarios', {}).subscribe({ error: onError });
+    http.expectOne('https://api.example.test/scenarios').flush(
+      { errors: { code: ['Codul este obligatoriu.', 42] }, internal: 'private server details' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    const error = onError.mock.calls[0][0] as ApiError;
+    expect(error.status).toBe(422);
+    expect(error.message).toBe('code: Codul este obligatoriu.');
+  });
+  it('asks the user to refresh when a scenario write conflicts', () => {
+    const onError = vi.fn();
+    api.post('scenarios', {}).subscribe({ error: onError });
+    http.expectOne('https://api.example.test/scenarios').flush(
+      { details: 'private server details' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    const error = onError.mock.calls[0][0] as ApiError;
+    expect(error.status).toBe(409);
+    expect(error.message).toContain('Actualizează');
+    expect(error.message).not.toContain('private server details');
+  });
   it.each([0, 404, 500])('normalizes status %s without leaking server details', (status) => {
     const onError = vi.fn();
     api.get('data/scenarios.json').subscribe({ error: onError });
