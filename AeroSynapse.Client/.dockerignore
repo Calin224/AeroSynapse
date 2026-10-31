@@ -1,0 +1,13 @@
+node_modules
+dist
+.angular
+.git
+.vscode
+.env
+.env.*
+coverage
+docs
+e2e
+test-results
+playwright-report
+npm-debug.log*

@@ -48,6 +48,10 @@ de pe portul 5080 și pentru un viitor serviciu FastAPI pe portul 8000. Footer-u
 afișează separat conectivitatea fiecărui serviciu; frontend-ul demo rămâne utilizabil
 și când acestea sunt indisponibile.
 
+Pentru livrare, `AeroSynapse.Client/Dockerfile` construiește frontend-ul și îl servește
+prin Nginx, cu proxy API, fallback pentru rutele SPA, healthcheck și configurare publică
+generată la pornire. Comenzi și variabile: [rulare în Docker](AeroSynapse.Client/README.md#rulare-în-docker).
+
 ## Pornire backend
 
 Instalează SDK-ul .NET indicat în `global.json` (10.0.301 sau un feature band compatibil din .NET 10). Rulează din rădăcina repository-ului:

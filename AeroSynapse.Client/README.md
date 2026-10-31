@@ -136,3 +136,49 @@ Testele folosesc porturi browser simulate pentru GPU, controale și observer;
 vizualizarea reală trebuie verificată și într-un browser cu WebGL disponibil.
 Verificatorul de asset-uri importă GLB-urile prin Three.js/Meshopt fără GPU și verifică
 dimensiunile, axele, transparența, identificatorii și bugetele modelelor.
+
+## Rulare în Docker
+
+Din rădăcina repository-ului, cu Docker pornit:
+
+```powershell
+docker build -t aerosynapse-frontend ./AeroSynapse.Client
+docker run --rm --name aerosynapse-frontend -p 127.0.0.1:8080:80 aerosynapse-frontend
+```
+
+Deschide `http://127.0.0.1:8080/control-tower` sau `/scenario`. Imaginea compilează
+aplicația cu Node.js 24 și servește doar rezultatul de producție prin Nginx.
+Dependențele Node, cache-urile, rapoartele de test, fișierele `.env` și suitele E2E
+sunt excluse din contextul Docker.
+
+La pornire, `docker/30-runtime-config.sh` generează `runtime-config.js` din variabilele
+de mai jos. Valorile sunt serializate prin JSON și fișierul este servit cu
+`Cache-Control: no-store`, astfel încât aceeași imagine poate fi configurată pentru
+mai multe medii fără recompilare.
+
+| Variabilă | Implicit | Rol |
+| --- | --- | --- |
+| `API_UPSTREAM` | `host.docker.internal:5080` | Adresa API accesibilă din container, fără schemă URL |
+| `INTELLIGENCE_UPSTREAM` | `host.docker.internal:8000` | Adresa FastAPI accesibilă din container, fără schemă URL |
+| `FRONTEND_API_BASE_URL` | `/api` | Adresa publică folosită de browser pentru API |
+| `FRONTEND_INTELLIGENCE_BASE_URL` | `/intelligence` | Adresa publică folosită de browser pentru FastAPI |
+
+Suprascrie variabilele cu `docker run -e NUME=valoare`. Pe Docker Desktop,
+`host.docker.internal` indică gazda; pe Docker Engine pentru Linux adaugă
+`--add-host host.docker.internal:host-gateway` sau folosește numele serviciilor din
+aceeași rețea Docker. Numele upstream trebuie să poată fi rezolvate la pornirea Nginx.
+Serviciile API și FastAPI se pornesc separat; datele demo rămân disponibile în lipsa lor.
+Adresele `FRONTEND_*` sunt publice și nu trebuie să conțină credențiale.
+
+Nginx păstrează prefixul `/api` pentru endpoint-urile hărților, trimite `/api/health`
+la `/health` în backend și elimină prefixul `/intelligence` pentru FastAPI.
+Navigarea directă către rutele SPA primește `index.html`. Fișierele statice lipsă,
+inclusiv modelele 3D și datele demonstrative, răspund cu 404.
+
+`GET /health` verifică frontend-ul și este folosit de healthcheck-ul imaginii Docker;
+conectivitatea backendurilor este afișată separat în aplicație. Verificarea configurației:
+
+```powershell
+docker exec aerosynapse-frontend nginx -t
+curl http://127.0.0.1:8080/health
+```
