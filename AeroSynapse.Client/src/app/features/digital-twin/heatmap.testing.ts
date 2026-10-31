@@ -33,6 +33,30 @@ export function datasetFixture(): HeatmapDataset {
   };
 }
 
+export function congestionRunFixture(): HeatmapRun {
+  return {
+    runId: 'run-1',
+    scenarioId: 'scenario-1',
+    layoutId: 'layout-1',
+    source: 'stored-run',
+    status: 'completed',
+    capacities: ['cp-1', 'cp-2', 'cp-3'].map((zoneId) => ({
+      zoneId, label: zoneId, serviceRatePerMinute: 10, staffCount: 1,
+    })),
+    snapshots: [0, 2, 5, 7].flatMap((minute) =>
+      ['cp-1', 'cp-2', 'cp-3'].map((zoneId, index) => ({
+        zoneId,
+        elapsedMinutes: minute,
+        processedPassengers: minute * 3,
+        queuedPassengers:
+          minute === 2 && index === 0 ? 30 :
+          minute === 2 && index === 1 ? 10 :
+          minute === 5 && index === 1 ? 15 : 0,
+      })),
+    ),
+  };
+}
+
 export function storedFixture(run: HeatmapRun = datasetFixture().baseline): RunDetails {
   return {
     id: run.runId,

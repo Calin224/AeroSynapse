@@ -6,6 +6,7 @@ import {
   HeatmapFrame,
   heatmapMinutes,
 } from './heatmap-model';
+import { congestionGradient, congestionTimeline, CONGESTION_SLIDER_STYLES } from './heatmap-timeline';
 
 @Component({
   selector: 'app-heatmap-controls',
@@ -52,13 +53,17 @@ import {
               >Cursor de timp
               <input
                 type="range"
+                class="congestion-slider"
                 aria-label="Minutul simulării"
                 min="0"
                 [max]="minutes().length ? minutes().length - 1 : 0"
                 step="1"
                 [value]="index()"
                 [disabled]="minutes().length < 2"
-                [attr.aria-valuetext]="'Minutul ' + frame().minute"
+                [style.--congestion-track]="track()"
+                [style.--congestion-thumb]="states[band()].color"
+                [attr.data-congestion-band]="band()"
+                [attr.aria-valuetext]="'Minutul ' + frame().minute + ' · starea cea mai gravă: ' + states[band()].label"
                 (input)="changeMinute($event)"
               />
             </label>
@@ -184,7 +189,7 @@ import {
       }
     </section>
   `,
-  styles: `
+  styles: [CONGESTION_SLIDER_STYLES, `
     :host {
       display: block;
     }
@@ -412,7 +417,7 @@ import {
         min-width: 680px;
       }
     }
-  `,
+  `],
 })
 export class HeatmapControls {
   readonly readOnly = input(false);
@@ -425,6 +430,17 @@ export class HeatmapControls {
   readonly followLatest = output<void>();
   protected readonly minutes = computed(() => heatmapMinutes(this.dataset()));
   protected readonly index = computed(() => this.minutes().indexOf(this.frame().minute));
+  private readonly timelineRun = computed(() => {
+    const dataset = this.dataset();
+    return this.frame().variant === 'optimized' && comparable(dataset) ? dataset.optimized! : dataset.baseline;
+  });
+  protected readonly timeline = computed(() => congestionTimeline(this.timelineRun(), this.minutes()));
+  protected readonly band = computed(() => this.timeline()[this.index()]?.band ?? 'unavailable');
+  protected readonly track = computed(() => congestionGradient(
+    this.timeline().map((moment, index) => ({ ...moment, minute: Math.max(0, index - 0.5) })),
+    0,
+    Math.max(0, this.minutes().length - 1),
+  ));
   protected readonly compatible = computed(() => comparable(this.dataset()));
   protected readonly bands = Object.values(CONGESTION_BANDS);
   protected readonly states = CONGESTION_BANDS;

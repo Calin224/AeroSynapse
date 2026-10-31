@@ -103,6 +103,12 @@ Pentru verificare manuală:
   Restabilește fixture-urile după verificare. Scenariile schimbă poziții demonstrative;
   un motor de simulare și telemetria reală nu fac parte din acest prototip.
 
+## Timeline de aglomerație
+
+Controalele heatmap și playback-ul pasagerilor colorează cursorul și întreaga bară de timp după cea mai gravă stare observată într-o zonă. Stările critice și avertismentele au prioritate; datele lipsă sunt marcate distinct, fără să pară trafic normal.
+
+Playback-ul folosește ultimul snapshot disponibil înaintea cursorului, fără interpolarea severității. Culorile păstrează durata intervalelor observate, iar eticheta accesibilă a cursorului include minutul și starea de aglomerație. Schimbarea rulării recalculează timeline-ul fără să modifice datele sursă.
+
 ## Build și teste
 
 ```powershell

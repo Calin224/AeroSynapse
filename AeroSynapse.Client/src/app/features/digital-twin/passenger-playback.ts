@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -9,7 +10,8 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { HeatmapRun } from './heatmap-model';
+import { CONGESTION_BANDS, HeatmapRun } from './heatmap-model';
+import { congestionAt, congestionGradient, congestionTimeline, CONGESTION_SLIDER_STYLES } from './heatmap-timeline';
 import {
   PassengerClock,
   PassengerPacket,
@@ -54,13 +56,17 @@ import {
           ><span class="sr-only">Derulare</span>
           <input
             type="range"
+            class="congestion-slider"
             aria-label="Poziția animației în minute"
-            [min]="start"
-            [max]="end"
+            [min]="start()"
+            [max]="end()"
             step="0.01"
             [value]="time()"
             [disabled]="!canPlay()"
-            [attr.aria-valuetext]="'Minutul ' + time().toFixed(1) + ' din simulare'"
+            [style.--congestion-track]="track()"
+            [style.--congestion-thumb]="states[band()].color"
+            [attr.data-congestion-band]="band()"
+            [attr.aria-valuetext]="'Minutul ' + time().toFixed(1) + ' din simulare · starea cea mai gravă: ' + states[band()].label"
             (input)="seek($event)"
           />
         </label>
@@ -119,7 +125,7 @@ import {
       </details>
     </section>
   `,
-  styles: `
+  styles: [CONGESTION_SLIDER_STYLES, `
     :host {
       display: block;
       grid-column: 1/-1;
@@ -219,7 +225,7 @@ import {
         flex-basis: 100%;
       }
     }
-  `,
+  `],
 })
 export class PassengerPlayback {
   readonly run = input.required<HeatmapRun>();
@@ -231,6 +237,10 @@ export class PassengerPlayback {
   readonly minuteChange = output<number>();
   protected readonly enabled = signal(true);
   protected readonly time = signal(0);
+  protected readonly timeline = computed(() => congestionTimeline(this.run(), this.timelineMinutes()));
+  protected readonly track = computed(() => congestionGradient(this.timeline(), this.start(), this.end()));
+  protected readonly band = computed(() => congestionAt(this.timeline(), this.time()));
+  protected readonly states = CONGESTION_BANDS;
   protected readonly playing = signal(false);
   protected readonly speed = signal<PlaybackSpeed>(1);
   protected readonly budget = signal(600);
@@ -245,8 +255,8 @@ export class PassengerPlayback {
   private lastMinute?: number;
   private request?: number;
   private publishedAt = -Infinity;
-  protected start = 0;
-  protected end = 0;
+  protected readonly start = signal(0);
+  protected readonly end = signal(0);
   constructor() {
     effect(() => {
       const run = this.run(),
@@ -264,10 +274,10 @@ export class PassengerPlayback {
           ],
           [Infinity, -Infinity],
         );
-        this.start = Math.min(minutes[0] ?? Infinity, motionRange[0]);
-        if (!Number.isFinite(this.start)) this.start = 0;
-        this.end = Math.max(minutes.at(-1) ?? -Infinity, motionRange[1]);
-        if (!Number.isFinite(this.end)) this.end = this.start;
+        const start = Math.min(minutes[0] ?? Infinity, motionRange[0]);
+        this.start.set(Number.isFinite(start) ? start : 0);
+        const end = Math.max(minutes.at(-1) ?? -Infinity, motionRange[1]);
+        this.end.set(Number.isFinite(end) ? end : this.start());
         const context = `${run.runId}:${run.layoutId}`;
         if (context !== this.context) {
           this.context = context;
@@ -276,15 +286,15 @@ export class PassengerPlayback {
           // within seconds. Only the live preview follows real time.
           this.clock.speed = run.source === 'live-preview' ? 1 : 16;
           this.speed.set(this.clock.speed);
-          this.clock.configure(this.start, this.end);
+          this.clock.configure(this.start(), this.end());
           this.clock.seek(minute);
         } else {
-          this.clock.configure(this.start, this.end);
+          this.clock.configure(this.start(), this.end());
           if (minute !== this.lastMinute) this.clock.seek(minute);
         }
         this.lastMinute = minute;
         this.mode.set(this.replay!.mode);
-        this.canPlay.set(this.end > this.start && this.replay!.mode !== 'unavailable');
+        this.canPlay.set(this.end() > this.start() && this.replay!.mode !== 'unavailable');
         if (this.replay!.mode === 'unavailable') this.stop();
         this.publish(false);
       });
@@ -370,7 +380,7 @@ export class PassengerPlayback {
       speed: this.clock.speed,
       budget: this.budget(),
       enabled: this.enabled(),
-      endMinute: this.end,
+      endMinute: this.end(),
     });
   }
 }
