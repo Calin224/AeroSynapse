@@ -62,15 +62,27 @@ describe('Three.js renderer lifecycle', () => {
       dispose: vi.fn(),
     };
     const observer = { observe: vi.fn(), disconnect: vi.fn() };
+    const loadTexture = vi.fn(async (_path: string) => new Texture());
     const dependencies: RendererDependencies = {
       graphics: () => graphics,
       controls: () => controls,
       observer: () => observer,
       loadAsset,
+      loadTexture,
     };
     const onError = vi.fn();
     const renderer = new ThreeTwinRenderer(host, onError, dependencies);
-    return { host, canvas, graphics, controls, observer, renderer, onError, loadAsset };
+    return {
+      host,
+      canvas,
+      graphics,
+      controls,
+      observer,
+      renderer,
+      onError,
+      loadAsset,
+      loadTexture,
+    };
   }
   it('sizes the camera and releases loop, controls, observer, GPU and canvas exactly once', async () => {
     const { host, graphics, controls, observer, renderer } = setup();
@@ -108,6 +120,31 @@ describe('Three.js renderer lifecycle', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     expect(vi.mocked(graphics.setAnimationLoop).mock.calls.length).toBe(callCount);
   });
+  it('applies a surface texture to the selected zone and restores its original material', async () => {
+    const { renderer, graphics, loadTexture } = setup();
+    await renderer.ready;
+    const [scene] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    let mesh: Mesh | undefined;
+    scene.traverse((object) => {
+      if (object instanceof Mesh && object.parent?.userData['entityId'] === 'zone-entity')
+        mesh = object;
+    });
+    expect(mesh).toBeDefined();
+    const original = mesh!.material;
+
+    await renderer.applySurface('zone-entity', 'marble');
+
+    const texture = await loadTexture.mock.results[0].value;
+    expect(loadTexture).toHaveBeenCalledWith('materials/airport/marble_01_Diffuse.jpg');
+    expect(renderer.getAppliedSurface('zone-entity')).toBe('marble');
+    expect(mesh!.material).not.toBe(original);
+    expect((mesh!.material as MeshStandardMaterial).map).toBe(texture);
+
+    renderer.resetSurface('zone-entity');
+    expect(mesh!.material).toBe(original);
+    expect(renderer.getAppliedSurface('zone-entity')).toBeNull();
+    renderer.dispose();
+  });
   it('reports a lost context and removes its listener on destruction', () => {
     const { canvas, renderer, onError } = setup();
     canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
@@ -136,6 +173,7 @@ describe('Three.js renderer lifecycle', () => {
           },
           observer: vi.fn(),
           loadAsset: vi.fn(),
+          loadTexture: vi.fn(),
         }),
     ).toThrow('unavailable');
     expect(graphics.dispose).toHaveBeenCalledOnce();

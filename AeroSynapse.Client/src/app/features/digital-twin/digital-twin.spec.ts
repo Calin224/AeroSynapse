@@ -4,7 +4,14 @@ import { TwinRenderer } from './twin-model';
 
 describe('DigitalTwin component boundary', () => {
   it('updates its renderer and disposes it when the component is destroyed', async () => {
-    const renderer: TwinRenderer = { setScene: vi.fn(), resetCamera: vi.fn(), dispose: vi.fn() };
+    const renderer: TwinRenderer = {
+      setScene: vi.fn(),
+      resetCamera: vi.fn(),
+      dispose: vi.fn(),
+      applySurface: vi.fn(),
+      resetSurface: vi.fn(),
+      getAppliedSurface: vi.fn(() => null),
+    };
     TestBed.configureTestingModule({
       imports: [DigitalTwin],
       providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
@@ -23,7 +30,14 @@ describe('DigitalTwin component boundary', () => {
     expect(renderer.dispose).toHaveBeenCalledOnce();
   });
   it('shows a recoverable error when WebGL initialization fails', async () => {
-    const renderer = { setScene: vi.fn(), resetCamera: vi.fn(), dispose: vi.fn() };
+    const renderer = {
+      setScene: vi.fn(),
+      resetCamera: vi.fn(),
+      dispose: vi.fn(),
+      applySurface: vi.fn(),
+      resetSurface: vi.fn(),
+      getAppliedSurface: vi.fn(() => null),
+    };
     const factory = vi
       .fn()
       .mockImplementationOnce(() => {

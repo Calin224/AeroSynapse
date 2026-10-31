@@ -18,11 +18,47 @@ export interface TwinSelection {
   synthetic: true;
   resource: string;
 }
+export const TWIN_SURFACES = [
+  {
+    id: 'terrazzo',
+    label: 'Terrazzo',
+    texture: 'materials/airport/terminal-terrazzo.jpg',
+  },
+  {
+    id: 'marble',
+    label: 'Marmură',
+    texture: 'materials/airport/marble_01_Diffuse.jpg',
+  },
+  {
+    id: 'oak',
+    label: 'Stejar',
+    texture: 'materials/airport/oak_veneer_01_Diffuse.jpg',
+  },
+  {
+    id: 'plaster',
+    label: 'Tencuială',
+    texture: 'materials/airport/white_plaster_02_Diffuse.jpg',
+  },
+  {
+    id: 'apron',
+    label: 'Platformă',
+    texture: 'materials/airport/terminal-apron.jpg',
+  },
+  {
+    id: 'carpet',
+    label: 'Mochetă',
+    texture: 'materials/airport/terminal-carpet.jpg',
+  },
+] as const;
+export type TwinSurface = (typeof TWIN_SURFACES)[number]['id'];
 export interface TwinRenderer {
   readonly ready?: Promise<void>;
   setScene(scene: TwinScene): void;
   setDisplayMode?(mode: TwinDisplayMode): Promise<void>;
   setResources?(resources: TwinResources): void;
+  applySurface(entityId: string, surface: TwinSurface): Promise<void>;
+  resetSurface(entityId: string): void;
+  getAppliedSurface(entityId: string): TwinSurface | null;
   setSelectionHandler?(handler: (selection: TwinSelection | null) => void): void;
   setAssetStatusHandler?(handler: (status: { loading: boolean; error?: string }) => void): void;
   getSelectableZones?(): TwinSelection[];

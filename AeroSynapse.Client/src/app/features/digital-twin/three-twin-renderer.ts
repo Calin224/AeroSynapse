@@ -6,11 +6,17 @@ import {
   DirectionalLight,
   Group,
   LOD,
+  Material,
   Mesh,
+  MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Raycaster,
+  RepeatWrapping,
   Scene,
+  SRGBColorSpace,
+  Texture,
+  TextureLoader,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -24,7 +30,9 @@ import {
   TwinRenderer,
   TwinResources,
   TwinScene,
+  TwinSurface,
   TwinSelection,
+  TWIN_SURFACES,
 } from './twin-model';
 
 export type GraphicsBackend = Pick<
@@ -52,6 +60,7 @@ export interface RendererDependencies {
   controls: (camera: PerspectiveCamera, canvas: HTMLCanvasElement) => CameraControls;
   observer: (callback: ResizeObserverCallback) => Pick<ResizeObserver, 'observe' | 'disconnect'>;
   loadAsset: (url: string, signal: AbortSignal) => Promise<Group>;
+  loadTexture: (url: string) => Promise<Texture>;
 }
 const browserDependencies: RendererDependencies = {
   graphics: () => new WebGLRenderer({ antialias: true, alpha: false }),
@@ -67,6 +76,7 @@ const browserDependencies: RendererDependencies = {
         .parseAsync(await response.arrayBuffer(), new URL('.', url).href)
     ).scene;
   },
+  loadTexture: (path) => new TextureLoader().loadAsync(new URL(path, document.baseURI).href),
 };
 
 /** Display state is isolated from simulation inputs. One glTF unit is one metre. */
@@ -80,6 +90,15 @@ export class ThreeTwinRenderer implements TwinRenderer {
   private readonly graphics: GraphicsBackend;
   private readonly raycaster = new Raycaster();
   private readonly pointer = new Vector2();
+  private readonly appliedSurfaces = new Map<
+    string,
+    {
+      surface: TwinSurface;
+      originals: Map<Mesh, Material | Material[]>;
+      replacements: Material[];
+      texture: Texture;
+    }
+  >();
   private controls?: CameraControls;
   private observer?: Pick<ResizeObserver, 'observe' | 'disconnect'>;
   private terminal?: Group;
@@ -164,6 +183,86 @@ export class ThreeTwinRenderer implements TwinRenderer {
     this.sceneData = data;
     this.updateVisibility();
     this.frame();
+  }
+  async applySurface(entityId: string, surface: TwinSurface): Promise<void> {
+    if (this.disposed) throw new Error('Rendererul 3D nu mai este disponibil.');
+    if (this.mode !== 'interior') throw new Error('Materialele se aplică doar în modul Interior.');
+    const definition = TWIN_SURFACES.find((option) => option.id === surface);
+    if (!definition) throw new Error('Materialul selectat nu există.');
+    const target = this.findEntity(entityId);
+    if (!target) throw new Error('Selectează o zonă vizibilă din terminal.');
+    const meshes: Mesh[] = [];
+    target.traverse((object) => {
+      if (object instanceof Mesh) meshes.push(object);
+    });
+    if (!meshes.length) throw new Error('Zona selectată nu conține geometrii 3D.');
+
+    const texture = await this.dependencies.loadTexture(definition.texture);
+    if (this.disposed || this.mode !== 'interior') {
+      texture.dispose();
+      throw new Error('Scena s-a schimbat înainte de aplicarea materialului.');
+    }
+    texture.colorSpace = SRGBColorSpace;
+    texture.wrapS = RepeatWrapping;
+    texture.wrapT = RepeatWrapping;
+    texture.repeat.set(3, 3);
+    texture.needsUpdate = true;
+
+    const previous = this.appliedSurfaces.get(entityId);
+    const originals =
+      previous?.originals ?? new Map(meshes.map((mesh) => [mesh, mesh.material] as const));
+    const replacements: Material[] = [];
+    try {
+      const assigned = meshes.map((mesh) => {
+        const original = originals.get(mesh) ?? mesh.material;
+        const originalMaterials = Array.isArray(original) ? original : [original];
+        const nextMaterials = originalMaterials.map((material) => {
+          const replacement =
+            material instanceof MeshStandardMaterial
+              ? material.clone()
+              : new MeshStandardMaterial();
+          replacement.map = texture;
+          replacement.needsUpdate = true;
+          replacements.push(replacement);
+          return replacement;
+        });
+        return [mesh, Array.isArray(original) ? nextMaterials : nextMaterials[0]] as const;
+      });
+
+      this.resetSurface(entityId);
+      for (const [mesh, material] of assigned) mesh.material = material;
+      this.appliedSurfaces.set(entityId, { surface, originals, replacements, texture });
+      this.frame();
+    } catch (error) {
+      for (const [mesh, material] of originals) mesh.material = material;
+      replacements.forEach((material) => material.dispose());
+      texture.dispose();
+      throw error;
+    }
+  }
+  resetSurface(entityId: string): void {
+    const applied = this.appliedSurfaces.get(entityId);
+    if (!applied) return;
+    for (const [mesh, material] of applied.originals) mesh.material = material;
+    applied.replacements.forEach((material) => material.dispose());
+    applied.texture.dispose();
+    this.appliedSurfaces.delete(entityId);
+    this.frame();
+  }
+  getAppliedSurface(entityId: string): TwinSurface | null {
+    return this.appliedSurfaces.get(entityId)?.surface ?? null;
+  }
+  private findEntity(entityId: string): Object3D | undefined {
+    let target: Object3D | undefined;
+    this.scene.traverseVisible((object) => {
+      if (
+        !target &&
+        object.userData['clickable'] === true &&
+        object.userData['entityId'] === entityId
+      )
+        target = object;
+    });
+    return target;
   }
   async setDisplayMode(mode: TwinDisplayMode): Promise<void> {
     if (this.disposed) return;
@@ -411,6 +510,7 @@ export class ThreeTwinRenderer implements TwinRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    for (const entityId of [...this.appliedSurfaces.keys()]) this.resetSurface(entityId);
     this.request.abort();
     this.graphics.setAnimationLoop(null);
     document.removeEventListener('visibilitychange', this.visibilityChanged);

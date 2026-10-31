@@ -19,7 +19,9 @@ import {
   TwinResource,
   TwinResources,
   TwinScene,
+  TwinSurface,
   TwinSelection,
+  TWIN_SURFACES,
 } from './twin-model';
 
 export const TWIN_RENDERER_FACTORY = new InjectionToken<
@@ -137,7 +139,66 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
         3 controale · 5 porți · Geometrie și mișcări demonstrative. Nu reproduce Craiova.
       </div>
     }
-  </div>`,
+  </div>
+  @if (status() === 'ready') {
+    <section class="material-editor" aria-label="Editor de materiale">
+      <div class="material-heading">
+        <div>
+          <strong>Materiale terminal</strong>
+          <span>Alege o suprafață și aplic-o pe zona selectată.</span>
+        </div>
+        @if (selection(); as selected) {
+          <span class="zone-chip">{{ selected.label }}</span>
+        } @else {
+          <span class="zone-hint">Selectează mai întâi o zonă din model</span>
+        }
+      </div>
+      <div class="surface-grid" role="group" aria-label="Alege materialul">
+        @for (surface of surfaceOptions; track surface.id) {
+          <button
+            type="button"
+            class="surface-option"
+            [class.selected]="selectedSurface() === surface.id"
+            [attr.aria-pressed]="selectedSurface() === surface.id"
+            (click)="chooseSurface(surface.id)"
+          >
+            <img [src]="surface.texture" [alt]="surface.label" />
+            <span>{{ surface.label }}</span>
+          </button>
+        }
+      </div>
+      <div class="material-actions">
+        <div class="material-status" aria-live="polite">
+          @if (surfaceLoading()) {
+            Se încarcă materialul…
+          } @else if (surfaceError()) {
+            <span class="material-error" role="alert">{{ surfaceError() }}</span>
+          } @else if (appliedSurface()) {
+            Material {{ appliedSurface() }} aplicat pe {{ selection()?.label }}.
+          } @else {
+            Materialul se aplică doar modelului local.
+          }
+        </div>
+        <div class="material-buttons">
+          <p-button
+            label="Aplică material"
+            icon="pi pi-palette"
+            size="small"
+            [disabled]="!selection() || mode() !== 'interior' || surfaceLoading()"
+            (onClick)="applySurface()"
+          />
+          <p-button
+            label="Revino la original"
+            icon="pi pi-undo"
+            [outlined]="true"
+            size="small"
+            [disabled]="!selection() || !appliedSurface() || surfaceLoading()"
+            (onClick)="resetSurface()"
+          />
+        </div>
+      </div>
+    </section>
+  }`,
   styles: `
     :host {
       display: block;
@@ -265,6 +326,77 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
       font-size: 11px;
       max-width: 75%;
     }
+    .material-editor {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      background: #101a24;
+      border-top: 1px solid #25313e;
+    }
+    .material-heading,
+    .material-actions,
+    .material-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .material-heading > div {
+      display: grid;
+      gap: 4px;
+    }
+    .material-heading strong {
+      color: #e8eef5;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .material-heading span,
+    .material-status {
+      color: #8e9caf;
+      font-size: 10px;
+    }
+    .zone-chip {
+      padding: 5px 8px;
+      border: 1px solid #2e4c49;
+      border-radius: 5px;
+      color: #59d9ba !important;
+      white-space: nowrap;
+    }
+    .surface-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .surface-option {
+      display: grid;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid #25313e;
+      border-radius: 7px;
+      background: #131e29;
+      color: #c3cedb;
+      cursor: pointer;
+      text-align: left;
+    }
+    .surface-option.selected {
+      border-color: #59d9ba;
+      color: #e8eef5;
+    }
+    .surface-option img {
+      width: 100%;
+      aspect-ratio: 2 / 1;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .surface-option span {
+      font-size: 10px;
+    }
+    .material-buttons {
+      justify-content: flex-end;
+    }
+    .material-error {
+      color: #ff9a91;
+    }
     @media (max-width: 650px) {
       .viewport {
         height: 520px;
@@ -280,6 +412,18 @@ export const TWIN_RENDERER_FACTORY = new InjectionToken<
       }
       .selection {
         bottom: 64px;
+      }
+      .surface-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .material-heading,
+      .material-actions {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .material-buttons {
+        justify-content: flex-start;
+        flex-wrap: wrap;
       }
     }
   `,
@@ -300,6 +444,11 @@ export class DigitalTwin {
   protected readonly zones = signal<TwinSelection[]>([]);
   protected readonly assetLoading = signal(false);
   protected readonly assetError = signal('');
+  protected readonly surfaceOptions = TWIN_SURFACES;
+  protected readonly selectedSurface = signal<TwinSurface>('terrazzo');
+  protected readonly appliedSurface = signal<TwinSurface | null>(null);
+  protected readonly surfaceLoading = signal(false);
+  protected readonly surfaceError = signal('');
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private readonly createRenderer = inject(TWIN_RENDERER_FACTORY);
   private renderer?: TwinRenderer;
@@ -320,11 +469,19 @@ export class DigitalTwin {
     this.assetError.set('');
     this.assetLoading.set(false);
     this.selection.set(null);
+    this.appliedSurface.set(null);
+    this.surfaceError.set('');
+    this.surfaceLoading.set(false);
     let renderer: TwinRenderer | undefined;
     try {
       renderer = this.createRenderer(this.host().nativeElement, () => this.fail());
       this.renderer = renderer;
-      renderer.setSelectionHandler?.((value) => this.selection.set(value));
+      renderer.setSelectionHandler?.((value) => {
+        this.selection.set(value);
+        this.appliedSurface.set(
+          value ? renderer?.getAppliedSurface(value.entityId) ?? null : null,
+        );
+      });
       renderer.setAssetStatusHandler?.((value) => {
         if (this.renderer !== renderer) return;
         this.assetLoading.set(value.loading);
@@ -368,6 +525,37 @@ export class DigitalTwin {
   }
   protected selectZone(event: Event): void {
     this.renderer?.selectEntity?.((event.target as HTMLSelectElement).value);
+  }
+  protected chooseSurface(surface: TwinSurface): void {
+    this.selectedSurface.set(surface);
+    this.surfaceError.set('');
+  }
+  protected async applySurface(): Promise<void> {
+    const renderer = this.renderer;
+    const selection = this.selection();
+    if (!renderer || !selection || this.mode() !== 'interior') return;
+    const surface = this.selectedSurface();
+    this.surfaceLoading.set(true);
+    this.surfaceError.set('');
+    try {
+      await renderer.applySurface(selection.entityId, surface);
+      if (this.renderer === renderer && this.selection()?.entityId === selection.entityId)
+        this.appliedSurface.set(renderer.getAppliedSurface(selection.entityId));
+    } catch (error) {
+      if (this.renderer === renderer)
+        this.surfaceError.set(
+          `Materialul nu a putut fi aplicat: ${error instanceof Error ? error.message : 'eroare necunoscută'}`,
+        );
+    } finally {
+      if (this.renderer === renderer) this.surfaceLoading.set(false);
+    }
+  }
+  protected resetSurface(): void {
+    const selection = this.selection();
+    if (!selection || !this.renderer) return;
+    this.renderer.resetSurface(selection.entityId);
+    this.appliedSurface.set(null);
+    this.surfaceError.set('');
   }
   private refreshZones(): void {
     this.zones.set(this.renderer?.getSelectableZones?.() ?? []);
