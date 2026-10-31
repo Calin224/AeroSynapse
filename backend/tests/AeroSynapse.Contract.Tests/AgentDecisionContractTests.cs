@@ -36,10 +36,12 @@ public sealed class AgentDecisionContractTests
     }
 
     [Fact]
-    public void Desk_steps_only_open_and_gate_choices_name_the_runs_delays()
+    public void Desk_steps_allow_closures_and_gate_choices_name_the_runs_delays()
     {
         var desks = JsonNode.Parse(Example("kpis", "check-in-desks-request").GetRawText())!;
         desks["checkIn"]!["deskSteps"] = new JsonArray(new JsonObject { ["startMinute"] = 0, ["staffCount"] = 2 }, new JsonObject { ["startMinute"] = 10, ["staffCount"] = 1 });
+        Assert.Empty(VersionedContract.Validate("KpiSimulationRequest", JsonSerializer.SerializeToElement(desks)));
+        desks["checkIn"]!["deskSteps"]![0]!["startMinute"] = 1;
         Assert.Contains(VersionedContract.Validate("KpiSimulationRequest", JsonSerializer.SerializeToElement(desks)), item => item.Field.EndsWith("/checkIn/deskSteps"));
         var gates = JsonNode.Parse(Example("journeys", "gate-choice-request").GetRawText())!;
         gates["journey"]!["gateChoices"]![0]!["eventId"] = "71000000-0000-0000-0000-000000000099";
