@@ -9,8 +9,8 @@ Backend AeroSynapse: .NET 10, ASP.NET Core Minimal API, MediatR și persistenț�
 | `backend/src/AeroSynapse.Domain` | Modelul aeroportului și validarea hărții: terminale, etaje, zone, rute, checkpoint-uri, porți și resurse. Fără dependențe externe. |
 | `backend/src/AeroSynapse.Application` | Query-ul de sănătate, contractul `IClock`, comenzile și query-urile MediatR pentru hărți, contractul repository-ului și snapshot-ul versionat. Depinde de Domain. |
 | `backend/src/AeroSynapse.Infrastructure` | Ceasul UTC, repository-ul de hărți și contextul Entity Framework Core cu SQLite. Depinde de Application și Domain. |
-| `backend/src/AeroSynapse.API` | Pornirea aplicației, compunerea dependențelor și endpoint-ul HTTP. Depinde de Application și Infrastructure. |
-| `backend/tests/AeroSynapse.Tests` | Teste xUnit pentru domeniu, health API și persistența hărților, inclusiv restart, concurență și constrângeri SQL. |
+| `backend/src/AeroSynapse.API` | Pornirea aplicației, compunerea dependențelor, health și endpoint-urile hărților pentru Development. Depinde de Application și Infrastructure. |
+| `backend/tests/AeroSynapse.Tests` | Teste xUnit pentru domeniu, API și persistența hărților, inclusiv restart, concurență, constrângeri SQL și restricționarea rutelor după mediu. |
 
 ## Pornire
 
@@ -18,7 +18,7 @@ Instalează SDK-ul .NET indicat în `global.json` (10.0.301 sau un feature band 
 
 ```sh
 dotnet restore AeroSynapse.sln
-dotnet run --project backend/src/AeroSynapse.API
+dotnet run --project backend/src/AeroSynapse.API --launch-profile Development
 ```
 
 API-ul pornește la `http://localhost:5080`. Verificare:
@@ -32,6 +32,25 @@ Răspuns HTTP 200, cu ora UTC curentă:
 ```json
 {"status":"Healthy","timestampUtc":"2026-10-30T12:00:00+00:00"}
 ```
+
+## API pentru hărți
+
+Rutele de mai jos sunt disponibile doar în mediul `Development`, pentru lucrul local, fără autentificare. La pornirea acestui mediu, aplicația creează automat schema SQLite. În celelalte medii, inclusiv `Production` și `Staging`, aceste rute răspund cu 404, iar aplicația nu deschide baza de date. `GET /health` este disponibil în toate mediile.
+
+| Metodă și rută | Răspuns |
+| --- | --- |
+| `POST /api/airports` | 201 cu snapshot-ul hărții și antetul `Location`; 400 pentru JSON invalid; 422 cu `issues` pentru erori de domeniu; 409 pentru ID-uri deja folosite. |
+| `GET /api/airports` | 200 cu cel mult 100 de aeroporturi, ordonate după nume și ID. |
+| `GET /api/airports/{airportId}/snapshot` | 200 cu snapshot-ul versionat sau 404 dacă aeroportul nu există. |
+
+Exemplu de creare și listare, rulat din rădăcina repository-ului:
+
+```sh
+curl -i -H "Content-Type: application/json" --data-binary "@backend/examples/airport-map.json" http://localhost:5080/api/airports
+curl http://localhost:5080/api/airports
+```
+
+Pentru citirea hărții, folosește URL-ul din antetul `Location`. Enumerările din JSON sunt șiruri, de exemplu `"Entrance"`; valorile numerice pentru enum și câmpurile necunoscute sunt respinse cu 400. Coordonatele nefinite sunt respinse cu 422 și detalii despre câmp. Repetarea unei cereri de creare cu aceleași ID-uri produce 409.
 
 ## Verificare
 
@@ -52,10 +71,10 @@ Componenta de persistență este disponibilă prin MediatR, în namespace-ul `Ae
 | `GetAirportSnapshotQuery` | Încarcă harta după ID-ul aeroportului și recalculează validările. Returnează `null` dacă aeroportul nu există. |
 | `ListAirportsQuery` | Returnează cel mult 100 de aeroporturi, ordonate după nume și ID. |
 
-`AddInfrastructure(connectionString)` configurează SQLite și repository-ul scoped. Valoarea implicită este `Data Source=aerosynapse.db`. Înainte de prima utilizare a repository-ului, gazda trebuie să creeze schema prin `AirportMapDbContext.Database.EnsureCreatedAsync()` într-un scope; testele fac acest lucru pe baze temporare separate. Pornirea API-ului și verificarea `/health` nu creează baza de date.
+`AddInfrastructure(connectionString)` configurează SQLite și repository-ul scoped. Valoarea implicită a extensiei este `Data Source=aerosynapse.db`. API-ul folosește `ConnectionStrings:AirportMaps` din configurație, cu fallback `Data Source=airport-maps.db`; poți suprascrie această valoare prin variabila de mediu `ConnectionStrings__AirportMaps`. În `Development`, gazda creează schema prin `AirportMapDbContext.Database.EnsureCreatedAsync()` într-un scope. Testele folosesc baze temporare separate.
 
 Hărțile cu erori sunt respinse prin `AirportMapValidationException`, iar reutilizarea unui ID existent, inclusiv între tipuri diferite de obiecte, produce `AirportMapConflictException`. Tranzacțiile împiedică salvarea parțială, iar constrângerile SQL protejează referințele, capacitățile, ratele și coordonatele și în cazul scrierilor directe.
 
 ## Scop
 
-API-ul HTTP expune în continuare `GET /health`; operațiile de persistență nu au încă endpoint-uri HTTP. Acest pas include modelele, validarea și stocarea hărților. Autentificarea, simularea, serviciul Python și frontend-ul vor fi integrate separat.
+Backendul include modelele, validarea, stocarea hărților și endpoint-urile HTTP pentru dezvoltare locală. Autentificarea, simularea, serviciul Python și frontend-ul vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.

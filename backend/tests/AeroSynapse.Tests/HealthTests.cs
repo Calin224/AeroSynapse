@@ -2,8 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using AeroSynapse.Application.Abstractions;
 using AeroSynapse.Application.Health;
+using AeroSynapse.Infrastructure.Airports;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -17,7 +20,8 @@ public sealed class HealthTests
     public async Task Api_starts_and_returns_current_utc_health_without_external_services(string environment)
     {
         await using var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder => builder.UseEnvironment(environment));
+            .WithWebHostBuilder(builder => builder.UseEnvironment(environment)
+                .ConfigureServices(UseInMemoryAirportMaps));
         using var client = factory.CreateClient();
         var before = DateTimeOffset.UtcNow;
 
@@ -39,6 +43,7 @@ public sealed class HealthTests
         await using var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
             {
+                UseInMemoryAirportMaps(services);
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(new FixedClock(timestamp));
             }));
@@ -47,6 +52,13 @@ public sealed class HealthTests
         var health = await client.GetFromJsonAsync<HealthResponse>("/health");
 
         Assert.Equal(new HealthResponse("Healthy", timestamp), health);
+    }
+
+    private static void UseInMemoryAirportMaps(IServiceCollection services)
+    {
+        services.RemoveAll<DbContextOptions<AirportMapDbContext>>();
+        services.RemoveAll<IDbContextOptionsConfiguration<AirportMapDbContext>>();
+        services.AddDbContext<AirportMapDbContext>(options => options.UseSqlite("Data Source=:memory:"));
     }
 
     private sealed class FixedClock(DateTimeOffset timestamp) : IClock
