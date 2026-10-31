@@ -68,9 +68,9 @@ describe('Incident designer', () => {
     percentage.dispatchEvent(new Event('input'));
     await fixture.whenStable();
     fixture.detectChanges();
-    const minute = fixture.nativeElement.querySelector('input') as HTMLInputElement;
-    minute.value = '3';
-    minute.dispatchEvent(new Event('input'));
+    const time = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    time.value = '2026-10-16T13:03';
+    time.dispatchEvent(new Event('input'));
     await fixture.whenStable();
     fixture.detectChanges();
     expect(view.event().id).toBe(id);
@@ -80,7 +80,9 @@ describe('Incident designer', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Control demo');
     expect(text).toContain('Poarta demo');
-    expect(text).toContain('3 → 5.5');
+    expect(text).toContain('13:03');
+    expect(text).toContain('13:05');
+    expect(text).not.toContain('minutul');
     expect(text).toContain('35%');
     expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
   });
@@ -120,7 +122,7 @@ describe('Incident designer', () => {
     view.setPayload('share', 1.1);
     fixture.detectChanges();
     expect(view.problems().join()).toContain('100%');
-    view.setMinute(89);
+    view.setTime('2026-10-16T15:59:00.000Z');
     fixture.detectChanges();
     expect(view.problems().join()).toContain('interval');
     fixture.componentRef.setInput('event', { ...view.event(), gateId: 'stale' });
@@ -152,13 +154,16 @@ describe('Incident designer', () => {
     const source = makeDraft(layout, 'workday', new Date('2026-10-16T10:00:00Z')).inputs;
     fixture.componentRef.setInput('inputs', source);
     fixture.componentRef.setInput('event', newSurge(source, layout));
-    view.setMinute(76);
+    view.setTime('2026-10-16T10:56:00.000Z');
     fixture.detectChanges();
-    expect(view.arrivalWindow()).toEqual({ minimum: 0, maximum: 78 });
-    expect(view.problems().join()).toContain('[0, 78]');
+    expect(view.arrivalWindow()).toEqual({
+      start: '2026-10-16T10:00:00.000Z',
+      end: '2026-10-16T10:58:00.000Z',
+    });
+    expect(view.problems().join()).toContain('13:58');
     expect(
       fixture.nativeElement.querySelector('[data-testid=incident-arrival-window]').textContent,
-    ).toContain('0–78');
+    ).toContain('13:00–13:58');
     expect(fixture.nativeElement.querySelectorAll('input')[1].max).toBe('2');
     view.setPayload('durationMinutes', 2);
     fixture.detectChanges();
@@ -175,12 +180,15 @@ describe('Incident designer', () => {
         { flightId: flight.id, checkpointId: 'cp1', arrival: { minimum: 20, maximum: 30 } },
       ],
     } as ScenarioInputs['passengerGeneration'];
-    expect(incidentArrivalWindow(source, flight.id)).toEqual({ minimum: 20, maximum: 27 });
+    expect(incidentArrivalWindow(source, flight.id)).toEqual({
+      start: '2026-10-16T10:20:00.000Z',
+      end: '2026-10-16T10:27:00.000Z',
+    });
     const event = newSurge(source, layout);
     expect(event.occurredAtUtc).toBe('2026-10-16T10:20:00.000Z');
     expect(incidentProblems(event, source, layout)).toEqual([]);
     event.occurredAtUtc = '2026-10-16T10:19:00Z';
-    expect(incidentProblems(event, source, layout).join()).toContain('[20, 27]');
+    expect(incidentProblems(event, source, layout).join()).toContain('13:20');
     expect(incidentArrivalWindow(source, source.flights[1].id)).toBeNull();
   });
 
@@ -191,7 +199,10 @@ describe('Incident designer', () => {
     delete flight.boardingOpensAtUtc;
     delete flight.boardingClosesAtUtc;
     const event = newSurge(source, layout);
-    expect(incidentArrivalWindow(source, flight.id)).toEqual({ minimum: 0, maximum: 3 });
+    expect(incidentArrivalWindow(source, flight.id)).toEqual({
+      start: '2026-10-16T10:00:00.000Z',
+      end: '2026-10-16T10:03:00.000Z',
+    });
     expect(surgePayload(event)?.durationMinutes).toBe(3);
     expect(incidentProblems(event, source, layout)).toEqual([]);
   });
@@ -199,10 +210,10 @@ describe('Incident designer', () => {
   it('repositions an incident on flight change without changing its duration or identity', () => {
     const fixture = editor(),
       view = fixture.componentInstance;
-    view.setMinute(70);
+    view.setTime('2026-10-16T11:10:00.000Z');
     view.setFlight(view.inputs().flights[0].id);
     fixture.detectChanges();
-    expect(view.minute()).toBe(18);
+    expect(view.event().occurredAtUtc).toBe('2026-10-16T10:53:00.000Z');
     expect(view.duration()).toBe(5);
     expect(view.problems()).toEqual([]);
   });

@@ -1,6 +1,15 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { RedirectFunction, Router, Routes } from '@angular/router';
 import { runtimeConfig } from './core/http/runtime-config';
 import { workspaceGuard } from './core/auth/auth-guard';
+const simulationRedirect =
+  (section = ''): RedirectFunction =>
+  ({ queryParams, fragment }) =>
+    inject(Router).createUrlTree(section ? ['/control-tower', section] : ['/control-tower'], {
+      queryParams,
+      fragment: fragment ?? undefined,
+    });
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -40,44 +49,47 @@ export const routes: Routes = [
     title: 'Control Tower | AeroSynapse',
     loadComponent: () =>
       import('./features/control-tower/control-tower').then((m) => m.ControlTower),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [workspaceGuard],
+        canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        title: 'Control Tower | AeroSynapse',
+        loadComponent: () => import('./features/scenario/scenario').then((m) => m.Scenario),
+      },
+      {
+        path: 'configure',
+        canActivate: [workspaceGuard],
+        data: { write: true },
+        canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
+        title: 'Configurare scenarii | Control Tower',
+        loadComponent: () =>
+          import('./features/scenario-studio/scenario-studio').then((m) => m.ScenarioStudio),
+      },
+      {
+        path: 'compare',
+        canActivate: [workspaceGuard],
+        data: { write: true },
+        title: 'Compară personalul | Control Tower',
+        loadComponent: () =>
+          import('./features/compare/compare-workbench').then((m) => m.CompareWorkbench),
+      },
+      {
+        path: 'batches',
+        canActivate: [workspaceGuard],
+        data: { write: true },
+        title: 'Teste repetate | Control Tower',
+        loadComponent: () => import('./features/batches/batches').then((m) => m.Batches),
+      },
+    ],
   },
-  {
-    path: 'scenario',
-    canActivate: [workspaceGuard],
-    data: { write: true },
-    title: 'Scenariile mele | AeroSynapse',
-    loadComponent: () => import('./features/scenario/scenario').then((m) => m.Scenario),
-  },
-  {
-    path: 'operations',
-    canActivate: [workspaceGuard],
-    title: 'Scenarii și rulări | AeroSynapse',
-    loadComponent: () => import('./features/operations/operations').then((m) => m.Operations),
-  },
-  {
-    path: 'scenario-studio',
-    canActivate: [workspaceGuard],
-    data: { write: true },
-    canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
-    title: 'Configurare scenarii | AeroSynapse',
-    loadComponent: () =>
-      import('./features/scenario-studio/scenario-studio').then((m) => m.ScenarioStudio),
-  },
-  {
-    path: 'batches',
-    canActivate: [workspaceGuard],
-    data: { write: true },
-    title: 'Teste repetate | AeroSynapse',
-    loadComponent: () => import('./features/batches/batches').then((m) => m.Batches),
-  },
-  {
-    path: 'compare',
-    canActivate: [workspaceGuard],
-    data: { write: true },
-    title: 'Compară personalul | AeroSynapse',
-    loadComponent: () =>
-      import('./features/compare/compare-workbench').then((m) => m.CompareWorkbench),
-  },
+  { path: 'scenario', pathMatch: 'full', redirectTo: simulationRedirect('') },
+  { path: 'operations', pathMatch: 'full', redirectTo: simulationRedirect('') },
+  { path: 'scenario-studio', pathMatch: 'full', redirectTo: simulationRedirect('configure') },
+  { path: 'batches', pathMatch: 'full', redirectTo: simulationRedirect('batches') },
+  { path: 'compare', pathMatch: 'full', redirectTo: simulationRedirect('compare') },
   {
     path: 'replay',
     canActivate: [workspaceGuard],

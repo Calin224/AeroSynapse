@@ -41,14 +41,13 @@ import { busiestMoment, HeatmapZone } from '../digital-twin/heatmap-model';
           </button>
         }
       </div>
-      <details>
-        <summary>Detalii tehnice</summary>
-        Rulare {{ overview().runId }} · seed {{ overview().seed }} · durată
-        {{ overview().durationMinutes }} min.
-      </details>
     </section>
   `,
   styles: `
+    :host {
+      display: block;
+      container-type: inline-size;
+    }
     .summary {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -79,12 +78,7 @@ import { busiestMoment, HeatmapZone } from '../digital-twin/heatmap-model';
       align-content: start;
       gap: 8px;
     }
-    details {
-      grid-column: 1 / -1;
-      font-size: 12px;
-      color: var(--text-faint);
-    }
-    @media (max-width: 760px) {
+    @container (max-width: 760px) {
       .summary {
         grid-template-columns: minmax(0, 1fr);
       }

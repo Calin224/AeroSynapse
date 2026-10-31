@@ -297,36 +297,6 @@ describe('Simulated staffing evaluation', () => {
     http.expectOne(historyPath).flush([]);
     fixture.destroy();
   });
-  it('shows accepted degradation as a tradeoff and preserves the captured policy during form edits', () => {
-    const fixture = component();
-    const result = evaluation();
-    result.recommendedRunId = null;
-    result.variants[1].assessment = { status: 'tradeoff', reasons: ['accepted_degradation'] };
-    fixture.componentInstance.load('evaluation-1');
-    http.expectOne('/api/staffing-evaluations/evaluation-1').flush(result);
-    fixture.componentInstance.policy.maxP95IncreaseMinutes = 99;
-    fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Compromis cu degradare acceptată');
-    expect(text).not.toContain('Îmbunătățire operațională');
-    expect(text).toContain('P95 0 min');
-    expect(text).toContain('Nu există candidat superior validat');
-    fixture.destroy();
-  });
-  it('renders failed candidate metrics as unavailable and exposes the rejection reason', () => {
-    const fixture = component();
-    const result = evaluation();
-    result.recommendedRunId = null;
-    result.variants[1].metrics = null;
-    result.variants[1].assessment = { status: 'failed', reasons: ['simulation_timeout'] };
-    fixture.componentInstance.load('evaluation-1');
-    http.expectOne('/api/staffing-evaluations/evaluation-1').flush(result);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Rulare eșuată');
-    expect(fixture.nativeElement.textContent).toContain('indisponibil');
-    expect(fixture.nativeElement.textContent).toContain('simulation_timeout');
-    fixture.destroy();
-  });
   it('cancels an obsolete polling response and resets the report on scenario revision changes', async () => {
     const fixture = component();
     fixture.componentInstance.load('evaluation-1');
@@ -383,20 +353,6 @@ describe('Simulated staffing evaluation', () => {
     http.expectNone('/api/staffing-evaluations/evaluation-1');
     fixture.destroy();
   });
-  it('resumes polling after a manual refresh fails for the current evaluation', async () => {
-    const fixture = component();
-    const view = fixture.componentInstance;
-    view.load('evaluation-1');
-    http.expectOne('/api/staffing-evaluations/evaluation-1').flush(evaluation('pending'));
-    view.load('evaluation-1');
-    http.expectOne('/api/staffing-evaluations/evaluation-1').error(new ProgressEvent('error'));
-    expect(view.evaluation()?.batch.batch.id).toBe('evaluation-1');
-    await vi.advanceTimersByTimeAsync(1000);
-    http.expectOne('/api/staffing-evaluations/evaluation-1').flush(evaluation());
-    http.expectOne(historyPath).flush([]);
-    expect(view.running()).toBe(false);
-    fixture.destroy();
-  });
   it('keeps an in-flight command when the same scenario revision is refreshed', () => {
     const fixture = component();
     const view = fixture.componentInstance;
@@ -426,19 +382,55 @@ describe('Simulated staffing evaluation', () => {
     expect(fixture.componentInstance.evaluation()?.recommendedRunId).toBeNull();
     fixture.destroy();
   });
-  it('blocks invalid policies and incomplete staffing constraints before posting', () => {
+  it('blocks invalid policies, weights, normalization and incomplete constraints before posting', () => {
     const fixture = component();
     const view = fixture.componentInstance;
     view.policy.maxBoardingRiskIncrease = -1;
     view.start();
     expect(view.message()).toContain('toleranțe');
     http.expectNone((request) => request.method === 'POST');
+    view.policy.maxBoardingRiskIncrease = 0;
+    view.multiObjectiveEnabled = true;
+    view.multiObjective.weights = { time: 0, cost: 0, risk: 0 };
+    view.start();
+    expect(view.message()).toContain('sumă pozitivă');
+    view.multiObjective.weights.time = 1;
+    view.multiObjective.normalization.timeMinutes = 0;
+    view.start();
+    http.expectNone((request) => request.method === 'POST');
+    view.multiObjectiveEnabled = false;
     fixture.componentRef.setInput('proposal', null);
     fixture.detectChanges();
     view.start();
     http.expectNone((request) => request.method === 'POST');
     fixture.destroy();
   });
+  it.each([
+    [
+      'tradeoff',
+      ['accepted_degradation'],
+      ['Compromis cu degradare acceptată', 'P95 0 min', 'Nu există candidat superior validat'],
+    ],
+    ['failed', ['simulation_timeout'], ['Rulare eșuată', 'indisponibil', 'simulation_timeout']],
+  ] as const)(
+    'renders a %s candidate without claiming an improvement',
+    (status, reasons, texts) => {
+      const fixture = component();
+      const result = evaluation();
+      result.recommendedRunId = null;
+      if (status === 'failed') result.variants[1].metrics = null;
+      result.variants[1].assessment = { status, reasons: [...reasons] };
+      fixture.componentInstance.load('evaluation-1');
+      http.expectOne('/api/staffing-evaluations/evaluation-1').flush(result);
+      // Form edits after loading must not change the captured policy shown in the report.
+      fixture.componentInstance.policy.maxP95IncreaseMinutes = 99;
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent;
+      for (const expected of texts) expect(text).toContain(expected);
+      expect(text).not.toContain('Îmbunătățire operațională');
+      fixture.destroy();
+    },
+  );
   it('captures changed multi-objective weights in a new solver command and never mutates a saved evaluation', () => {
     const fixture = component();
     const view = fixture.componentInstance;
@@ -458,20 +450,6 @@ describe('Simulated staffing evaluation', () => {
     expect(first.request.body.multiObjective.weights.time).toBe(100);
     changed.flush(evaluation('completed', changed.request.body.commandId));
     http.expectOne(historyPath).flush([]);
-    fixture.destroy();
-  });
-  it('rejects zero weights and invalid normalization before creating multi-objective scenarios', () => {
-    const fixture = component();
-    const view = fixture.componentInstance;
-    view.multiObjectiveEnabled = true;
-    view.multiObjective.weights = { time: 0, cost: 0, risk: 0 };
-    view.start();
-    http.expectNone((request) => request.method === 'POST');
-    expect(view.message()).toContain('sumă pozitivă');
-    view.multiObjective.weights.time = 1;
-    view.multiObjective.normalization.timeMinutes = 0;
-    view.start();
-    http.expectNone((request) => request.method === 'POST');
     fixture.destroy();
   });
   it('retains the evaluated recommendation and audit view after its own approval updates the scenario revision', () => {

@@ -8,6 +8,11 @@ import { apiErrorInterceptor } from '../../core/http/api-error.interceptor';
 import { OPERATION_REQUEST_TIMEOUT_MS } from '../../core/http/operation-request';
 import { SimulationExecution, SimulationPanel } from './simulation-panel';
 
+const scenarioId = '91000000-0000-0000-0000-000000000001';
+const runId = '92000000-0000-0000-0000-000000000001';
+const launch = `/api/scenarios/${scenarioId}/simulations`;
+const metricsUrl = `/api/runs/${runId}/metrics?limit=100`;
+
 describe('Simulation flow', () => {
   let http: HttpTestingController;
   beforeEach(() => {
@@ -53,18 +58,16 @@ describe('Simulation flow', () => {
     const fixture = TestBed.createComponent(SimulationPanel);
     http
       .expectOne('/api/scenarios')
-      .flush([
-        { id: '91000000-0000-0000-0000-000000000001', name: 'Persisted scenario', revision: 3 },
-      ]);
-    fixture.componentInstance.selectedId.set('91000000-0000-0000-0000-000000000001');
+      .flush([{ id: scenarioId, name: 'Persisted scenario', revision: 3 }]);
+    fixture.componentInstance.selectedId.set(scenarioId);
     fixture.detectChanges();
     return fixture;
   }
   function reply(key: string, status: SimulationExecution['status']): SimulationExecution {
     return {
       commandId: key,
-      runId: '92000000-0000-0000-0000-000000000001',
-      scenarioId: '91000000-0000-0000-0000-000000000001',
+      runId,
+      scenarioId,
       status,
       correlationId: JSON.parse(localStorage.getItem('aerosynapse.simulation-command.v1')!)
         .correlationId,
@@ -78,18 +81,16 @@ describe('Simulation flow', () => {
     const fixture = setup();
     const panel = fixture.componentInstance;
     panel.start();
-    const request = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const request = http.expectOne(launch);
     const key = request.request.headers.get('Idempotency-Key')!;
     expect(request.request.body).toEqual({ scenarioRevision: 3 });
     expect(request.request.headers.get('X-Correlation-ID')).toBeTruthy();
     panel.start();
-    http.expectNone('/api/scenarios/91000000-0000-0000-0000-000000000001/simulations');
+    http.expectNone(launch);
     request.flush(reply(key, 'pending'));
     await new Promise((resolve) => setTimeout(resolve, 5));
     http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'completed'));
-    http.expectOne('/api/runs/92000000-0000-0000-0000-000000000001/metrics?limit=100').flush({
+    http.expectOne(metricsUrl).flush({
       items: [
         {
           id: 'metric-1',
@@ -101,8 +102,8 @@ describe('Simulation flow', () => {
       ],
     });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Finalizată');
-    expect(fixture.nativeElement.textContent).toContain('Pasageri procesați: 20');
+    expect(panel.execution()?.status).toBe('completed');
+    expect(panel.metrics()).toHaveLength(1);
     expect(panel.active()).toBe(false);
   });
 
@@ -153,30 +154,24 @@ describe('Simulation flow', () => {
   it('preserves the same key and revision when confirmation is lost', async () => {
     const panel = setup().componentInstance;
     panel.start();
-    const original = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const original = http.expectOne(launch);
     const key = original.request.headers.get('Idempotency-Key')!;
     original.error(new ProgressEvent('error'));
     await new Promise((resolve) => setTimeout(resolve, 5));
     http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'running'));
     panel.resume();
-    const replay = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const replay = http.expectOne(launch);
     expect(replay.request.headers.get('Idempotency-Key')).toBe(key);
     expect(replay.request.body).toEqual({ scenarioRevision: 3 });
     replay.flush(reply(key, 'failed'));
     expect(panel.execution()?.status).toBe('failed');
-    http.expectNone('/api/runs/92000000-0000-0000-0000-000000000001/metrics?limit=100');
+    http.expectNone(metricsUrl);
   });
 
   it('restores a pending command after navigation or reload', async () => {
     const fixture = setup();
     fixture.componentInstance.start();
-    const request = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const request = http.expectOne(launch);
     const key = request.request.headers.get('Idempotency-Key')!;
     request.flush(reply(key, 'pending'));
     fixture.destroy();
@@ -185,7 +180,29 @@ describe('Simulation flow', () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'failed'));
     expect(restored.componentInstance.command()?.key).toBe(key);
-    http.expectNone('/api/scenarios/91000000-0000-0000-0000-000000000001/simulations');
+    http.expectNone(launch);
+  });
+  it('re-sends a restored command the server does not know and drops it when rejected', async () => {
+    const key = '93000000-0000-0000-0000-000000000001';
+    localStorage.setItem(
+      'aerosynapse.simulation-command.v1',
+      JSON.stringify({
+        key,
+        scenarioId,
+        scenarioRevision: 2,
+        correlationId: '94000000-0000-0000-0000-000000000001',
+      }),
+    );
+    const panel = TestBed.createComponent(SimulationPanel).componentInstance;
+    http.expectOne('/api/scenarios').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    http.expectOne(`/api/simulations/${key}`).flush({}, { status: 404, statusText: 'Not Found' });
+    const replay = http.expectOne(launch);
+    expect(replay.request.headers.get('Idempotency-Key')).toBe(key);
+    replay.flush({}, { status: 409, statusText: 'Conflict' });
+    http.expectOne('/api/scenarios').flush([]);
+    expect(panel.active()).toBe(false);
+    expect(localStorage.getItem('aerosynapse.simulation-command.v1')).toBeNull();
   });
   it('shows running from the stream and retries terminal REST reads without resubmitting the command', async () => {
     vi.useFakeTimers();
@@ -193,16 +210,14 @@ describe('Simulation flow', () => {
       const fixture = setup();
       const panel = fixture.componentInstance;
       panel.start();
-      const request = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const request = http.expectOne(launch);
       const key = request.request.headers.get('Idempotency-Key')!;
       request.flush(reply(key, 'pending'));
       await vi.advanceTimersByTimeAsync(0);
       http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'pending'));
       panel.live.status.set('live');
       const run = {
-        runId: '92000000-0000-0000-0000-000000000001',
+        runId,
         status: 'running',
         revision: 2,
         resultsValid: false,
@@ -210,7 +225,7 @@ describe('Simulation flow', () => {
         snapshot: null,
       };
       const state = {
-        scenarioId: '91000000-0000-0000-0000-000000000001',
+        scenarioId,
         sequence: 1,
         resetRequired: false,
         run,
@@ -230,11 +245,9 @@ describe('Simulation flow', () => {
       http.expectOne(`/api/simulations/${key}`).flush({}, { status: 503, statusText: 'offline' });
       await vi.advanceTimersByTimeAsync(2000);
       http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'completed'));
-      http
-        .expectOne('/api/runs/92000000-0000-0000-0000-000000000001/metrics?limit=100')
-        .flush({ items: [] });
+      http.expectOne(metricsUrl).flush({ items: [] });
       expect(panel.execution()?.status).toBe('completed');
-      http.expectNone('/api/scenarios/91000000-0000-0000-0000-000000000001/simulations');
+      http.expectNone(launch);
       fixture.destroy();
     } finally {
       vi.useRealTimers();
@@ -245,9 +258,7 @@ describe('Simulation flow', () => {
     (failure) => {
       const panel = setup().componentInstance;
       panel.start();
-      const request = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const request = http.expectOne(launch);
       const key = request.request.headers.get('Idempotency-Key')!;
       const value = reply(key, 'pending');
       if (failure === 'command') value.commandId = crypto.randomUUID();
@@ -261,9 +272,7 @@ describe('Simulation flow', () => {
       expect(panel.error()).toContain('nu corespunde');
       expect(panel.active()).toBe(true);
       panel.resume();
-      const retry = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const retry = http.expectOne(launch);
       expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
       retry.flush(reply(key, 'failed'));
     },
@@ -274,9 +283,7 @@ describe('Simulation flow', () => {
       const fixture = setup(),
         panel = fixture.componentInstance;
       panel.start();
-      const request = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const request = http.expectOne(launch);
       const key = request.request.headers.get('Idempotency-Key')!;
       request.flush(reply(key, 'pending'));
       await vi.advanceTimersByTimeAsync(0);
@@ -285,9 +292,7 @@ describe('Simulation flow', () => {
       panel.live.state.set(null);
       await vi.advanceTimersByTimeAsync(2000);
       http.expectOne(`/api/simulations/${key}`).flush(reply(key, 'completed'));
-      http
-        .expectOne('/api/runs/92000000-0000-0000-0000-000000000001/metrics?limit=100')
-        .flush({ items: [] });
+      http.expectOne(metricsUrl).flush({ items: [] });
       expect(panel.execution()?.status).toBe('completed');
       fixture.destroy();
     } finally {
@@ -298,16 +303,12 @@ describe('Simulation flow', () => {
     const fixture = setup(),
       panel = fixture.componentInstance;
     panel.start();
-    const request = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const request = http.expectOne(launch);
     request.flush(reply(request.request.headers.get('Idempotency-Key')!, 'completed'));
-    const metrics = http.expectOne(
-      '/api/runs/92000000-0000-0000-0000-000000000001/metrics?limit=100',
-    );
+    const pending = http.expectOne(metricsUrl);
     fixture.componentRef.setInput('scenarioId', '91000000-0000-0000-0000-000000000002');
     fixture.detectChanges();
-    expect(metrics.cancelled).toBe(true);
+    expect(pending.cancelled).toBe(true);
     expect(panel.execution()).toBeNull();
     expect(panel.metrics()).toEqual([]);
     fixture.destroy();
@@ -318,9 +319,7 @@ describe('Simulation flow', () => {
       const fixture = setup(),
         panel = fixture.componentInstance;
       panel.start();
-      const request = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const request = http.expectOne(launch);
       const key = request.request.headers.get('Idempotency-Key')!;
       await vi.advanceTimersByTimeAsync(OPERATION_REQUEST_TIMEOUT_MS);
       expect(request.cancelled).toBe(true);
@@ -329,9 +328,7 @@ describe('Simulation flow', () => {
       const recovery = http.expectOne(`/api/simulations/${key}`);
       panel.resume();
       expect(recovery.cancelled).toBe(true);
-      const retry = http.expectOne(
-        '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-      );
+      const retry = http.expectOne(launch);
       expect(retry.request.body).toEqual(request.request.body);
       expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
       retry.flush(reply(key, 'failed'));
@@ -349,35 +346,16 @@ describe('Simulation flow', () => {
     panel.working.subscribe((value) => working.push(value));
     panel.select('91000000-0000-0000-0000-000000000002');
     expect(selected).toEqual(['91000000-0000-0000-0000-000000000002']);
-    panel.selectedId.set('91000000-0000-0000-0000-000000000001');
+    panel.selectedId.set(scenarioId);
     panel.start();
     fixture.detectChanges();
     expect(working.at(-1)).toBe(true);
-    const request = http.expectOne(
-      '/api/scenarios/91000000-0000-0000-0000-000000000001/simulations',
-    );
+    const request = http.expectOne(launch);
     panel.select('91000000-0000-0000-0000-000000000002');
-    expect(panel.selectedId()).toBe('91000000-0000-0000-0000-000000000001');
+    expect(panel.selectedId()).toBe(scenarioId);
     request.flush(reply(request.request.headers.get('Idempotency-Key')!, 'failed'));
     fixture.detectChanges();
     expect(working.at(-1)).toBe(false);
-    fixture.destroy();
-  });
-  it('renders a host-selected scenario after its options arrive asynchronously', async () => {
-    const fixture = TestBed.createComponent(SimulationPanel);
-    fixture.componentRef.setInput('scenarioId', '91000000-0000-0000-0000-000000000001');
-    fixture.detectChanges();
-    http
-      .expectOne('/api/scenarios')
-      .flush([
-        { id: '91000000-0000-0000-0000-000000000001', name: 'Persisted scenario', revision: 3 },
-      ]);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    const chosen = fixture.nativeElement.querySelector('#simulation-scenario');
-    expect(chosen.dataset.scenarioId).toBe('91000000-0000-0000-0000-000000000001');
-    expect(chosen.textContent).toContain('Persisted scenario');
     fixture.destroy();
   });
 });

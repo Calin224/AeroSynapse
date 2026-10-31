@@ -1,4 +1,3 @@
-<app-simulation-journey active="compare" [scenarioId]="scenarioId || null" />
 <div class="page-heading">
   <div>
     <h1 class="display">Compară personalul</h1>
@@ -36,9 +35,6 @@
         }
       </select></label
     >
-    @if (!scenarioId) {
-      <p class="hint"><a routerLink="/scenario-studio">Scenario Studio</a></p>
-    }
   } @else {
     <app-data-state
       [status]="library.status"
@@ -48,7 +44,7 @@
       (retry)="scenarios.reload()"
     />
     @if (library.status === 'empty') {
-      <a class="btn-primary task-link" routerLink="/scenario-studio">Creează primul scenariu →</a>
+      <a class="btn-primary task-link" routerLink="/control-tower/configure">Creează primul scenariu →</a>
     }
   }
   @if (busy()) {
@@ -117,7 +113,7 @@
         ) {
           <p class="hint">
             Toată echipa e alocată. Adaugă operatori în
-            <a routerLink="/scenario-studio" [queryParams]="{ scenarioId: scenarioId }"
+            <a routerLink="/control-tower/configure" [queryParams]="{ scenarioId: scenarioId }"
               >scenariul de pornire</a
             >.
           </p>
@@ -175,6 +171,15 @@
         ID experiment: <code>{{ value.batch.id }}</code> · seed-uri: {{ value.seeds.join(', ') }} ·
         limită {{ value.batch.timeLimitSeconds }} secunde
       </p>
+      <!-- A paired run shares the single seed above, so rows list only what differs. -->
+      @for (row of roles(); track row.replica.runId) {
+        <p>
+          {{ row.role }}: {{ row.variant.name }} · runId <code>{{ row.replica.runId }}</code> ·
+          scenariu <code>{{ row.variant.scenarioId }}</code> · revizia
+          {{ row.variant.scenarioRevision }} ·
+          {{ row.replica.resultsValid ? 'Rezultate valide' : 'Fără rezultate validate' }}
+        </p>
+      }
     </details>
     @if (value.batch.failureReason) {
       <p role="alert">{{ value.batch.failureReason }}</p>
@@ -184,21 +189,6 @@
         @for (row of roles(); track row.replica.runId) {
           <article>
             <h3>{{ row.role }} · {{ status(row.replica.runStatus) }}</h3>
-            <details>
-              <summary>Detalii despre rulare</summary>
-              <p>
-                runId: <code>{{ row.replica.runId }}</code>
-              </p>
-              <p>
-                {{ row.variant.name }} · scenariu <code>{{ row.variant.scenarioId }}</code> ·
-                revizia
-                {{ row.variant.scenarioRevision }}
-              </p>
-              <p>
-                Seed {{ row.replica.seed }} ·
-                {{ row.replica.resultsValid ? 'Rezultate valide' : 'Fără rezultate validate' }}
-              </p>
-            </details>
             @if (row.replica.failureReason) {
               <p role="alert">{{ row.replica.failureReason }}</p>
             }

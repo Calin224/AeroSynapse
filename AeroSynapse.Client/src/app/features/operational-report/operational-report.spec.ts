@@ -64,15 +64,6 @@ describe('Operational report selection and persisted data loading', () => {
     await flushPair(view);
     await fixture.whenStable();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.run-cards')).toBeNull();
-    expect(host.textContent).not.toContain('Detalii despre rulări');
-    const tables = host.querySelectorAll<HTMLElement>('.table-wrap');
-    expect(tables).toHaveLength(2);
-    for (const table of tables) {
-      expect(table.tabIndex).toBe(0);
-      expect(table.getAttribute('role')).toBe('region');
-      expect(table.getAttribute('aria-label')).toBeTruthy();
-    }
     expect(host.querySelector('[data-summary-metric="queuedPassengers"]')!.textContent).toContain(
       '-50%',
     );

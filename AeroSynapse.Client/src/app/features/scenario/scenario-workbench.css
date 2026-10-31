@@ -48,39 +48,24 @@
   margin-top: 18px;
   border-top: 1px solid var(--border);
 }
-.facts button {
+.facts > div {
   display: grid;
   gap: 4px;
-  justify-items: start;
   padding: 14px 12px 4px 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  color: var(--text);
-  text-align: left;
-  box-shadow: none;
-  transition: color var(--ease);
 }
-.facts button span {
+.facts dt {
   color: var(--text-muted);
   font-size: var(--dp-typography-label);
   letter-spacing: var(--dp-typography-label-tracking);
   text-transform: uppercase;
 }
-.facts strong {
+.facts dd {
+  margin: 0;
   font-size: clamp(26px, 3vw, 36px);
   font-weight: var(--dp-typography-display);
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-}
-.facts button:hover,
-.facts button:focus-visible {
-  background: none;
-  color: var(--signal);
-}
-.facts button:hover span {
-  color: var(--signal);
 }
 
 /* Run deck: inverted block, the one place to start and follow a run. */
@@ -285,17 +270,6 @@
   background: var(--panel);
   color: var(--signal);
 }
-.live-badge {
-  margin-left: auto;
-  padding: 2px 8px;
-  background: var(--signal);
-  color: var(--on-accent);
-  font-size: 11px;
-  font-weight: var(--dp-typography-strong);
-  letter-spacing: var(--dp-typography-label-tracking);
-  text-transform: uppercase;
-  animation: pulse 1.2s ease-in-out infinite;
-}
 
 /* Sections of the active step. */
 .tabs {
@@ -379,11 +353,6 @@
   font-size: 26px;
   letter-spacing: -0.02em;
 }
-.gallery-head p {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 14px;
-}
 .search {
   position: relative;
   width: min(340px, 100%);
@@ -408,7 +377,7 @@
 .card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
   gap: 8px;
   min-width: 0;
   min-height: 168px;
@@ -461,24 +430,6 @@
 .card-meta {
   color: var(--text-muted);
   font-size: 13px;
-}
-.card-go {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  font-weight: var(--dp-typography-strong);
-}
-.card-go i {
-  transition: transform var(--ease);
-}
-.card:hover .card-go {
-  color: var(--signal);
-}
-.card:hover .card-go i {
-  transform: translateX(4px);
 }
 .tag {
   padding: 2px 8px;
@@ -540,10 +491,8 @@
 @media (prefers-reduced-motion: reduce) {
   .hero,
   .card,
-  .card-go i,
   .meter span,
   .dot,
-  .live-badge,
   .detail > [role='tabpanel']:not([hidden]) {
     animation: none !important;
     transition: none !important;

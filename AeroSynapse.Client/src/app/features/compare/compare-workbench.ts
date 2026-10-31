@@ -1,4 +1,3 @@
-import { SimulationJourney } from '../../shared/ui/simulation-journey';
 import { SimulationContext } from '../../core/simulation-context';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -31,7 +30,7 @@ import { StudioLayout } from '../scenario-studio/studio.models';
 
 @Component({
   selector: 'app-compare-workbench',
-  imports: [FormsModule, RouterLink, DataState, RunComparisonReport, SimulationJourney],
+  imports: [FormsModule, RouterLink, DataState, RunComparisonReport],
   templateUrl: './compare-workbench.html',
   styleUrl: './compare-workbench.css',
 })

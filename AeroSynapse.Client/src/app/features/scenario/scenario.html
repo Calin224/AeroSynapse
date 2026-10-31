@@ -1,117 +1,488 @@
-<app-simulation-journey active="run" [scenarioId]="selected()?.id ?? null" />
-@let state = resource.state();
-<div class="page-heading">
-  <div>
-    <h1 class="display">Scenariile mele</h1>
+<header class="page-heading">
+  <div><h1 class="display">Control Tower</h1></div>
+  <div class="page-actions">
+    @if (store.selected() && !galleryOpen()) {
+      <button type="button" [disabled]="locked()" (click)="browse()">
+        <i class="pi pi-th-large" aria-hidden="true"></i> Toate scenariile
+      </button>
+    }
+    @if (session.canWrite()) {
+      <a
+        class="btn-primary create-link"
+        [routerLink]="locked() ? null : '/control-tower/configure'"
+        [attr.aria-disabled]="locked() ? 'true' : null"
+        [attr.tabindex]="locked() ? -1 : null"
+        ><i class="pi pi-plus" aria-hidden="true"></i> Scenariu nou</a
+      >
+    }
   </div>
-  <a class="btn-primary create-link" routerLink="/scenario-studio"
-    ><i class="pi pi-plus" aria-hidden="true"></i> Creează un scenariu</a
-  >
-</div>
-@if (state.status === 'ready') {
-  @if (!selected()) {
-    <section class="panel choose-scenario">
-      <h2>Alege un scenariu salvat</h2>
+</header>
+@if (store.message()) {
+  <p class="notice" role="alert">
+    {{ store.message() }} <button type="button" (click)="reload()">Reîncearcă</button>
+  </p>
+}
+@if (store.loading()) {
+  <p role="status">Se încarcă scenariul…</p>
+}
+@if (session.canWrite()) {
+  <app-simulation-panel
+    [scenario]="store.selected()?.scenario ?? null"
+    [disabled]="launchBlocked()"
+    [scenarioId]="store.selected()?.scenario?.id ?? null"
+    (accepted)="follow($event)"
+    (finished)="refreshPreview($event)"
+    (scenarioSelected)="restoreScenario($event)"
+    (working)="simulationActive.set($event)"
+  />
+}
+@if (store.selected(); as scenario) {
+  <div [hidden]="galleryOpen()">
+    <section class="hero" aria-labelledby="summary-title">
+      <div class="hero-main">
+        <p class="eyebrow">
+          {{ scenario.scenario.code }} · revizia {{ scenario.scenario.revision }}
+        </p>
+        <h2 id="summary-title">{{ scenario.scenario.name }}</h2>
+        @if (
+          scenario.scenario.description && scenario.scenario.description !== scenario.scenario.name
+        ) {
+          <p class="hero-description">{{ scenario.scenario.description }}</p>
+        }
+        <dl class="facts">
+          <div>
+            <dt>Durată</dt>
+            <dd>{{ scenario.inputs.durationMinutes }} min</dd>
+          </div>
+          <div>
+            <dt>Zboruri</dt>
+            <dd>{{ scenario.inputs.flights.length }}</dd>
+          </div>
+          <div>
+            <dt>Evenimente</dt>
+            <dd>{{ scenario.inputs.events.length }}</dd>
+          </div>
+          <div>
+            <dt>Personal</dt>
+            <dd>{{ scenario.inputs.staffAllocations.length }}</dd>
+          </div>
+        </dl>
+      </div>
 
-      <div class="scenario-grid">
-        @for (item of state.data; track item.id) {
-          <button
-            class="scenario-option"
-            [disabled]="simulationActive()"
-            (click)="selectScenario(item.id)"
-          >
-            <i class="pi pi-send" aria-hidden="true"></i><strong>{{ item.name }}</strong>
-            @if (item.description) {
-              <span>{{ item.description }}</span>
+      <div class="deck" aria-live="polite">
+        @if (store.run(); as run) {
+          <p class="deck-status" [attr.data-status]="run.status">
+            <span class="dot" aria-hidden="true"></span>
+            {{ run.id === store.runs()[0]?.id ? 'Ultima rulare' : 'Rulare afișată' }}:
+            <strong>{{ statusLabel(run.status) }}</strong>
+            @if (run.finishedAtUtc) {
+              <span class="when">· {{ fromNow(run.finishedAtUtc) }}</span>
             }
-          </button>
+          </p>
+        } @else {
+          <p class="deck-status">
+            <span class="dot" aria-hidden="true"></span>
+            {{ store.runs().length ? 'Se încarcă rularea…' : 'Nicio rulare încă' }}
+          </p>
+        }
+        @if (progress(); as p) {
+          <div
+            class="meter"
+            role="progressbar"
+            aria-label="Progresul simulării"
+            aria-valuemin="0"
+            [attr.aria-valuemax]="p.total"
+            [attr.aria-valuenow]="p.minute"
+          >
+            <span [style.width.%]="p.percent"></span>
+          </div>
+          <p class="meter-label">Minutul {{ p.minute }} din {{ p.total }}</p>
+        }
+        <button
+          appWriteAccess
+          class="run"
+          type="button"
+          [disabled]="launchBlocked() || simulationActive()"
+          (click)="run()"
+        >
+          <i
+            class="pi"
+            [class.pi-play]="!progress()"
+            [class.pi-spin]="!!progress()"
+            [class.pi-spinner]="!!progress()"
+            aria-hidden="true"
+          ></i>
+          {{
+            simulationActive() || progress()
+              ? 'Simulare în curs…'
+              : store.runs().length
+                ? 'Rulează din nou'
+                : 'Pornește simularea'
+          }}
+        </button>
+        @if (runFailure()) {
+          <p class="deck-error" role="alert">{{ runFailure() }}</p>
+        }
+        @if (launchError()) {
+          <p class="deck-error" role="alert">{{ launchError() }}</p>
+          @if (canResume()) {
+            <button type="button" [disabled]="submitting()" (click)="resume()">
+              Continuă verificarea simulării
+            </button>
+          }
+        }
+        @if (recentRuns().length) {
+          <div class="history" role="group" aria-label="Rulări recente">
+            <span class="history-label">Rulări recente</span>
+            <div class="history-runs">
+              @for (item of recentRuns(); track item.id; let i = $index) {
+                <button
+                  type="button"
+                  [class.selected]="item.id === store.run()?.id"
+                  [attr.aria-pressed]="item.id === store.run()?.id"
+                  [attr.data-status]="item.status"
+                  [title]="
+                    statusLabel(item.status) +
+                    (item.finishedAtUtc ? ' · ' + fromNow(item.finishedAtUtc) : '')
+                  "
+                  (click)="openRun(item.id)"
+                >
+                  <span class="dot" aria-hidden="true"></span>#{{ store.runs().length - i }}
+                </button>
+              }
+            </div>
+          </div>
         }
       </div>
     </section>
-  } @else {
-    <div class="selected-toolbar">
-      <label
-        >Scenariul ales<select
-          [ngModel]="selectedId()"
-          (ngModelChange)="selectScenario($event)"
-          [disabled]="simulationActive()"
-        >
-          @for (item of state.data; track item.id) {
-            <option [value]="item.id">{{ item.name }}</option>
-          }
-        </select></label
+
+    <nav class="phases" aria-label="Pași">
+      <button
+        type="button"
+        [attr.aria-current]="phase() === 'prepare' ? 'step' : null"
+        (click)="showPhase('prepare')"
       >
-      @if (!simulationActive()) {
-        <a routerLink="/scenario-studio" [queryParams]="{ scenarioId: selected()!.id }"
-          >Modifică zborurile și pasagerii</a
+        <span class="step">01</span>
+        <span
+          ><strong>Pregătește scenariul</strong
+          ><small>Zboruri, pasageri, personal, resurse</small></span
         >
+      </button>
+      <i class="pi pi-arrow-right phase-arrow" aria-hidden="true"></i>
+      <button
+        type="button"
+        [attr.aria-current]="phase() === 'results' ? 'step' : null"
+        (click)="showPhase('results')"
+      >
+        <span class="step">02</span>
+        <span
+          ><strong>Analizează rezultatele</strong
+          ><small>{{
+            store.run() ? 'Hartă și prognoza cozilor' : 'Disponibile după prima rulare'
+          }}</small></span
+        >
+      </button>
+    </nav>
+
+    <div
+      class="tabs"
+      role="tablist"
+      aria-label="Secțiuni operaționale"
+      aria-orientation="horizontal"
+    >
+      @for (item of tabs(); track item.id) {
+        <button
+          type="button"
+          role="tab"
+          [id]="'tab-' + item.id"
+          [attr.aria-selected]="tab() === item.id"
+          [attr.aria-controls]="'tabpanel-' + item.id"
+          [tabindex]="tab() === item.id ? 0 : -1"
+          (click)="tab.set(item.id)"
+          (keydown)="moveTab($event)"
+        >
+          <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
+          <span>{{ item.label }}</span>
+        </button>
       }
-      <button type="button" [disabled]="simulationActive()" (click)="reload()">Actualizează</button>
     </div>
-  }
-} @else {
-  <section class="panel choose-scenario">
-    <app-data-state
-      [status]="state.status"
-      label="scenariile"
-      [message]="state.status === 'error' ? state.message : ''"
-      emptyMessage="Niciun scenariu disponibil."
-      (retry)="resource.reload()"
-    />
-    @if (state.status === 'empty') {
-      <div class="empty-actions">
-        <a class="btn-primary create-link" routerLink="/scenario-studio"
-          >Creează primul scenariu →</a
-        >
+
+    <div class="detail">
+      <div
+        role="tabpanel"
+        id="tabpanel-schedule"
+        aria-labelledby="tab-schedule"
+        [hidden]="tab() !== 'schedule'"
+      >
+        <app-flight-schedule-panel
+          [scenario]="scenario"
+          [disabled]="lockedExcept(scheduleBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="scheduleBusy.set($event)"
+        />
       </div>
-    }
-  </section>
-}
-<app-simulation-panel
-  [hidden]="!selected() && !simulationActive()"
-  [scenarioId]="selected()?.id ?? null"
-  (finished)="refreshPreview($event)"
-  (scenarioSelected)="setScenario($event)"
-  (working)="simulationActive.set($event)"
-/>
-@if (selected(); as scenario) {
-  @let view = preview();
-  <section class="panel stage">
-    <header class="panel-heading">
-      <div>
-        <h2>{{ scenario.name }}</h2>
-        @if (view.status === 'ready') {
-          <p>
-            Simularea selectată{{
-              view.overview.finishedAtUtc
-                ? ': ' + (view.overview.finishedAtUtc | date: 'dd.MM.yyyy, HH:mm')
-                : ''
-            }}
-          </p>
+      <div
+        role="tabpanel"
+        id="tabpanel-passengers"
+        aria-labelledby="tab-passengers"
+        [hidden]="tab() !== 'passengers'"
+      >
+        <app-passenger-generation-panel
+          [scenario]="scenario"
+          [disabled]="lockedExcept(passengerBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="passengerBusy.set($event)"
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-routes"
+        aria-labelledby="tab-routes"
+        [hidden]="tab() !== 'routes'"
+      >
+        <app-navigation-panel
+          [scenario]="scenario"
+          [run]="store.run()"
+          [disabled]="lockedExcept(navigationBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="navigationBusy.set($event)"
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-events"
+        aria-labelledby="tab-events"
+        [hidden]="tab() !== 'events'"
+      >
+        <app-events-panel
+          [scenario]="scenario"
+          [active]="tab() === 'events'"
+          [disabled]="lockedExcept(eventsBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="eventsBusy.set($event)"
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-staffing"
+        aria-labelledby="tab-staffing"
+        [hidden]="tab() !== 'staffing'"
+      >
+        <app-staffing-panel
+          [scenario]="scenario"
+          [active]="tab() === 'staffing'"
+          [disabled]="!session.canWrite() || locked()"
+          (changed)="scheduleChanged($event)"
+          (working)="staffingBusy.set($event)"
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-resources"
+        aria-labelledby="tab-resources"
+        [hidden]="tab() !== 'resources'"
+      >
+        <app-resource-panel
+          [scenario]="scenario"
+          [active]="tab() === 'resources'"
+          [disabled]="lockedExcept(resourcesBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="resourcesBusy.set($event)"
+        />
+      </div>
+
+      <div
+        role="tabpanel"
+        id="tabpanel-runs"
+        aria-labelledby="tab-runs"
+        [hidden]="tab() !== 'runs'"
+      >
+        <app-run-settings-panel
+          [scenario]="scenario"
+          [disabled]="lockedExcept(runSettingsBusy)"
+          (changed)="scheduleChanged($event)"
+          (working)="runSettingsBusy.set($event)"
+        />
+        @if (store.context(); as context) {
+          @if (store.runError()) {
+            <p class="notice" role="alert">
+              {{ store.runError() }}
+              <button type="button" (click)="store.reload()">Reîncearcă</button>
+            </p>
+          }
+          @if (store.run()?.status === 'completed' && !store.run()?.resultsValid) {
+            <p class="notice" role="alert">Rezultatele rulării sunt invalide.</p>
+          }
+          @if (
+            store.run() &&
+            context.scenario.scenario.revision !== store.selected()?.scenario?.revision
+          ) {
+            <p class="capture-note">
+              Captură istorică · revizia {{ context.scenario.scenario.revision }}. Configurația
+              curentă: revizia {{ store.selected()?.scenario?.revision }}.
+            </p>
+          }
+          <div
+            class="simulation-workspace"
+            [attr.data-scenario-id]="context.scenario.scenario.id"
+            [attr.data-run-id]="store.run()?.id"
+          >
+            <section class="panel stage" aria-label="Harta rulării">
+              @if (store.runLoading()) {
+                <p class="no-run" role="status">Se citește captura rulării…</p>
+              } @else {
+                @if (overview(); as view) {
+                  <app-run-summary
+                    [overview]="view"
+                    (playFromStart)="playFromStart(view)"
+                    (showBusiest)="twin()?.playFrom($event.elapsedMinutes, $event.zoneId)"
+                  />
+                } @else if (!store.run()) {
+                  <p class="no-run">Pregătit pentru prima simulare</p>
+                }
+                <app-digital-twin [scene]="scene()" openAt="busiest" />
+              }
+            </section>
+            <aside class="rail" aria-label="Agent AI, incidente, resurse și evoluția terminalului">
+              <app-agent-panel
+                [scenario]="store.selected()"
+                [controls]="context.layout.layout.checkpoints.length"
+                [runId]="store.run()?.id ?? null"
+                [tracked]="!!context.scenario.inputs.agent"
+                [running]="locked()"
+                (changed)="reload()"
+              />
+              <section class="panel incidents" aria-labelledby="incidents-title">
+                <header class="panel-title">
+                  <h2 id="incidents-title">Incidente / evenimente</h2>
+                  <span>{{ store.incidents().length }}</span>
+                </header>
+                <div class="panel-scroll" tabindex="0" aria-label="Lista incidentelor">
+                  @for (incident of store.incidents(); track incident.id) {
+                    <article [attr.data-phase]="incident.phase">
+                      <div>
+                        <strong>{{ incident.label }}</strong
+                        ><small>{{ incident.phase }}</small>
+                      </div>
+                      <p>{{ incident.target }} · min {{ incident.minute | number: '1.0-1' }}</p>
+                      <p>{{ incident.detail }}</p>
+                    </article>
+                  } @empty {
+                    <p class="empty">Scenariul selectat nu conține incidente programate.</p>
+                  }
+                </div>
+              </section>
+              <section class="panel resource-panel" aria-labelledby="resources-title">
+                <header class="panel-title">
+                  <h2 id="resources-title">Resurse</h2>
+                  <span>{{ context.layout.layout.gates.length }} porți</span>
+                </header>
+                <div class="panel-scroll" tabindex="0" aria-label="Resursele scenariului">
+                  <table>
+                    <caption>
+                      Alocare nominală
+                      {{
+                        store.run() ? 'capturată în run' : 'din scenariu'
+                      }}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Control</th>
+                        <th>Operatori</th>
+                        <th>Rată / operator</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (resource of resources(); track resource.id) {
+                        <tr [class.focused-zone]="resource.id === focusedZoneId()">
+                          <th scope="row">{{ resource.code }}</th>
+                          <td [title]="resource.people">{{ resource.staff }}</td>
+                          <td>{{ resource.capacityPerMinute | number: '1.0-2' }} pax/min</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="panel trends" aria-label="Grafice operaționale">
+                <app-tower-trends
+                  [points]="store.metrics().points"
+                  [contextKey]="store.run()?.id ?? ''"
+                  [source]="
+                    store.heatmap()?.source === 'live-preview'
+                      ? 'Simulare în curs'
+                      : 'Evoluția simulării'
+                  "
+                />
+              </section>
+            </aside>
+          </div>
         }
       </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-forecast"
+        aria-labelledby="tab-forecast"
+        [hidden]="tab() !== 'forecast'"
+      >
+        <app-queue-forecast-panel
+          [run]="store.run()"
+          [progress]="store.progress()"
+          [active]="tab() === 'forecast' && !galleryOpen()"
+          [disabled]="!session.canWrite() || store.loading() || store.runLoading() || panelBusy()"
+        />
+      </div>
+    </div>
+  </div>
+}
+@if (galleryOpen() || (!store.selected() && !store.loading() && !store.message())) {
+  <section class="gallery" aria-labelledby="gallery-title" [attr.aria-busy]="store.loading()">
+    <header class="gallery-head">
+      <div>
+        <h2 id="gallery-title">Alege un scenariu</h2>
+      </div>
+      <label class="search">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input
+          type="search"
+          placeholder="Caută după nume sau cod"
+          aria-label="Caută scenarii"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+        />
+      </label>
     </header>
-    @if (view.status === 'ready') {
-      <app-run-summary
-        [overview]="view.overview"
-        (playFromStart)="playFromStart(view.overview)"
-        (showBusiest)="twin()?.playFrom($event.elapsedMinutes, $event.zoneId)"
-      />
-      <app-digital-twin [scene]="view.overview.scene" openAt="busiest" />
-    } @else if (view.status === 'loading') {
-      <div class="no-run" role="status">Se încarcă rezultatele anterioare…</div>
-    } @else if (view.status === 'error') {
-      <div class="no-run" role="alert">
-        <strong>Rezultatele nu s-au putut încărca</strong><span>{{ view.message }}</span
-        ><button type="button" (click)="refreshPreview()">Încearcă din nou</button>
+    @if (store.scenarios().length) {
+      <div class="cards">
+        @for (item of visibleScenarios(); track item.id; let i = $index) {
+          <button
+            type="button"
+            class="card"
+            [style.--i]="i"
+            [disabled]="locked()"
+            [class.recent]="item.id === store.selected()?.scenario?.id"
+            (click)="selectScenario(item.id)"
+          >
+            <span class="card-top">
+              <span class="mono">{{ item.code }}</span>
+              @if (item.id === store.selected()?.scenario?.id) {
+                <span class="tag">Ultimul deschis</span>
+              }
+            </span>
+            <strong>{{ item.name }}</strong>
+            <span class="card-meta">
+              Revizia {{ item.revision }}
+              @if (item.updatedAtUtc) {
+                · modificat {{ fromNow(item.updatedAtUtc) }}
+              }
+            </span>
+          </button>
+        } @empty {
+          <p class="no-match">Niciun scenariu nu se potrivește cu „{{ query() }}”.</p>
+        }
       </div>
     } @else {
-      <div class="no-run">
-        <i class="pi pi-chart-line" aria-hidden="true"></i
-        ><strong>{{
-          simulationActive() ? 'Se calculează rezultatele' : 'Pregătit pentru prima simulare'
-        }}</strong>
-      </div>
+      <p>Niciun scenariu disponibil.</p>
     }
   </section>
 }

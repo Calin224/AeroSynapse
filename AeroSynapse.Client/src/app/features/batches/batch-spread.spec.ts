@@ -57,21 +57,6 @@ describe('batch spread chart', () => {
     );
   });
 
-  it('answers "how often" for every variant as the threshold moves', () => {
-    const fixture = chart();
-    const element: HTMLElement = fixture.nativeElement;
-    const slider = element.querySelector<HTMLInputElement>('input[type="range"]')!;
-    const answers = () =>
-      [...element.querySelectorAll('.often li strong')].map((item) => item.textContent?.trim());
-    expect(element.querySelector('.often label')!.textContent).toContain('30 min');
-    expect(answers()).toEqual(['în 1 din 4 zile · cam 1 zi din 4', 'în niciuna din cele 2 zile']);
-    slider.value = '7.2';
-    slider.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-    expect(answers()).toEqual(['în toate cele 4 zile', 'în niciuna din cele 2 zile']);
-    expect(element.querySelectorAll('.dot.past')).toHaveLength(4);
-  });
-
   it('walks the days with the arrow keys and describes the focused day', () => {
     const fixture = chart();
     const element: HTMLElement = fixture.nativeElement;

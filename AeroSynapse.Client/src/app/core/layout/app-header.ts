@@ -1,11 +1,18 @@
 import { Component, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  IsActiveMatchOptions,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import { filter } from 'rxjs';
 import { SessionState } from '../auth/session-state';
 import { AuthService } from '../auth/auth-service';
 import { WorkspaceNavigation } from './workspace-navigation';
+import { SimulationContext } from '../simulation-context';
 import { CommandPalette } from './command-palette';
 
 @Component({
@@ -17,6 +24,16 @@ import { CommandPalette } from './command-palette';
 export class AppHeader {
   readonly session = inject(SessionState);
   readonly navigation = inject(WorkspaceNavigation);
+  readonly simulation = inject(SimulationContext);
+  readonly exactPathMatch: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    matrixParams: 'ignored',
+    fragment: 'ignored',
+  };
+  readonly expandedDestinations = signal(
+    new Set(this.navigation.path().startsWith('/control-tower') ? ['/control-tower'] : []),
+  );
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
   private readonly drawer = viewChild.required<ElementRef<HTMLDialogElement>>('drawer');
@@ -25,7 +42,7 @@ export class AppHeader {
   readonly loggingOut = signal(false);
   readonly expandedGroups = signal(
     new Set(
-      ['Operațiuni', 'Simulare', 'Acces rapid', this.navigation.current()?.group].filter(
+      ['Operațiuni', 'Acces rapid', this.navigation.current()?.group].filter(
         (group): group is string => !!group,
       ),
     ),
@@ -40,6 +57,9 @@ export class AppHeader {
       .subscribe(() => {
         const group = this.navigation.current()?.group;
         if (group) this.expandedGroups.update((groups) => new Set([...groups, group]));
+        const destination = this.navigation.current();
+        if (destination?.children && this.navigation.path().startsWith(destination.path))
+          this.expandedDestinations.update((paths) => new Set([...paths, destination.path]));
         this.drawer().nativeElement.close();
       });
   }
@@ -50,6 +70,25 @@ export class AppHeader {
       const next = new Set(groups);
       if (next.has(group)) next.delete(group);
       else next.add(group);
+      return next;
+    });
+  }
+
+  childQueryParams(path: string) {
+    if (this.navigation.path() === path) return this.router.parseUrl(this.router.url).queryParams;
+    if (path === '/control-tower/configure') return {};
+    const selected = this.simulation.current();
+    if (!selected) return {};
+    return path === '/control-tower'
+      ? { scenarioId: selected.scenarioId, runId: selected.runId }
+      : { scenarioId: selected.scenarioId };
+  }
+
+  toggleDestination(path: string) {
+    this.expandedDestinations.update((paths) => {
+      const next = new Set(paths);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
       return next;
     });
   }

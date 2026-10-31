@@ -1,13 +1,23 @@
 import { Component, forwardRef, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AbsoluteTimeInput } from '../../shared/ui/absolute-time-input';
+import { addMinutes } from '../../shared/absolute-time';
 
 export type FieldValue =
   string | number | boolean | null | FieldValue[] | { [key: string]: FieldValue };
 @Component({
   selector: 'app-object-fields',
-  imports: [FormsModule, forwardRef(() => ObjectFields)],
+  imports: [FormsModule, AbsoluteTimeInput, forwardRef(() => ObjectFields)],
   template: `
-    @if (type(value()) === 'object' || type(value()) === 'array') {
+    @if (arrivalLabel(); as label) {
+      <app-absolute-time-input
+        [label]="label"
+        [value]="arrivalTime()"
+        [timeZone]="timeZone()"
+        [disabled]="disabled()"
+        (changed)="setArrivalTime($event)"
+      />
+    } @else if (type(value()) === 'object' || type(value()) === 'array') {
       <div class="fields">
         @for (entry of entries(); track entry.key) {
           <div class="entry">
@@ -23,6 +33,9 @@ export type FieldValue =
               [value]="entry.value"
               [depth]="depth() + 1"
               [disabled]="disabled()"
+              [fieldPath]="childPath(entry.key)"
+              [arrivalStartUtc]="arrivalStartUtc()"
+              [timeZone]="timeZone()"
               (changed)="replace(entry.key, $event)"
             />
             <button
@@ -79,7 +92,7 @@ export type FieldValue =
         }
       }
     }
-    @if (depth() > 0) {
+    @if (depth() > 0 && !arrivalLabel()) {
       <label class="kind"
         >Tip<select
           [ngModel]="type(value())"
@@ -138,7 +151,37 @@ export class ObjectFields {
   readonly value = input.required<FieldValue>();
   readonly disabled = input(false);
   readonly depth = input(0);
+  /** Context for the legacy passenger-profile editor; other objects retain their original types. */
+  readonly fieldPath = input<readonly string[]>([]);
+  readonly arrivalStartUtc = input('');
+  readonly timeZone = input('UTC');
   readonly changed = output<FieldValue>();
+  childPath(key: string) {
+    return [...this.fieldPath(), key];
+  }
+  arrivalLabel(): string | null {
+    const field = /^batches\.\d+\.arrival\.(minimum|maximum|mean|mode)$/.exec(
+      this.fieldPath().join('.'),
+    )?.[1];
+    if (!this.arrivalStartUtc() || !field) return null;
+    return (
+      {
+        minimum: 'Început sosiri',
+        maximum: 'Sfârșit sosiri',
+        mean: 'Ora medie a sosirii',
+        mode: 'Ora cea mai frecventă a sosirii',
+      } as Record<string, string>
+    )[field];
+  }
+  arrivalTime() {
+    const value = this.value();
+    return typeof value === 'number' ? addMinutes(this.arrivalStartUtc(), value) : '';
+  }
+  setArrivalTime(utc: string) {
+    // The UI schedules absolute instants; only this adapter speaks the legacy distribution contract.
+    const duration = (Date.parse(utc) - Date.parse(this.arrivalStartUtc())) / 60000;
+    this.changed.emit(Number.isFinite(duration) ? duration : null);
+  }
   type(value: FieldValue): string {
     return value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
   }

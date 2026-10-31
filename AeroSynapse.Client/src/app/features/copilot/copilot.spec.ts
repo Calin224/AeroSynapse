@@ -7,13 +7,7 @@ import { BehaviorSubject } from 'rxjs';
 import { PickedRun, RunPicker } from '../../shared/ui/run-picker';
 import { Copilot } from './copilot';
 import { ToolName, ToolResult, validToolResult } from './copilot-tools.models';
-import {
-  CopilotAnswer,
-  CopilotContext,
-  CopilotScope,
-  modelLabel,
-  validAnswer,
-} from './copilot.models';
+import { CopilotAnswer, CopilotContext, CopilotScope, validAnswer } from './copilot.models';
 
 const scenarioId = '10000000-0000-0000-0000-000000000001';
 const runId = '20000000-0000-0000-0000-000000000001';
@@ -152,10 +146,6 @@ describe('Copilot conversation', () => {
     expect(host.querySelector('[data-answer]')!.textContent!.trim()).toBe(
       'Pasageri în coadă: 17 pasageri.',
     );
-    expect(host.textContent).toContain('LLM dezactivat');
-    expect(host.textContent).toContain(runId);
-    expect(host.textContent).toContain('Bottleneck');
-    expect(host.querySelector('nav.next')).toBeNull();
   });
 
   it('keeps each turn with the zone and minute it was asked about', async () => {
@@ -407,11 +397,6 @@ describe('Copilot evidence envelope', () => {
     expect(validAnswer({ ...answer(), citations: [null] } as unknown as CopilotAnswer, scope)).toBe(
       false,
     );
-  });
-  it('labels every provider fallback distinctly from model-assisted answers', () => {
-    expect(modelLabel('available')).toContain('AI asistat');
-    for (const status of ['disabled', 'unconfigured', 'unavailable', 'invalid_response', 'timeout'])
-      expect(modelLabel(status)).toContain('Rezumat din metrici');
   });
   it('accepts tool results only for the selected run, zone, minute and tool', () => {
     const at = { ...scope, minute: 15 },

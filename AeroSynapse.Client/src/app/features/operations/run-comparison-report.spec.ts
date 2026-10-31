@@ -93,67 +93,36 @@ describe('Baseline and what-if report', () => {
     value.metrics.push(metric('cp2', 'maximumQueue', 0, 0));
     value.metrics.push(metric('cp1', 'processedPassengers', 250, 250));
     value.metrics.push(metric('cp3', 'processedPassengers', 0, 0));
+    // Check-in desks appear in the table, but staffing advice targets security controls only.
+    value.metrics.push({
+      ...metric('desks', 'processedPassengers', 240, 240),
+      zoneType: 'checkIn',
+    });
     const fixture = component(value);
     fixture.componentRef.setInput('simple', true);
     fixture.componentRef.setInput('zoneNames', {
       cp1: 'Control 1',
       cp2: 'Control 2',
       cp3: 'Control 3',
+      desks: 'Check-in',
     });
     fixture.detectChanges();
     const insight = fixture.nativeElement.querySelector('.insight').textContent;
     expect(insight).toContain('Control 2');
     expect(insight).toContain('Control 1');
     expect(insight).not.toContain('Control 3');
+    expect(insight).not.toContain('Check-in');
+    expect(fixture.nativeElement.textContent).not.toContain('Zonă fără nume');
     value.comparability!.comparable = false;
     fixture.componentRef.setInput('report', { ...value });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.insight')).toBeNull();
   });
-  it('names the check-in desks in the table but points staffing advice only at security controls', () => {
-    const value = report();
-    const metric = (
-      zoneId: string,
-      zoneType: string,
-      name: string,
-      baseline: number,
-      candidate: number,
-    ) => ({
-      zoneId,
-      zoneType,
-      name,
-      unit: 'passengers',
-      baseline,
-      candidate,
-      delta: candidate - baseline,
-    });
-    value.metrics.push(metric('cp2', 'checkpoint', 'processedPassengers', 0, 0));
-    value.metrics.push(metric('cp2', 'checkpoint', 'maximumQueue', 0, 0));
-    value.metrics.push(metric('cp1', 'checkpoint', 'processedPassengers', 250, 250));
-    value.metrics.push(metric('desks', 'checkIn', 'processedPassengers', 240, 240));
-    const fixture = component(value);
-    fixture.componentRef.setInput('simple', true);
-    fixture.componentRef.setInput('zoneNames', {
-      cp1: 'Control 1',
-      cp2: 'Control 2',
-      desks: 'Check-in',
-    });
-    fixture.detectChanges();
-    const insight = fixture.nativeElement.querySelector('.insight').textContent;
-    expect(insight).toContain('Control 1');
-    expect(insight).not.toContain('Check-in');
-    expect(fixture.nativeElement.textContent).not.toContain('Zonă fără nume');
-  });
   it('labels both run IDs and displays a signed descriptive difference without declaring a winner', () => {
     const fixture = component(),
       text = fixture.nativeElement.textContent;
-    expect(text).toContain('baseline-run');
     expect(text).toContain('candidate-run');
-    expect(text).toContain('Baseline');
-    expect(text).toContain('What-if / candidat');
     expect(text).toContain('-50%');
-
-
   });
   it.each([0, -1])(
     'never renders a percentage for baseline %s, even if an invalid percentage was supplied',

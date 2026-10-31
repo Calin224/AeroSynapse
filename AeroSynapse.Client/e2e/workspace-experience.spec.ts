@@ -204,16 +204,16 @@ test('loading, retry, empty and partial data remain usable', async ({ page }) =>
       : route.fulfill({ json: [] });
   });
   await page.goto('/control-tower');
-  await expect(page.locator('.loading[role=status]')).toBeVisible();
-  await expect(page.locator('#tower-scenario')).toBeDisabled();
+  await expect(page.getByRole('status').filter({ hasText: 'Se încarcă scenariul…' })).toBeVisible();
   release();
   await expect(page.locator('.notice[role=alert]')).toBeVisible();
   fail = false;
   await page.getByRole('button', { name: 'Reîncearcă', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Niciun scenariu disponibil' })).toBeVisible();
-  const createScenario = page.getByRole('link', { name: 'Deschide Scenario Studio', exact: true });
+  await expect(page.getByRole('heading', { name: 'Alege un scenariu', exact: true })).toBeVisible();
+  await expect(page.getByText('Niciun scenariu disponibil.', { exact: true })).toBeVisible();
+  const createScenario = page.getByRole('link', { name: 'Scenariu nou', exact: true });
   await expect(createScenario).toBeVisible();
-  await expect(createScenario).toHaveAttribute('href', '/scenario-studio');
+  await expect(createScenario).toHaveAttribute('href', '/control-tower/configure');
   await page.route('**/api/scenarios', (route) =>
     route.fulfill({ json: [fixture.scenario.scenario] }),
   );
@@ -221,7 +221,7 @@ test('loading, retry, empty and partial data remain usable', async ({ page }) =>
     route.fulfill({ json: [] }),
   );
   await page.reload();
-  await expect(page.getByTestId('tower-processed')).toHaveText('—');
+  await expect(page.locator('.deck-status')).toContainText('Nicio rulare încă');
   await expect(page.locator('app-tower-trends')).toContainText(
     'Nicio observație completă.',
   );

@@ -18,9 +18,7 @@ import { SimulationExecution, simulationReceiptProblem } from '../operations/sim
 export type { SimulationExecution } from '../operations/simulation-command';
 import { ApiError } from '../../core/http/api-error.interceptor';
 import { createDataResource } from '../../shared/data-resource';
-import { DataState } from '../../shared/ui/data-state';
 import { OperationsStream } from '../../core/http/operations-stream';
-import { OperationsProgress } from '../../shared/ui/operations-progress';
 import { TERMINAL_MAP_ZONES } from '../digital-twin/terminal-zones';
 
 interface SavedScenario {
@@ -60,117 +58,9 @@ const metricKey = (name: string) =>
 
 @Component({
   selector: 'app-simulation-panel',
-  imports: [DataState, OperationsProgress],
   providers: [OperationsStream],
-  template: `
-    <section class="panel simulation-panel">
-      <header class="panel-heading">
-        <div>
-          <h2 id="simulation-heading" tabindex="-1">Rulează o simulare</h2>
-        </div>
-      </header>
-      <div class="panel-body">
-        @let state = scenarios.state();
-        @if (state.status === 'ready') {
-          @let chosen = chosenScenario();
-          <div class="launcher">
-            <!-- The scenario list on the page is the only picker; this panel runs that choice. -->
-            <p id="simulation-scenario" [attr.data-scenario-id]="selectedId()">
-              @if (chosen) {
-                Scenariu: <strong>{{ chosen.name }}</strong> · revizia {{ chosen.revision }}
-              } @else {
-                Alege un scenariu din listă.
-              }
-            </p>
-            <button class="btn-primary" [disabled]="!selectedId() || active()" (click)="start()">
-              Pornește simularea
-            </button>
-          </div>
-        } @else {
-          <app-data-state
-            [status]="state.status"
-            label="scenariile salvate"
-            [message]="state.status === 'error' ? state.message : ''"
-            emptyMessage="Nu există scenarii salvate pentru simulare."
-            (retry)="scenarios.reload()"
-          />
-        }
-        <div aria-live="polite">
-          @if (execution(); as run) {
-            <p>
-              Stare: <strong>{{ statusLabel(run.status) }}</strong>
-            </p>
-            <details class="simulation-reference">
-              <summary>Detalii tehnice</summary>
-              Rulare {{ run.runId }} · Correlation ID {{ run.correlationId }}
-            </details>
-            <app-operations-progress
-              [run]="live.state()?.run ?? null"
-              [connection]="live.status()"
-              [optimization]="live.state()?.optimization ?? null"
-              [zoneNames]="zoneNames"
-            />
-            @if (run.failureReason) {
-              <p class="notice" role="alert">{{ run.failureReason }}</p>
-            }
-            @if (run.resultsValid) {
-              @for (metric of keyMetrics(); track metric.id) {
-                <p>{{ metric.label }}: {{ metric.value }}</p>
-              }
-            }
-          } @else {
-            @if (submitting()) {
-              <p>Stare: În așteptare</p>
-            }
-            <!-- Before any run there is nothing to follow; an idle hint would read as an error. -->
-            @if (submitting() || live.status() !== 'idle') {
-              <app-operations-progress
-                [run]="live.state()?.run ?? null"
-                [connection]="live.status()"
-                [optimization]="live.state()?.optimization ?? null"
-                [zoneNames]="zoneNames"
-              />
-            }
-          }
-          @if (error()) {
-            <p class="notice" role="alert">{{ error() }}</p>
-          }
-        </div>
-        @if (command() && error()) {
-          <button [disabled]="submitting()" (click)="resume()">
-            Continuă verificarea simulării
-          </button>
-        }
-      </div>
-    </section>
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .launcher {
-      display: grid;
-      gap: 8px;
-    }
-    .launcher p {
-      margin: 0;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    [aria-live] > * + * {
-      margin-top: 10px;
-    }
-    strong {
-      color: var(--text);
-    }
-    .simulation-reference,
-    small {
-      color: var(--text-muted);
-      font-size: 12px;
-      overflow-wrap: anywhere;
-      font-family: var(--font-mono);
-    }
-  `,
+  // Headless launcher: the Control Tower deck renders its state through viewChild.
+  template: '',
 })
 export class SimulationPanel {
   private readonly simulation = inject(SimulationContext);
@@ -187,6 +77,8 @@ export class SimulationPanel {
   );
   readonly selectedId = signal('');
   protected chosenScenario(): SavedScenario | undefined {
+    const provided = this.scenario();
+    if (provided?.id === this.selectedId()) return provided;
     const state = this.scenarios.state();
     return state.status === 'ready'
       ? state.data.find((item) => item.id === this.selectedId())
@@ -194,8 +86,13 @@ export class SimulationPanel {
   }
   /** Optional selection owned by the host page; ignored while a simulation is in flight. */
   readonly scenarioId = input<string | null>(null);
+  /** Prevent new launches while the workspace loads or observes another active run. */
+  readonly disabled = input(false);
+  readonly scenario = input<SavedScenario | null>(null);
   /** Emits the run id once a launched simulation completes with valid results. */
   readonly finished = output<string>();
+  /** A validated receipt lets the workspace observe this run while it is still running. */
+  readonly accepted = output<SimulationExecution>();
   readonly scenarioSelected = output<string>();
   readonly working = output<boolean>();
   private announced = '';
@@ -283,12 +180,8 @@ export class SimulationPanel {
   }
 
   start() {
-    if (this.active()) return;
-    const state = this.scenarios.state();
-    const scenario =
-      state.status === 'ready'
-        ? state.data.find((item) => item.id === this.selectedId())
-        : undefined;
+    if (this.disabled() || this.active()) return;
+    const scenario = this.chosenScenario();
     if (!scenario) return;
     this.metricsRequest?.unsubscribe();
     const command = {
@@ -363,6 +256,11 @@ export class SimulationPanel {
             : this.api.get<SimulationExecution>(`simulations/${key}`).pipe(
                 timeout(OPERATION_REQUEST_TIMEOUT_MS),
                 catchError((error) => {
+                  // An unknown key was never accepted; the idempotent re-send launches or rejects it.
+                  if (error instanceof ApiError && error.status === 404) {
+                    this.resume();
+                    return EMPTY;
+                  }
                   this.error.set(
                     operationError(error) + ' Comanda este păstrată pentru reconectare.',
                   );
@@ -398,6 +296,7 @@ export class SimulationPanel {
     this.execution.set(run);
     this.simulation.remember(run.scenarioId, run.runId);
     this.live.trackRun(run.runId);
+    if (current?.runId !== run.runId) this.accepted.emit(run);
     if (run.status === 'completed' || run.status === 'failed') {
       this.poll?.unsubscribe();
       try {
@@ -445,14 +344,6 @@ export class SimulationPanel {
             'Simularea este finalizată, dar rezultatele nu pot fi încărcate momentan.',
           ),
       });
-  }
-  statusLabel(status: SimulationExecution['status']) {
-    return {
-      pending: 'În așteptare',
-      running: 'În execuție',
-      completed: 'Finalizată',
-      failed: 'Eșuată',
-    }[status];
   }
   protected readonly zoneNames = Object.fromEntries(
     TERMINAL_MAP_ZONES.filter(

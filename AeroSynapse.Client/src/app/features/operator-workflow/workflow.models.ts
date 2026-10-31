@@ -8,11 +8,11 @@ import {
   flightPassengers,
   incidentArrivalWindow,
   scenarioClock,
-  scenarioMinute,
   surgePayload,
 } from '../scenario-studio/incident-designer';
 import type { InputEvent, StudioLayout } from '../scenario-studio/studio.models';
 import { formatWait, OutcomeRow, percentChange } from '../../shared/ui/outcome-cards';
+import { addMinutes } from '../../shared/absolute-time';
 
 export type WorkflowStage = 'event' | 'simulate' | 'optimize' | 'compare' | 'review';
 export type EvaluationStage = Extract<WorkflowStage, 'optimize' | 'compare' | 'review'>;
@@ -56,42 +56,45 @@ export function flightTimeline(
   layout: StudioLayout,
   surge: InputEvent | null,
 ): FlightTimeline {
-  const span = inputs.durationMinutes > 0 ? inputs.durationMinutes : 1;
-  const at = (minute: number) => Math.min(100, Math.max(0, (minute / span) * 100));
-  const between = (from: number, to: number): TimelineSpan | null =>
-    Number.isFinite(from) && Number.isFinite(to) && to > from && to > 0 && from < span
+  const duration = inputs.durationMinutes > 0 ? inputs.durationMinutes : 1;
+  const start = Date.parse(inputs.startsAtUtc),
+    span = duration * 60000,
+    end = start + span;
+  const at = (timestamp: number) => Math.min(100, Math.max(0, ((timestamp - start) / span) * 100));
+  const between = (fromUtc: string, toUtc: string): TimelineSpan | null => {
+    const from = Date.parse(fromUtc),
+      to = Date.parse(toUtc);
+    return Number.isFinite(from) && Number.isFinite(to) && to > from && to > start && from < end
       ? { left: at(from), width: at(to) - at(from) }
       : null;
-  const step = span <= 120 ? 15 : span <= 360 ? 30 : 60;
-  const ticks = Array.from({ length: Math.floor(span / step) + 1 }, (_, i) => i * step).map(
-    (minute) => ({ left: at(minute), label: scenarioClock(inputs, minute) }),
-  );
+  };
+  const step = duration <= 120 ? 15 : duration <= 360 ? 30 : 60;
+  const ticks = Array.from({ length: Math.floor(duration / step) + 1 }, (_, i) =>
+    addMinutes(inputs.startsAtUtc, i * step),
+  ).map((utc) => ({ left: at(Date.parse(utc)), label: scenarioClock(inputs, utc) }));
   const flights = [...inputs.flights]
     .sort((a, b) => Date.parse(a.departureAtUtc) - Date.parse(b.departureAtUtc))
     .map((flight): TimelineFlight => {
-      const departure = scenarioMinute(inputs, flight.departureAtUtc);
+      const departure = Date.parse(flight.departureAtUtc);
       const window = incidentArrivalWindow(inputs, flight.id);
       return {
         id: flight.id,
         code: flight.code,
         gate: layout.layout.gates.find((gate) => gate.id === flight.gateId)?.code ?? '—',
         passengers: flightPassengers(inputs, flight.id),
-        departure: scenarioClock(inputs, departure),
-        departureAt: departure >= 0 && departure <= span ? at(departure) : null,
-        arrivals: window ? between(window.minimum, window.maximum) : null,
+        departure: scenarioClock(inputs, flight.departureAtUtc),
+        departureAt: departure >= start && departure <= end ? at(departure) : null,
+        arrivals: window ? between(window.start, window.end) : null,
         boarding:
           flight.boardingOpensAtUtc && flight.boardingClosesAtUtc
-            ? between(
-                scenarioMinute(inputs, flight.boardingOpensAtUtc),
-                scenarioMinute(inputs, flight.boardingClosesAtUtc),
-              )
+            ? between(flight.boardingOpensAtUtc, flight.boardingClosesAtUtc)
             : null,
         cancelled: flight.status === 'cancelled',
       };
     });
   const payload = surge ? surgePayload(surge) : null;
-  const start = surge ? scenarioMinute(inputs, surge.occurredAtUtc) : NaN;
-  const window = payload ? between(start, start + payload.durationMinutes) : null;
+  const surgeEnd = surge && payload ? addMinutes(surge.occurredAtUtc, payload.durationMinutes) : '';
+  const window = surge && payload ? between(surge.occurredAtUtc, surgeEnd) : null;
   return {
     ticks,
     flights,
@@ -102,20 +105,30 @@ export function flightTimeline(
             // Keep a short surge visible as a band rather than a hairline.
             width: Math.max(window.width, 1.2),
             flightId: surge.flightId ?? null,
-            label: `${scenarioClock(inputs, start)}–${scenarioClock(inputs, start + payload.durationMinutes)}`,
+            label: `${scenarioClock(inputs, surge.occurredAtUtc)}–${scenarioClock(inputs, surgeEnd)}`,
           }
         : null,
   };
 }
 
 /** Where a new surge on this flight should start: when its passengers begin to arrive. */
-export function surgeStartMinute(inputs: ScenarioInputs, flightId: string, duration: number) {
+export function surgeStartTime(inputs: ScenarioInputs, flightId: string, duration: number) {
   const flight = inputs.flights.find((row) => row.id === flightId);
   const batch = inputs.passengerGeneration?.batches.find((row) => row.flightId === flightId);
-  const departure = flight ? scenarioMinute(inputs, flight.departureAtUtc) : NaN;
-  const preferred = batch?.arrival.minimum ?? (Number.isFinite(departure) ? departure - 45 : 0);
+  const preferred = batch
+    ? addMinutes(inputs.startsAtUtc, batch.arrival.minimum)
+    : flight
+      ? addMinutes(flight.departureAtUtc, -45)
+      : inputs.startsAtUtc;
   const window = incidentArrivalWindow(inputs, flightId);
-  return window ? Math.max(window.minimum, Math.min(preferred, window.maximum - duration)) : 0;
+  return window
+    ? new Date(
+        Math.max(
+          Date.parse(window.start),
+          Math.min(Date.parse(preferred), Date.parse(addMinutes(window.end, -duration))),
+        ),
+      ).toISOString()
+    : inputs.startsAtUtc;
 }
 
 export interface StaffMove {
@@ -222,7 +235,10 @@ export function shiftPlanView(
   return {
     slots,
     ticks: Array.from({ length: Math.floor(day / 60) + 1 }, (_, hour) => hour * 60).map(
-      (minute) => ({ left: at(minute), label: scenarioClock(inputs, minute) }),
+      (minute) => ({
+        left: at(minute),
+        label: scenarioClock(inputs, addMinutes(inputs.startsAtUtc, minute)),
+      }),
     ),
     rows: plan.schedule.checkpoints.map((row) => {
       const arrivals = row.arrivals ?? [];
@@ -245,7 +261,7 @@ export function shiftPlanView(
         return {
           id: shift.staffMemberId,
           name: names.get(shift.staffMemberId) ?? `Operator ${index + 1}`,
-          hours: `${scenarioClock(inputs, first)}–${scenarioClock(inputs, last)}`,
+          hours: `${scenarioClock(inputs, addMinutes(inputs.startsAtUtc, first))}–${scenarioClock(inputs, addMinutes(inputs.startsAtUtc, last))}`,
           bars: shift.segments.map((segment, position) => ({
             left: at(segment.startMinute),
             width: at(segment.endMinute) - at(segment.startMinute),

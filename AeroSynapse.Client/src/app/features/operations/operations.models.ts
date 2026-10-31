@@ -62,6 +62,8 @@ export interface ScenarioInputs {
   passengerGeneration?: PassengerGenerationConfig | null;
   navigation?: import('./navigation.models').NavigationConfig | null;
   snapshotIntervalMinutes?: number | null;
+  /** Minimum gap between any two scheduled departures, including their configured delays. */
+  minimumDepartureSpacingMinutes?: number | null;
   integratedResources?: import('./resource.models').IntegratedResourceConfig | null;
   /** Staffed desks of a layout check-in area; hold-baggage passengers queue there before security. */
   checkIn?: { areaId: string; staffCount: number; holdBaggageShare: number } | null;
@@ -238,10 +240,6 @@ export interface FlightSchedule {
 export interface ScenarioDetails {
   scenario: ScenarioSummary;
   inputs: ScenarioInputs;
-}
-export interface PublishedLayout {
-  version: { id: string };
-  layout: SceneDetails;
 }
 export interface RunSummary {
   id: string;

@@ -172,6 +172,88 @@ async function review(page: Page) {
   await page.getByRole('button', { name: 'Verifică scenariul', exact: true }).click();
 }
 test.beforeEach(async () => mkdir(evidence, { recursive: true }));
+test('absolute schedule also edits advanced arrival distributions with calendar times', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-10-31T21:30:00Z'));
+  const { requests } = await fixture(page);
+  await page.goto('/scenario-studio');
+  await page.getByRole('button', { name: 'Configurații suplimentare', exact: true }).click();
+  await page.getByRole('button', { name: /Congestie la securitate/ }).click();
+  await page.getByRole('button', { name: 'Zboruri și pasageri', exact: true }).click();
+  await page.getByRole('button', { name: 'Resurse și evenimente', exact: true }).click();
+  await page.getByText('Setări avansate de simulare', { exact: true }).click();
+  await page.getByText('Profiluri de pasageri', { exact: true }).click();
+  await expect(page.getByLabel('Început sosiri', { exact: true }).first()).toHaveValue(
+    '2026-10-31T23:45',
+  );
+  await expect(page.getByLabel('Sfârșit sosiri', { exact: true }).first()).toHaveValue(
+    '2026-11-01T00:20',
+  );
+  await page.getByLabel('Început sosiri', { exact: true }).first().fill('2026-10-31T23:50');
+  await page.getByRole('button', { name: 'Validare scenariu', exact: true }).click();
+  await expect(page.getByText('Configurație validată.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Salvează scenariul', exact: true }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0].inputs.passengerGeneration!.batches[0].arrival.minimum).toBe(20);
+  expect(requests[0].inputs.passengerGeneration!.batches[0].arrival.maximum).toBe(50);
+});
+for (const width of [1440, 390]) {
+  test(`absolute schedule keeps local dates and UTC payloads ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.clock.setFixedTime(new Date('2026-10-31T21:30:00Z'));
+    const { requests } = await fixture(page);
+    await page.goto('/scenario-studio');
+    await page.locator('button.principal').click();
+    await page.getByRole('button', { name: 'Zboruri și pasageri', exact: true }).click();
+    const departures = page.getByLabel('Ora plecării', { exact: true });
+    await expect(departures.first()).toHaveAttribute('type', 'datetime-local');
+    await expect(departures.first()).toHaveValue('2026-11-01T00:30');
+    await expect(departures.nth(1)).toHaveValue('2026-11-01T01:30');
+    const next = page.getByRole('button', { name: 'Resurse și evenimente', exact: true });
+    const ruleErrors = page.getByTestId('flight-rule-error');
+    await expect(ruleErrors).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    await departures.first().fill('2026-11-01T01:00');
+    await expect(ruleErrors).toContainText('minimum 60');
+    await expect(ruleErrors).toHaveCSS('color', 'rgb(201, 0, 0)');
+    await expect(next).toBeDisabled();
+    await expect(page.locator('.stepper button').nth(2)).toBeDisabled();
+    await expect(page.locator('.stepper button').nth(3)).toBeDisabled();
+    await expect(page.locator('#step-heading')).toContainText('Zboruri și fluxuri de pasageri');
+    await departures.first().fill('2026-11-01T00:15');
+    await expect(ruleErrors).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    await departures.first().fill('');
+    await expect(ruleErrors).toContainText('HH:MM');
+    await expect(next).toBeDisabled();
+    await departures.first().fill('2026-11-01T00:15');
+    await expect(ruleErrors).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    await accessibility(page);
+    await page.screenshot({
+      path: resolve(evidence, `absolute-flights-${width}.png`),
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Resurse și evenimente', exact: true }).click();
+    await page.getByRole('button', { name: 'Adaugă val de pasageri', exact: true }).click();
+    await page
+      .getByLabel('Ora de început a incidentului', { exact: true })
+      .fill('2026-10-31T23:50');
+    await accessibility(page);
+    await page.getByRole('button', { name: 'Validare scenariu', exact: true }).click();
+    await expect(page.getByText('Configurație validată.', { exact: true })).toBeVisible();
+    await expect(page.locator('.review tbody tr').first()).toContainText('00:15 · 2026-11-01');
+    await page.getByRole('button', { name: 'Salvează scenariul', exact: true }).click();
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0].inputs.flights[0].departureAtUtc).toBe('2026-10-31T22:15:00.000Z');
+    expect(requests[0].inputs.flights[0].boardingOpensAtUtc).toBe('2026-10-31T22:03:00.000Z');
+    expect(requests[0].inputs.flows[0].endsAtUtc).toBe('2026-10-31T22:13:00.000Z');
+    expect(requests[0].inputs.events.map((event) => event.occurredAtUtc)).toEqual([
+      '2026-10-31T21:50:00.000Z',
+    ]);
+  });
+}
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
@@ -179,6 +261,7 @@ for (const viewport of [
   test(`guided creation, linked traffic and completion ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.clock.setFixedTime(new Date('2026-10-31T06:00:00Z'));
     const { requests } = await fixture(page);
     await page.goto('/scenario-studio');
     await expect(page.getByRole('heading', { name: 'Cu ce vrei să începi?' })).toBeVisible();
@@ -197,7 +280,7 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Continuă la zboruri' }).click();
     const flight = page.getByRole('article', { name: 'Zbor 1', exact: true });
     await flight.getByLabel('Pasageri', { exact: true }).fill('145');
-    await flight.getByLabel('Plecare după (minute)', { exact: true }).fill('30');
+    await flight.getByLabel('Ora plecării', { exact: true }).fill('2026-10-31T08:30');
     await flight
       .getByRole('combobox', { name: 'Poartă de îmbarcare', exact: true })
       .selectOption('G3');
@@ -217,6 +300,7 @@ for (const viewport of [
     expect(request.inputs.populations[0].count).toBe(145);
     expect(request.inputs.flows[0].routeId).toBe('CP1-G3');
     expect(request.inputs.flights[0].gateId).toBe('G3');
+    expect(request.inputs.flights[0].departureAtUtc).toBe('2026-10-31T06:30:00.000Z');
     expect(
       Date.parse(request.inputs.flows[0].endsAtUtc) - Date.parse(request.inputs.startsAtUtc),
     ).toBe(28 * 60000);

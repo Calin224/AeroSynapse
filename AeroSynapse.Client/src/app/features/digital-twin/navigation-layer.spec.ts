@@ -1,6 +1,6 @@
 import { Line } from 'three';
 import { NavigationLayer } from './navigation-layer';
-import { displayNavigationRoutes, interpolateRoute, routePoints2d } from './navigation-path';
+import { displayNavigationRoutes, routePoints2d } from './navigation-path';
 import { TwinNavigationRoute } from './twin-model';
 
 const route: TwinNavigationRoute = { routeKey: 'nav-route', passengerCount: 20,
@@ -17,12 +17,9 @@ describe('Operational routes displayed independently from simulation time', () =
     const lastDispose = vi.spyOn((layer.group.children[0] as Line).geometry, 'dispose');
     layer.dispose(); layer.dispose(); expect(lastDispose).toHaveBeenCalledOnce(); expect(layer.group.children).toHaveLength(0);
   });
-  it('projects the same API waypoints into 2D and uses geometric interpolation only for display', () => {
+  it('projects the same API waypoints into 2D and does not mutate them', () => {
     const original = structuredClone(route);
     expect(routePoints2d(route)).toBe('0,78 10,78 10,68');
-    expect(interpolateRoute(route, .75)).toEqual({ x: 10, y: 0, z: 5 });
-    expect(interpolateRoute(route, 0)).toEqual({ x: 0, y: 0, z: 0 });
-    expect(interpolateRoute(route, 1)).toEqual({ x: 10, y: 0, z: 10 });
     expect(route).toEqual(original);
   });
   it('bounds rendering work and omits malformed visual coordinates without changing operational data', () => {

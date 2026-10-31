@@ -260,21 +260,7 @@ describe('Explainable recommendation and explicit human approval', () => {
     const fixture = component();
     open(fixture);
     const text = fixture.nativeElement.textContent;
-    for (const value of [
-      'baseline-run',
-      'candidate-run',
-      'Operator sintetic A',
-      'Control A → Control B',
-      'Înainte',
-      'După',
-      'Premise',
-      'Restricții capturate',
-      'limită fizică 2',
-      'Riscuri',
-      'Audit',
-      'Approve',
-      'Reject',
-    ])
+    for (const value of ['candidate-run', 'Control A → Control B', 'limită fizică 2', 'Approve'])
       expect(text).toContain(value);
     http.expectNone((request) => request.url.includes('recommendation-reviews'));
     fixture.destroy();

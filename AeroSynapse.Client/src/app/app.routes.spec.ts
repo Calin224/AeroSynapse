@@ -10,16 +10,14 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth-service';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
-import { ControlTowerStore } from './features/control-tower/control-tower.store';
 import { ControlTower } from './features/control-tower/control-tower';
-import { Scenario } from './features/scenario/scenario';
-import { TWIN_RENDERER_FACTORY } from './features/digital-twin/digital-twin';
+import { noWebGl, stubScenarioPanels } from './features/scenario/scenario.testing';
 import { NotFound } from './shared/not-found';
-import { storedRun } from './features/control-tower/run-overview.testing';
 
 describe('Feature routes and data states', () => {
   let http: HttpTestingController;
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
@@ -35,31 +33,10 @@ describe('Feature routes and data states', () => {
         },
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
-        {
-          provide: TWIN_RENDERER_FACTORY,
-          useValue: () => {
-            throw new Error('WebGL unavailable');
-          },
-        },
+        noWebGl,
       ],
     });
-    TestBed.overrideComponent(ControlTower, {
-      set: {
-        providers: [
-          {
-            provide: OperationsStream,
-            useValue: {
-              state: signal(null),
-              updates: new Subject(),
-              connect: vi.fn(),
-              status: signal('polling'),
-              error: signal(''),
-            },
-          },
-          ControlTowerStore,
-        ],
-      },
-    });
+    stubScenarioPanels('polling');
     http = TestBed.inject(HttpTestingController);
     const auth = TestBed.inject(AuthService);
     auth.state.session.set({
@@ -78,7 +55,9 @@ describe('Feature routes and data states', () => {
     http.expectOne('/api/scenarios').flush([]);
     harness.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Niciun scenariu disponibil');
-    expect(harness.routeNativeElement?.textContent).toContain('Deschide Scenario Studio');
+    expect(
+      harness.routeNativeElement?.querySelector('a[href="/control-tower/configure"]'),
+    ).toBeTruthy();
   });
   it('recovers from HTTP failure and keeps incidents, KPI charts and resources usable after WebGL fails', async () => {
     const harness = await RouterTestingHarness.create();
@@ -104,56 +83,60 @@ describe('Feature routes and data states', () => {
     const host = harness.routeNativeElement!;
     expect(host.textContent).toContain('Replay demo');
     expect(host.textContent).toContain('Vârf de sosire');
-    expect(host.textContent).toContain('13:06:00');
     expect(host.querySelector('app-terminal-map')).toBeTruthy();
     expect(host.querySelectorAll('app-tower-trends svg')).toHaveLength(2);
-    expect(host.querySelector('[data-focused-zone]')?.getAttribute('data-focused-zone')).toBe(
-      ids.cp,
-    );
-    expect(host.querySelector('[data-testid="tower-processed"]')?.textContent?.trim()).toBe('12');
-    expect(host.querySelector('.workspace-grid')?.getAttribute('data-run-id')).toBe(ids.run);
+    expect(host.querySelector('.resource-panel tr.focused-zone th')?.textContent).toContain('CP1');
+    expect(host.querySelector('app-run-summary')?.textContent).toContain('12 din 20');
+    expect(host.querySelector('.simulation-workspace')?.getAttribute('data-run-id')).toBe(ids.run);
   });
-  it("lists saved scenarios and previews the selected scenario's latest run", async () => {
+  it("redirects saved scenarios to Control Tower and previews the selected scenario's run", async () => {
     const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/scenario', Scenario);
-    const scenarios = [
-      { id: 'scenario-1', code: 'DEMO-1', name: 'Vârf de seară', revision: 1 },
-      { id: 'scenario-2', code: 'DEMO-2', name: 'Trafic redus', revision: 2 },
-    ];
-    http.match('/api/scenarios').forEach((request) => request.flush(scenarios));
-    harness.detectChanges();
-    const choices =
-      harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('.scenario-option');
-    expect(choices).toHaveLength(2);
-    http.expectNone('/api/scenarios/scenario-1/runs?limit=100');
-    choices[0].click();
-    harness.detectChanges();
-    http.expectOne('/api/scenarios/scenario-1/runs?limit=100').flush([storedRun()]);
-    http.expectOne('/api/scenarios/scenario-1/runs/run-1').flush(storedRun());
+    await harness.navigateByUrl(
+      `/scenario?scenarioId=${ids.scenario}&runId=${ids.run}#simulation`,
+      ControlTower,
+    );
+    expect(TestBed.inject(Router).url).toBe(
+      `/control-tower?scenarioId=${ids.scenario}&runId=${ids.run}#simulation`,
+    );
+    const { scenario, layout, run } = towerFixture();
+    const second = structuredClone(scenario);
+    second.scenario.id = ids.otherRun;
+    second.scenario.name = 'Trafic redus';
+    const catalog = [scenario.scenario, second.scenario];
+    http.expectOne('/api/scenarios').flush(catalog);
+    http.expectOne(`/api/scenarios/${ids.scenario}`).flush(scenario);
+    http.expectOne(`/api/scenes/${ids.scene}/layout-versions/${ids.layout}`).flush(layout);
+    http.expectOne(`/api/scenarios/${ids.scenario}/runs?limit=100`).flush([run]);
+    await vi.waitFor(() =>
+      http.expectOne(`/api/scenarios/${ids.scenario}/runs/${ids.run}`).flush(run),
+    );
     await harness.fixture.whenStable();
     harness.detectChanges();
-    const selected = harness.routeNativeElement!.querySelector<HTMLSelectElement>(
-      '.selected-toolbar select',
-    )!;
-    expect(selected.value).toBe('scenario-1');
-    expect(harness.routeNativeElement?.querySelector('#run-summary-title')?.textContent).toContain(
-      'Flux fluent.',
+    expect(harness.routeNativeElement?.querySelector('#summary-title')?.textContent).toContain(
+      scenario.scenario.name,
     );
-    expect(harness.routeNativeElement?.textContent).toContain('90 din 200');
-    selected.value = 'scenario-2';
-    selected.dispatchEvent(new Event('change'));
+    expect(harness.routeNativeElement?.querySelector('#run-summary-title')).toBeTruthy();
+    expect(harness.routeNativeElement?.textContent).toContain('12 din 20');
+    const browse = [
+      ...harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('.page-actions button'),
+    ].find((button) => button.textContent?.includes('Toate scenariile'))!;
+    browse.click();
     harness.detectChanges();
-    http.expectOne('/api/scenarios/scenario-2/runs?limit=100').flush([]);
+    const alternative = [
+      ...harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('.gallery .card'),
+    ].find((button) => button.textContent?.includes(second.scenario.name))!;
+    alternative.click();
+    await vi.waitFor(() => http.expectOne('/api/scenarios').flush(catalog));
+    http.expectOne(`/api/scenarios/${ids.otherRun}`).flush(second);
+    http.expectOne(`/api/scenes/${ids.scene}/layout-versions/${ids.layout}`).flush(layout);
+    http.expectOne(`/api/scenarios/${ids.otherRun}/runs?limit=100`).flush([]);
+    await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(selected.value).toBe('scenario-2');
+    expect(harness.routeNativeElement?.querySelector('#summary-title')?.textContent).toContain(
+      second.scenario.name,
+    );
+    expect(harness.routeNativeElement?.querySelector('.gallery')).toBeNull();
     expect(harness.routeNativeElement?.textContent).toContain('Pregătit pentru prima simulare');
-  });
-  it('shows an empty Scenario collection', async () => {
-    const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/scenario', Scenario);
-    http.match('/api/scenarios').forEach((request) => request.flush([]));
-    harness.detectChanges();
-    expect(harness.routeNativeElement?.textContent).toContain('Nu există scenarii salvate');
   });
   it.each([
     '/missing',

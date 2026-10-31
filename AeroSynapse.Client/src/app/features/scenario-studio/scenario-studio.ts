@@ -1,4 +1,3 @@
-import { SimulationJourney } from '../../shared/ui/simulation-journey';
 import {
   afterNextRender,
   Component,
@@ -10,30 +9,33 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, map, Observable, switchMap } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { ApiError } from '../../core/http/api-error.interceptor';
 import { createDataResource } from '../../shared/data-resource';
 import { DataState } from '../../shared/ui/data-state';
+import { AbsoluteTimeInput } from '../../shared/ui/absolute-time-input';
+import { absoluteTimeLabel, addMinutes } from '../../shared/absolute-time';
 import {
   OperatorRole,
   ScenarioDetails,
   ScenarioFlight,
   ScenarioOperator,
-  ScenarioSummary,
   SceneSummary,
 } from '../operations/operations.models';
 import { FieldValue, ObjectFields } from './object-fields';
 import { IncidentDesigner, newSurge } from './incident-designer';
 import {
   basicErrors,
+  departureSpacingErrors,
   defaultCheckIn,
   FieldErrors,
   fromScenario,
   InputEvent,
   makeDraft,
+  MINIMUM_DEPARTURE_SPACING_MINUTES,
   PRESETS,
   shiftStart,
   StudioDraft,
@@ -43,7 +45,7 @@ import {
 
 @Component({
   selector: 'app-scenario-studio',
-  imports: [FormsModule, RouterLink, DataState, ObjectFields, IncidentDesigner, SimulationJourney],
+  imports: [FormsModule, DataState, ObjectFields, IncidentDesigner, AbsoluteTimeInput],
   templateUrl: './scenario-studio.html',
   styleUrl: './scenario-studio.css',
 })
@@ -54,10 +56,6 @@ export class ScenarioStudio {
   private readonly destroy = inject(DestroyRef);
   readonly scenes = createDataResource(
     () => this.api.get<(SceneSummary & { isSynthetic?: boolean })[]>('scenes'),
-    (rows) => !rows.length,
-  );
-  readonly scenarios = createDataResource(
-    () => this.api.get<ScenarioSummary[]>('scenarios'),
     (rows) => !rows.length,
   );
   readonly saved = signal<ScenarioDetails | null>(null);
@@ -72,7 +70,6 @@ export class ScenarioStudio {
   readonly advancedTraffic = signal(false);
   readonly advancedGeneral = signal(false);
   readonly advancedConfig = signal(false);
-  readonly libraryOpen = signal(false);
   readonly completed = signal(false);
   readonly statuses = ['scheduled', 'delayed', 'boarding', 'closed', 'departed', 'cancelled'];
   readonly statusLabels: Record<string, string> = {
@@ -92,7 +89,7 @@ export class ScenarioStudio {
   private clean = '';
   private validated = '';
   private lastStart = '';
-  private readonly lastDepartureMinutes = new Map<string, number>();
+  private readonly lastDepartures = new Map<string, string>();
 
   selectedScene() {
     const state = this.scenes.state();
@@ -174,7 +171,6 @@ export class ScenarioStudio {
             this.advancedTraffic.set(false);
             this.advancedGeneral.set(false);
             this.advancedConfig.set(false);
-            this.libraryOpen.set(false);
             this.message.set('');
             this.focusStep();
           },
@@ -205,7 +201,6 @@ export class ScenarioStudio {
             this.accept(value);
             this.step.set(1);
             this.completed.set(false);
-            this.libraryOpen.set(false);
             this.focusStep();
           },
           error: (error) => this.report(error),
@@ -316,7 +311,6 @@ export class ScenarioStudio {
           this.accept(value);
           this.errors.set({});
           this.message.set(message);
-          this.scenarios.reload();
           this.step.set(4);
           this.completed.set(true);
           this.focusStep();
@@ -340,7 +334,7 @@ export class ScenarioStudio {
   }
   setStart(value: string) {
     if (!this.draft) return;
-    const timestamp = value ? value + 'Z' : '';
+    const timestamp = value;
     if (Number.isFinite(Date.parse(this.draft.inputs.startsAtUtc)))
       this.lastStart = this.draft.inputs.startsAtUtc;
     if (
@@ -354,26 +348,21 @@ export class ScenarioStudio {
     );
     this.changed();
   }
-  minute(value: string | null | undefined): number | null {
-    if (!value || !this.draft) return null;
-    const minute = (Date.parse(value) - Date.parse(this.draft.inputs.startsAtUtc)) / 60000;
-    return Number.isFinite(minute) ? Math.round(minute * 1e6) / 1e6 : null;
+  clock(value: string | null | undefined) {
+    return absoluteTimeLabel(value, this.draft?.inputs.timeZone ?? 'UTC');
   }
-  at(minute: number | null): string {
-    const timestamp = Date.parse(this.draft?.inputs.startsAtUtc ?? '') + Number(minute) * 60000;
-    return minute !== null &&
-      Number.isFinite(minute) &&
-      Number.isFinite(timestamp) &&
-      Math.abs(timestamp) <= 8640000000000000
-      ? new Date(timestamp).toISOString()
-      : '';
-  }
-  setMinute<T extends object, K extends keyof T>(row: T, key: K, minute: number | null) {
-    row[key] = this.at(minute) as T[K];
+  setTime<T extends object, K extends keyof T>(row: T, key: K, utc: string) {
+    row[key] = utc as T[K];
     this.changed();
   }
   addFlight() {
     if (!this.draft || !this.layout) return;
+    if (!Number.isFinite(Date.parse(this.draft.inputs.startsAtUtc))) {
+      this.message.set(
+        'Completează data și ora de început a scenariului înainte de a adăuga zboruri.',
+      );
+      return;
+    }
     // Spread new flights over free gates first; only reuse a gate once every gate is taken.
     const gates = this.connectedGates();
     const flights = this.draft.inputs.flights;
@@ -387,28 +376,36 @@ export class ScenarioStudio {
       return;
     }
     const lastDeparture = Math.max(
-      0,
+      Date.parse(this.draft.inputs.startsAtUtc),
       ...flights
-        .filter((row) => row.gateId === gate.id)
-        .map((row) => (this.minute(row.departureAtUtc) ?? 0) + (row.delayMinutes ?? 0)),
+        .filter((row) => row.status !== 'cancelled')
+        .map((row) => Date.parse(addMinutes(row.departureAtUtc, row.delayMinutes ?? 0)))
+        .filter(Number.isFinite),
     );
-    const departure = Math.max(Math.min(this.draft.inputs.durationMinutes, 60), lastDeparture + 15);
-    if (departure > 10080) {
+    const spacing =
+      this.draft.inputs.minimumDepartureSpacingMinutes ?? MINIMUM_DEPARTURE_SPACING_MINUTES;
+    const departureAtUtc = addMinutes(new Date(lastDeparture).toISOString(), spacing);
+    const horizon =
+      (Date.parse(departureAtUtc) - Date.parse(this.draft.inputs.startsAtUtc)) / 60000;
+    if (!departureAtUtc || horizon > 10080) {
       this.message.set(
         'Adăugarea zborului depășește orizontul de simulare permis. Este necesară ajustarea orarului.',
       );
       return;
     }
-    this.draft.inputs.durationMinutes = Math.max(this.draft.inputs.durationMinutes, departure);
+    this.draft.inputs.durationMinutes = Math.max(
+      this.draft.inputs.durationMinutes,
+      Math.ceil(horizon),
+    );
     let number = 101 + flights.length;
     while (flights.some((row) => row.code === `DEMO ${number}`)) number++;
     this.draft.inputs.flights.push({
       id: crypto.randomUUID(),
       code: `DEMO ${number}`,
       gateId: gate?.id ?? '',
-      departureAtUtc: this.at(departure),
-      boardingOpensAtUtc: this.at(Math.max(0, departure - 12)),
-      boardingClosesAtUtc: this.at(departure - Math.min(2, departure / 2)),
+      departureAtUtc,
+      boardingOpensAtUtc: addMinutes(departureAtUtc, -12),
+      boardingClosesAtUtc: addMinutes(departureAtUtc, -2),
       passengerCapacity: 120,
       delayMinutes: 0,
       status: 'scheduled',
@@ -473,27 +470,34 @@ export class ScenarioStudio {
     group.flow.routeId = route.id;
     this.edited();
   }
-  setDeparture(flight: ScenarioFlight, minute: number | null) {
+  setDeparture(flight: ScenarioFlight, utc: string) {
     const group = this.simpleGroup(flight);
     if (!group) return;
-    const current = this.minute(flight.departureAtUtc);
-    if (current !== null) this.lastDepartureMinutes.set(flight.id, current);
-    const oldMinute = current ?? this.lastDepartureMinutes.get(flight.id) ?? null;
-    if (minute !== null && Number.isFinite(minute) && oldMinute !== null) {
-      const offset = minute - oldMinute;
-      flight.boardingOpensAtUtc = this.at(
-        (this.minute(flight.boardingOpensAtUtc) ?? oldMinute - 12) + offset,
-      );
-      flight.boardingClosesAtUtc = this.at(
-        (this.minute(flight.boardingClosesAtUtc) ?? oldMinute - 2) + offset,
-      );
-      group.flow.endsAtUtc = this.at((this.minute(group.flow.endsAtUtc) ?? oldMinute - 2) + offset);
+    if (Number.isFinite(Date.parse(flight.departureAtUtc)))
+      this.lastDepartures.set(flight.id, flight.departureAtUtc);
+    const previous = this.lastDepartures.get(flight.id);
+    if (utc && previous && Number.isFinite(Date.parse(utc))) {
+      const shift = (value: string) =>
+        addMinutes(value, (Date.parse(utc) - Date.parse(previous)) / 60000);
+      flight.boardingOpensAtUtc = shift(flight.boardingOpensAtUtc || addMinutes(previous, -12));
+      flight.boardingClosesAtUtc = shift(flight.boardingClosesAtUtc || addMinutes(previous, -2));
+      group.flow.endsAtUtc = shift(group.flow.endsAtUtc || addMinutes(previous, -2));
     }
-    flight.departureAtUtc = this.at(minute);
+    flight.departureAtUtc = utc;
     this.edited();
   }
   addPassengers(flight: ScenarioFlight) {
     if (!this.draft || this.passengersFor(flight) > 0) return;
+    if (
+      ![this.draft.inputs.startsAtUtc, flight.departureAtUtc].every((value) =>
+        Number.isFinite(Date.parse(value)),
+      )
+    ) {
+      this.message.set(
+        'Completează data și ora scenariului și a plecării înainte de a adăuga pasageri.',
+      );
+      return;
+    }
     const route = this.layout?.layout.routes.find((row) => row.toGateId === flight.gateId);
     if (!route) {
       this.message.set('Adăugarea pasagerilor necesită o poartă cu traseu disponibil.');
@@ -511,7 +515,12 @@ export class ScenarioStudio {
       flightId: flight.id,
       routeId: route.id,
       passengerCount: population.count,
-      startsAtUtc: this.at(0),
+      startsAtUtc: new Date(
+        Math.max(
+          Date.parse(this.draft.inputs.startsAtUtc),
+          Date.parse(addMinutes(flight.departureAtUtc, -90)),
+        ),
+      ).toISOString(),
       endsAtUtc: flight.boardingClosesAtUtc ?? flight.departureAtUtc,
     });
     this.edited();
@@ -621,15 +630,63 @@ export class ScenarioStudio {
         : {}),
     };
   }
+  private timingErrors(): FieldErrors {
+    return Object.fromEntries(
+      Object.entries(this.draft ? basicErrors(this.draft) : {}).filter(
+        ([field]) =>
+          field.endsWith('AtUtc') ||
+          field === 'inputs.timeZone' ||
+          field === 'inputs.minimumDepartureSpacingMinutes' ||
+          /^inputs\.flights\[\d+\]\.delayMinutes$/.test(field),
+      ),
+    );
+  }
+  flightRuleProblems(): string[] {
+    if (!this.draft) return [];
+    const errors = this.timingErrors(),
+      spacing = departureSpacingErrors(this.draft.inputs);
+    const fields = Object.keys(errors).filter(
+      (field) =>
+        field.startsWith('inputs.flights[') ||
+        ['inputs.startsAtUtc', 'inputs.timeZone', 'inputs.minimumDepartureSpacingMinutes'].includes(
+          field,
+        ),
+    );
+    const problems: string[] = [];
+    if (
+      fields.some(
+        (field) => (field.endsWith('AtUtc') && !spacing[field]) || field === 'inputs.timeZone',
+      )
+    ) {
+      problems.push(
+        `Introdu date și ore absolute valide (HH:MM), în fusul ${this.draft.inputs.timeZone}. Pentru o programare după miezul nopții, alege data corespunzătoare.`,
+      );
+    }
+    for (const field of fields) {
+      if (spacing[field]) problems.push(...spacing[field]);
+      else if (!field.endsWith('AtUtc') && field !== 'inputs.timeZone')
+        problems.push(`${this.fieldLabel(field)}: ${errors[field].join(' ')}`);
+    }
+    return [...new Set(problems)];
+  }
+  navigationBlocked(target: number): boolean {
+    if (this.busy()) return true;
+    return (
+      target > this.step() &&
+      Object.keys(this.timingErrors()).some((field) => this.stepFor(field) < target)
+    );
+  }
   goStep(target: number) {
     if (this.busy() || !this.draft) return;
     if (target > this.step()) {
       const errors = Object.fromEntries(
-        Object.entries(this.draftErrors()).filter(([field]) => this.stepFor(field) === this.step()),
+        Object.entries(this.draftErrors()).filter(([field]) => this.stepFor(field) < target),
       );
       this.errors.set(errors);
       if (Object.keys(errors).length) {
         this.message.set('Continuare blocată. Câmpurile indicate necesită completare.');
+        this.step.set(Math.min(...Object.keys(errors).map((field) => this.stepFor(field))));
+        this.focusStep();
         return;
       }
     }
@@ -732,6 +789,16 @@ export class ScenarioStudio {
   addFlow() {
     const input = this.draft!.inputs,
       flight = this.flightsWithoutPassengers()[0] ?? input.flights[0];
+    if (
+      ![input.startsAtUtc, flight?.departureAtUtc ?? input.startsAtUtc].every((value) =>
+        Number.isFinite(Date.parse(value)),
+      )
+    ) {
+      this.message.set(
+        'Completează data și ora scenariului și a plecării înainte de a adăuga fluxuri.',
+      );
+      return;
+    }
     this.draft!.inputs.flows.push({
       id: crypto.randomUUID(),
       populationId: input.populations[0]?.id ?? '',
@@ -739,8 +806,16 @@ export class ScenarioStudio {
       routeId:
         this.layout?.layout.routes.find((route) => route.toGateId === flight?.gateId)?.id ?? '',
       passengerCount: 120,
-      startsAtUtc: this.at(0),
-      endsAtUtc: flight?.boardingClosesAtUtc ?? this.at(Math.max(0.5, input.durationMinutes - 2)),
+      startsAtUtc: flight
+        ? new Date(
+            Math.max(
+              Date.parse(input.startsAtUtc),
+              Date.parse(addMinutes(flight.departureAtUtc, -90)),
+            ),
+          ).toISOString()
+        : input.startsAtUtc,
+      endsAtUtc:
+        flight?.boardingClosesAtUtc ?? addMinutes(input.startsAtUtc, input.durationMinutes - 2),
     });
     this.changed();
   }
@@ -765,18 +840,6 @@ export class ScenarioStudio {
       this.draft?.inputs.staffAllocations.find((row) => row.staffMemberId === id)?.checkpointId ??
       ''
     );
-  }
-  addEvent() {
-    this.draft!.inputs.events.push({
-      id: crypto.randomUUID(),
-      type: 'demo-note',
-      occurredAtUtc: this.at(0),
-      checkpointId: null,
-      gateId: null,
-      flightId: null,
-      payloadJson: '{}',
-    });
-    this.changed();
   }
   addIncident() {
     if (!this.draft || !this.layout) return;
@@ -878,6 +941,7 @@ export class ScenarioStudio {
       seed: 'Seed',
       timeZone: 'Fus orar',
       snapshotIntervalMinutes: 'Interval snapshot',
+      minimumDepartureSpacingMinutes: 'Interval minim între plecări',
       passengerCapacity: 'Capacitate pasageri',
       gateId: 'Poartă',
       departureAtUtc: 'Plecare',

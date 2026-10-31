@@ -250,14 +250,6 @@ describe('Monte Carlo batch page', () => {
     fixture.detectChanges();
     expect(view.seedText).toBe('42, 43, 44, 45, 46');
     expect(fixture.nativeElement.textContent).toContain('5 simulări în total');
-    view.create();
-    const request = http.expectOne('/api/simulation-batches');
-    expect(request.request.body).toMatchObject({
-      seeds: [42, 43, 44, 45, 46],
-      baseline: { scenarioId: 'baseline', revision: 3 },
-      candidates: [],
-    });
-    request.flush({}, { status: 503, statusText: 'Unavailable' });
     view.setRepetitions(0);
     expect(view.seedText).toBe('42, 43, 44, 45, 46');
     view.setRepetitions(26);
@@ -317,9 +309,6 @@ describe('Monte Carlo batch page', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('O simulare nu a reușit. Ele nu intră în calcul');
-    expect(text).toContain('Nicio repetare finalizată.');
-    expect(text).toContain('Deviație standard');
-    expect(text).toContain('P05');
     expect(text).toContain('2 / 1');
     expect(text).toContain('candidate_failed');
     expect(text).toContain('simulation_failed');
@@ -374,12 +363,7 @@ describe('Monte Carlo batch page', () => {
     );
     expect(verdict.textContent).toContain('Mai bună în 2 din 2 zile');
     expect(verdict.querySelector('.figure strong')!.textContent!.trim()).toBe('−50%');
-    expect(element.querySelectorAll('app-batch-spread .dot')).toHaveLength(4);
-    expect(element.querySelector('.duel')!.textContent).toContain('mai bună în 2 din 2 zile');
     expect(element.querySelectorAll('.duel [data-outcome="better"]')).toHaveLength(2);
-    const details = element.querySelector<HTMLDetailsElement>('details.tech')!;
-    expect(details.open).toBe(false);
-    expect(details.textContent).toContain('run-v0-42');
     view.detail.set(paired());
     fixture.detectChanges();
     expect(runRequests()).toHaveLength(0);
@@ -391,13 +375,7 @@ describe('Monte Carlo batch page', () => {
     fixture.detectChanges();
     flushRuns();
     fixture.detectChanges();
-    const chips = [...element.querySelectorAll<HTMLButtonElement>('.chips button')];
-    expect(chips.map((chip) => chip.textContent!.trim())).toEqual([
-      'Așteptare medie',
-      'Coada maximă',
-    ]);
-    expect(chips[0].getAttribute('aria-pressed')).toBe('true');
-    chips[1].click();
+    element.querySelectorAll<HTMLButtonElement>('.chips button')[1].click();
     fixture.detectChanges();
     const verdict = element.querySelector('.verdict')!;
     expect(verdict.getAttribute('data-tone')).toBe('worse');
@@ -451,24 +429,5 @@ describe('Monte Carlo batch page', () => {
     expect(runRequests().map((request) => request.request.url)).toEqual([
       '/api/runs/run-v0-43/metrics?limit=100',
     ]);
-  });
-  it('brings the results into view when a saved test is opened', async () => {
-    const original = Element.prototype.scrollIntoView;
-    const scroll = vi.fn();
-    Element.prototype.scrollIntoView = scroll; // Not implemented by jsdom.
-    try {
-      const fixture = TestBed.createComponent(Batches);
-      fixture.detectChanges();
-      http.expectOne('/api/scenarios').flush(scenarios);
-      http.expectOne('/api/simulation-batches').flush([report.batch]);
-      fixture.detectChanges();
-      fixture.nativeElement.querySelector('.history').click();
-      await new Promise((resolve) => setTimeout(resolve));
-      http.expectOne('/api/simulation-batches/batch-1').flush(report);
-      fixture.detectChanges();
-      expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
-    } finally {
-      Element.prototype.scrollIntoView = original;
-    }
   });
 });

@@ -240,7 +240,7 @@ describe('Baseline/what-if workbench', () => {
     expect(request.request.body).toMatchObject({ checkpointId: 'desks', staffCount: 4 });
     request.flush({}, { status: 503, statusText: 'Unavailable' });
   });
-  it('suggests one additional available operator without taking people from other controls', () => {
+  it('suggests one additional available operator, never takes people from other controls and rejects larger counts', () => {
     const fixture = component(),
       view = fixture.componentInstance;
     select(view);
@@ -255,6 +255,10 @@ describe('Baseline/what-if workbench', () => {
     expect(view.source()!.scenario.inputs.staffAllocations).toEqual(
       scenario.inputs.staffAllocations,
     );
+    view.staffCount = 3;
+    view.create();
+    expect(view.message()).toContain('0–2');
+    http.expectNone((request) => request.method === 'POST');
   });
   it("caps a control at the scenario's team instead of the layout's spare slots", () => {
     const fixture = component(),
@@ -300,13 +304,6 @@ describe('Baseline/what-if workbench', () => {
     http.expectOne('/api/runs/baseline-run/compare/candidate-run').flush(report());
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.summary-table').textContent).toContain('-5');
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'Raport detaliat și verificarea comparabilității',
-    );
-    expect(
-      fixture.nativeElement.querySelector('section[aria-label="Rezultate baseline și what-if"]'),
-    ).toBeNull();
-    expect(fixture.nativeElement.querySelector('.history')).toBeNull();
     expect(view.source()!.scenario.inputs).toEqual(scenario.inputs);
     http.expectNone((request) => request.method === 'PUT');
     await vi.advanceTimersByTimeAsync(5000);
@@ -315,16 +312,6 @@ describe('Baseline/what-if workbench', () => {
     const repeated = http.expectOne('/api/scenarios/source/what-if');
     expect(repeated.request.body.commandId).not.toBe(request.request.body.commandId);
     repeated.flush({}, { status: 503, statusText: 'Unavailable' });
-  });
-  it('does not take staff allocated elsewhere and rejects an invalid count before sending a command', () => {
-    const view = component().componentInstance;
-    select(view);
-    expect(view.currentCount()).toBe(2);
-    expect(view.availableCount()).toBe(3);
-    view.staffCount = 4;
-    view.create();
-    expect(view.message()).toContain('0–3');
-    http.expectNone((request) => request.method === 'POST');
   });
   it('preserves the original command after a network error and blocks changed parameters until reconciliation', () => {
     const fixture = component(),
@@ -410,20 +397,6 @@ describe('Baseline/what-if workbench', () => {
       'Date insuficiente pentru calcularea diferențelor',
     );
   });
-  it('does not present a multi-seed batch as a single pair', async () => {
-    const fixture = component(),
-      view = fixture.componentInstance;
-    select(view);
-    view.open('pair');
-    const multiple = pair('completed');
-    multiple.seeds = [42, 43];
-    await vi.advanceTimersByTimeAsync(0);
-    http.expectOne('/api/simulation-batches/pair').flush(multiple);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a[href="/batches"]')).toBeNull();
-    http.expectNone((request) => request.url.includes('/compare/'));
-    expect(view.roles()).toEqual([]);
-  });
   it('restores a timed-out command after reload and retries its original inputs despite a newer source revision', async () => {
     const fixture = component(),
       view = fixture.componentInstance;
@@ -465,36 +438,30 @@ describe('Baseline/what-if workbench', () => {
     expect(view.message()).toContain('nu corespunde');
     fixture.destroy();
   });
-  it('rejects a foreign polling manifest without rendering or comparing its runs', async () => {
+  it.each([
+    'missing-replica',
+    'duplicate-run',
+    'wrong-seed',
+    'wrong-role',
+    'multi-seed',
+    'foreign',
+  ])('does not treat an inconsistent %s manifest as a pair', async (failure) => {
     const fixture = component(),
       view = fixture.componentInstance;
     select(view);
     view.open('pair');
+    const value = pair('completed');
+    if (failure === 'missing-replica') value.replications[0].variantId = 'unrelated';
+    if (failure === 'duplicate-run') value.replications[1].runId = value.replications[0].runId;
+    if (failure === 'wrong-seed') value.replications[1].seed = 99;
+    if (failure === 'wrong-role') value.variants[1].position = 2;
+    if (failure === 'multi-seed') value.seeds = [42, 43];
+    if (failure === 'foreign') value.batch.id = 'foreign';
     await vi.advanceTimersByTimeAsync(0);
-    http.expectOne('/api/simulation-batches/pair').flush(pair('completed', 'foreign'));
-    expect(view.detail()).toBeNull();
-    expect(view.pollingError()).toContain('nu aparține');
+    http.expectOne('/api/simulation-batches/pair').flush(value);
+    fixture.detectChanges();
+    expect(view.roles()).toEqual([]);
     http.expectNone('/api/runs/baseline-run/compare/candidate-run');
     fixture.destroy();
   });
-  it.each(['missing-replica', 'duplicate-run', 'wrong-seed', 'wrong-role'])(
-    'does not treat an inconsistent %s manifest as a pair',
-    async (failure) => {
-      const fixture = component(),
-        view = fixture.componentInstance;
-      select(view);
-      view.open('pair');
-      const value = pair('completed');
-      if (failure === 'missing-replica') value.replications[0].variantId = 'unrelated';
-      if (failure === 'duplicate-run') value.replications[1].runId = value.replications[0].runId;
-      if (failure === 'wrong-seed') value.replications[1].seed = 99;
-      if (failure === 'wrong-role') value.variants[1].position = 2;
-      await vi.advanceTimersByTimeAsync(0);
-      http.expectOne('/api/simulation-batches/pair').flush(value);
-      fixture.detectChanges();
-      expect(view.roles()).toEqual([]);
-      http.expectNone('/api/runs/baseline-run/compare/candidate-run');
-      fixture.destroy();
-    },
-  );
 });

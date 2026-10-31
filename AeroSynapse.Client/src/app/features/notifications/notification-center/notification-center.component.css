@@ -487,9 +487,6 @@ details > summary::-webkit-details-marker {
     background var(--ease),
     color var(--ease);
 }
-.context-links a + a {
-  border-left: 1px solid var(--border);
-}
 .context-links a:hover {
   background: var(--text);
   color: var(--on-accent);

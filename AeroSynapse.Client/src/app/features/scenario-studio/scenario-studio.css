@@ -85,9 +85,6 @@
 .preset-top i {
   font-size: 20px;
 }
-.preset-top small {
-  font-size: 12px;
-}
 .preset strong {
   font-size: 18px;
 }
@@ -176,9 +173,6 @@
   color: var(--on-accent);
   border-color: var(--accent);
 }
-.step-heading .eyebrow {
-  margin-bottom: 8px;
-}
 .editor {
   border: 0;
   padding: 0;
@@ -229,6 +223,13 @@ textarea {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 400;
+}
+.rule-error {
+  color: var(--danger);
+  border-left: 3px solid var(--danger);
+  padding-left: 12px;
+  margin-top: 12px;
+  font-size: 13px;
 }
 .included {
   display: flex;
@@ -403,32 +404,6 @@ summary {
   font-size: 13px;
   padding: 10px 0;
   min-height: 44px;
-}
-.library {
-  padding: 12px 24px;
-  margin-top: 28px;
-}
-.library-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin: 16px 0;
-  max-height: 360px;
-  overflow: auto;
-}
-.scenario-choice {
-  display: grid;
-  gap: 6px;
-  text-align: left;
-  white-space: normal;
-}
-.scenario-choice span {
-  color: var(--text-muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.scenario-choice.selected {
-  border-color: var(--accent);
 }
 .validation-errors {
   background: var(--danger-soft);

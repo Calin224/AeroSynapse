@@ -1,13 +1,12 @@
 <dialog
   #palette
   class="command-palette"
-  aria-labelledby="search-heading"
+  aria-label="Navigare rapidă"
   (click)="dismissBackdrop($event)"
   (close)="closed.emit()"
 >
   <header class="palette-heading">
-    <span class="eyebrow" id="search-heading">NAVIGARE RAPIDĂ</span
-    ><button
+    <button
       class="icon-button"
       type="button"
       aria-label="Închide căutarea"
@@ -74,7 +73,6 @@
     </div>
   }
   <footer class="palette-footer">
-    <span><kbd>↑</kbd><kbd>↓</kbd> navighează</span><span><kbd>↵</kbd> deschide</span
-    ><span>Instrumentele disponibile rolului tău</span>
+    <span><kbd>↑</kbd><kbd>↓</kbd> navighează</span><span><kbd>↵</kbd> deschide</span>
   </footer>
 </dialog>

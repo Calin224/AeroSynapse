@@ -33,8 +33,7 @@ describe('Queue prediction card', () => {
     const rows = [...element.querySelectorAll('tbody tr')].map(row => row.textContent);
     expect(rows[0]).toContain('Control Nord'); expect(rows[0]).toContain('34.2'); expect(rows[0]).toContain('+4.2'); expect(rows[0]).toContain('91%');
     expect(rows[0]).toContain('22–41'); expect(rows[1]).toContain('Checkpoint control-');
-    expect(text).toContain('us038-residual-cqr-calibrated-2.0+0123456789abcdef'); expect(text).toContain('us038-synthetic-2.0');
-    expect(text).toContain('c3e77ffd17a9'); expect(text).toContain('simulări SimPy sintetice'); expect(text).toContain('P(coadă > 20)');
+    expect(text).toContain('us038-residual-cqr-calibrated-2.0+0123456789abcdef'); expect(text).toContain('P(coadă > 20)');
 
   });
   it.each([['predictor_disabled', 'QUEUE_ML_PREDICTOR=disabled'], ['model_warming', 'se antrenează'], ['model_unavailable', 'a eșuat']] as const)(

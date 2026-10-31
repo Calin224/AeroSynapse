@@ -1,15 +1,7 @@
-<app-simulation-journey
-  active="create"
-  [formal]="true"
-  [scenarioId]="saved()?.scenario?.id ?? null"
-/>
 <div class="page-heading">
   <div>
     <h1 class="display">{{ draft ? 'Configurare scenariu' : 'Creare scenariu' }}</h1>
   </div>
-  <a class="btn" routerLink="/scenario"
-    >Catalog de scenarii <i class="pi pi-arrow-up-right" aria-hidden="true"></i
-  ></a>
 </div>
 @if (pending(); as action) {
   <section class="notice" role="alert">
@@ -96,9 +88,6 @@
                   "
                   aria-hidden="true"
                 ></i>
-                @if (preset.id === 'principal') {
-                  <small>Configurație standard</small>
-                }
               </span>
               <strong>{{
                 preset.id === 'principal'
@@ -162,7 +151,7 @@
             [class.active]="step() === index + 1"
             [attr.aria-current]="step() === index + 1 ? 'step' : null"
             (click)="goStep(index + 1)"
-            [disabled]="busy()"
+            [disabled]="navigationBlocked(index + 1)"
           >
             <span>{{ index + 1 }}</span
             >{{ label }}
@@ -174,7 +163,6 @@
   <div class="studio-grid">
     <div class="studio-detail">
       <header class="step-heading">
-        <p class="eyebrow">ETAPA {{ step() }} DIN 4</p>
         <h2 id="step-heading" tabindex="-1">
           {{
             step() === 1
@@ -222,18 +210,22 @@
               ></textarea>
             </label>
           </div>
+          @if (step() === 1 && !busy() && navigationBlocked(2)) {
+            <p class="rule-error" role="alert">
+              Completează o dată de început și un fus orar valid înainte de a continua.
+            </p>
+          }
           <details [open]="advancedGeneral()">
             <summary>Data, codul și setările de reproducere</summary>
 
             <div class="fields">
               <label>Cod<input [(ngModel)]="value.code" maxlength="64" /></label>
-              <label
-                >Început (UTC)<input
-                  type="datetime-local"
-                  step="any"
-                  [ngModel]="value.inputs.startsAtUtc.replace('Z', '')"
-                  (ngModelChange)="setStart($event)"
-              /></label>
+              <app-absolute-time-input
+                label="Început scenariu"
+                [value]="value.inputs.startsAtUtc"
+                [timeZone]="value.inputs.timeZone"
+                (changed)="setStart($event)"
+              />
               <label
                 >Fus orar IANA<input
                   [(ngModel)]="value.inputs.timeZone"
@@ -264,6 +256,9 @@
               <i class="pi pi-plus" aria-hidden="true"></i> Adaugă zbor
             </button>
           </div>
+          @for (problem of flightRuleProblems(); track problem) {
+            <p class="rule-error" role="alert" data-testid="flight-rule-error">{{ problem }}</p>
+          }
           @if (missingPassengerCodes(); as codes) {
             <p class="notice" role="status" data-testid="flights-without-passengers">
               Zboruri fără pasageri: {{ codes }}. Alocarea pasagerilor este necesară pentru
@@ -293,14 +288,12 @@
                       [ngModel]="group.flow.passengerCount"
                       (ngModelChange)="setPassengers(flight, $event)"
                   /></label>
-                  <label
-                    >Plecare după (minute)<input
-                      type="number"
-                      min="1"
-                      [max]="value.inputs.durationMinutes"
-                      [ngModel]="minute(flight.departureAtUtc)"
-                      (ngModelChange)="setDeparture(flight, $event)"
-                  /></label>
+                  <app-absolute-time-input
+                    label="Ora plecării"
+                    [value]="flight.departureAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setDeparture(flight, $event)"
+                  />
                   <label
                     >Poartă de îmbarcare<select
                       [ngModel]="flight.gateId"
@@ -340,27 +333,24 @@
                       min="1"
                       [(ngModel)]="flight.passengerCapacity"
                   /></label>
-                  <label
-                    >Plecare (minut simulat)<input
-                      type="number"
-                      step="any"
-                      [ngModel]="minute(flight.departureAtUtc)"
-                      (ngModelChange)="setMinute(flight, 'departureAtUtc', $event)"
-                  /></label>
-                  <label
-                    >Deschidere îmbarcare (minut)<input
-                      type="number"
-                      step="any"
-                      [ngModel]="minute(flight.boardingOpensAtUtc)"
-                      (ngModelChange)="setMinute(flight, 'boardingOpensAtUtc', $event)"
-                  /></label>
-                  <label
-                    >Închidere îmbarcare (minut)<input
-                      type="number"
-                      step="any"
-                      [ngModel]="minute(flight.boardingClosesAtUtc)"
-                      (ngModelChange)="setMinute(flight, 'boardingClosesAtUtc', $event)"
-                  /></label>
+                  <app-absolute-time-input
+                    label="Plecare"
+                    [value]="flight.departureAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setTime(flight, 'departureAtUtc', $event)"
+                  />
+                  <app-absolute-time-input
+                    label="Deschidere îmbarcare"
+                    [value]="flight.boardingOpensAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setTime(flight, 'boardingOpensAtUtc', $event)"
+                  />
+                  <app-absolute-time-input
+                    label="Închidere îmbarcare"
+                    [value]="flight.boardingClosesAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setTime(flight, 'boardingClosesAtUtc', $event)"
+                  />
                   <label
                     >Întârziere (minute)<input
                       type="number"
@@ -461,20 +451,18 @@
                   <label
                     >Pasageri alocați<input type="number" min="1" [(ngModel)]="flow.passengerCount"
                   /></label>
-                  <label
-                    >Început (minut)<input
-                      type="number"
-                      step="any"
-                      [ngModel]="minute(flow.startsAtUtc)"
-                      (ngModelChange)="setMinute(flow, 'startsAtUtc', $event)"
-                  /></label>
-                  <label
-                    >Sfârșit (minut)<input
-                      type="number"
-                      step="any"
-                      [ngModel]="minute(flow.endsAtUtc)"
-                      (ngModelChange)="setMinute(flow, 'endsAtUtc', $event)"
-                  /></label>
+                  <app-absolute-time-input
+                    label="Început flux"
+                    [value]="flow.startsAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setTime(flow, 'startsAtUtc', $event)"
+                  />
+                  <app-absolute-time-input
+                    label="Sfârșit flux"
+                    [value]="flow.endsAtUtc"
+                    [timeZone]="value.inputs.timeZone"
+                    (changed)="setTime(flow, 'endsAtUtc', $event)"
+                  />
                 </div>
                 <button type="button" class="btn-sm" (click)="removeFlow(flow.id)">
                   Elimină fluxul {{ index + 1 }}
@@ -590,7 +578,6 @@
                 <button type="button" class="btn-primary btn-sm" (click)="addIncident()">
                   Adaugă val de pasageri
                 </button>
-                <button type="button" class="btn-sm" (click)="addEvent()">Adaugă notă demo</button>
               </div>
             </div>
 
@@ -607,14 +594,13 @@
                   />
                 } @else {
                   <div class="fields">
-                    <label>Tip<input [(ngModel)]="event.type" maxlength="64" /></label
-                    ><label
-                      >Moment (minut)<input
-                        type="number"
-                        step="any"
-                        [ngModel]="minute(event.occurredAtUtc)"
-                        (ngModelChange)="setMinute(event, 'occurredAtUtc', $event)"
-                    /></label>
+                    <label>Tip<input [(ngModel)]="event.type" maxlength="64" /></label>
+                    <app-absolute-time-input
+                      label="Ora evenimentului"
+                      [value]="event.occurredAtUtc"
+                      [timeZone]="value.inputs.timeZone"
+                      (changed)="setTime(event, 'occurredAtUtc', $event)"
+                    />
                     <label
                       >Checkpoint<select [(ngModel)]="event.checkpointId">
                         <option [ngValue]="null">Fără checkpoint</option>
@@ -665,8 +651,14 @@
               @if (value.inputs.passengerGeneration; as config) {
                 <details>
                   <summary>Profiluri de pasageri</summary>
+                  <p class="hint">
+                    Sosirile folosesc date și ore absolute (HH:MM), în fusul
+                    {{ value.inputs.timeZone }}. Dispersia și timpii de procesare sunt durate.
+                  </p>
                   <app-object-fields
                     [value]="advanced(config)"
+                    [arrivalStartUtc]="value.inputs.startsAtUtc"
+                    [timeZone]="value.inputs.timeZone"
                     (changed)="setAdvanced('passengerGeneration', $event)"
                   />
                 </details>
@@ -712,14 +704,6 @@
               <dd>{{ layout!.layout.scene.name }}</dd>
             </div>
             <div>
-              <dt>Durată</dt>
-              <dd>{{ value.inputs.durationMinutes }} minute</dd>
-            </div>
-            <div>
-              <dt>Pasageri</dt>
-              <dd>{{ totalPassengers() }}</dd>
-            </div>
-            <div>
               <dt>Operatori</dt>
               <dd>
                 {{ operators('security').length }} securitate ·
@@ -744,7 +728,7 @@
                   <tr>
                     <td>{{ flight.code }}</td>
                     <td>{{ passengersFor(flight) }}</td>
-                    <td>Minutul {{ minute(flight.departureAtUtc) }}</td>
+                    <td>{{ clock(flight.departureAtUtc) }}</td>
                   </tr>
                 }
               </tbody>
@@ -783,7 +767,7 @@
             class="btn-primary"
             type="button"
             (click)="goStep(step() + 1)"
-            [disabled]="busy()"
+            [disabled]="navigationBlocked(step() + 1)"
           >
             {{
               step() === 1
@@ -795,7 +779,12 @@
             <i class="pi pi-arrow-right" aria-hidden="true"></i>
           </button>
         } @else if (!saved() || dirty()) {
-          <button class="btn-primary" type="button" (click)="save()" [disabled]="busy()">
+          <button
+            class="btn-primary"
+            type="button"
+            (click)="save()"
+            [disabled]="navigationBlocked(5)"
+          >
             {{ busy() ? 'Se salvează…' : saved() ? 'Salvează modificările' : 'Salvează scenariul' }}
             <i class="pi pi-check" aria-hidden="true"></i>
           </button>
@@ -826,15 +815,6 @@
 
       <details>
         <summary>Detalii și acțiuni</summary>
-        <p class="hint">
-          {{
-            !saved() || saved()!.scenario.isSynthetic === true
-              ? 'DEMO · sintetic'
-              : 'Statut sintetic neconfirmat'
-          }}
-          · layout v{{ layout!.version.version }} ·
-          {{ saved() ? 'revizia ' + saved()!.scenario.revision : 'scenariu nou' }}
-        </p>
         <code>{{ value.code }}</code>
         @if (saved()) {
           <div class="stack">
@@ -866,34 +846,3 @@
     </aside>
   </div>
 }
-<details class="library panel" [open]="libraryOpen()">
-  <summary>Scenarii salvate</summary>
-  <button type="button" class="btn-sm" (click)="scenarios.reload()" [disabled]="busy()">
-    Actualizează lista
-  </button>
-  @let library = scenarios.state();
-  @if (library.status === 'ready') {
-    <div class="library-list">
-      @for (scenario of library.data; track scenario.id) {
-        <button
-          class="scenario-choice"
-          type="button"
-          [class.selected]="saved()?.scenario?.id === scenario.id"
-          (click)="select(scenario.id)"
-          [disabled]="busy()"
-        >
-          <strong>{{ scenario.name }}</strong
-          ><span>{{ scenario.code }} · revizia {{ scenario.revision }}</span>
-        </button>
-      }
-    </div>
-  } @else {
-    <app-data-state
-      [status]="library.status"
-      label="scenariile"
-      [message]="library.status === 'error' ? library.message : ''"
-      emptyMessage="Niciun scenariu salvat disponibil."
-      (retry)="scenarios.reload()"
-    />
-  }
-</details>

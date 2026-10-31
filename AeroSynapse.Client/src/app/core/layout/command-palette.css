@@ -36,13 +36,9 @@ kbd {
 }
 .palette-heading {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding: 10px 16px 0 24px;
-}
-.palette-heading .eyebrow {
-  margin: 0;
-  font-size: 12px;
 }
 .search-field {
   display: flex;
@@ -136,9 +132,6 @@ kbd {
   font-size: 12px;
   color: var(--text-muted);
 }
-.palette-footer > span:last-child {
-  margin-left: auto;
-}
 .palette-footer kbd + kbd {
   margin-left: 2px;
 }
@@ -160,8 +153,7 @@ kbd {
 }
 @media (max-width: 650px) {
   .result-group,
-  .result-arrow,
-  .palette-footer > span:last-child {
+  .result-arrow {
     display: none;
   }
   .command-palette {

@@ -99,9 +99,12 @@ describe('Scenario Studio', () => {
     const fixture = TestBed.createComponent(ScenarioStudio);
     fixture.detectChanges();
     http.expectOne('/api/scenes').flush([layout.layout.scene]);
-    http.expectOne('/api/scenarios').flush([]);
     fixture.detectChanges();
     return fixture;
+  }
+  function principal(view: ScenarioStudio) {
+    view.newScenario('principal');
+    http.expectOne('/api/scenes/scene/layout-versions').flush(layout);
   }
   function load(view: ScenarioStudio, value = saved()) {
     view.select(value.scenario.id);
@@ -109,22 +112,6 @@ describe('Scenario Studio', () => {
     http.expectOne('/api/scenes/scene/layout-versions/layout-7').flush(layout);
     return value;
   }
-  it('starts with a recommended example and reveals alternatives on demand', () => {
-    const fixture = component();
-    const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelectorAll('.preset')).toHaveLength(1);
-    const toggle = root.querySelector<HTMLButtonElement>('.other-presets')!;
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    toggle.click();
-    fixture.detectChanges();
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(root.querySelectorAll('.preset')).toHaveLength(5);
-    expect(root.textContent).toContain('Trafic redus');
-    expect(root.textContent).toContain('Zi de lucru · 8 ore');
-    toggle.click();
-    fixture.detectChanges();
-    expect(root.querySelectorAll('.preset')).toHaveLength(1);
-  });
   it('loads the primary preset in one click with five coherent flights and bounded nominal staff', () => {
     const fixture = component(),
       view = fixture.componentInstance;
@@ -141,9 +128,6 @@ describe('Scenario Studio', () => {
         view.draft!.inputs.flights.some((flight) => flight.id === flow.flightId),
       ),
     ).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('layout v7');
-    expect(fixture.nativeElement.textContent).toContain('DEMO · sintetic');
-    expect(fixture.nativeElement.querySelector('textarea')?.getAttribute('maxlength')).toBe('2000');
     view.save();
     const request = http.expectOne('/api/scenarios');
     expect(request.request.method).toBe('POST');
@@ -152,7 +136,7 @@ describe('Scenario Studio', () => {
     request.flush({}, { status: 503, statusText: 'Unavailable' });
     expect(view.dirty()).toBe(true);
   });
-  it('starts demo presets with check-in desks of the layout and switches check-in with its operators', () => {
+  it('starts demo presets with the check-in desks of the layout', () => {
     const desks = {
       id: 'desks',
       code: 'CHECK-IN',
@@ -184,21 +168,6 @@ describe('Scenario Studio', () => {
     };
     expect(makeDraft(bottleneck, 'bottleneck', start).inputs.checkIn).toBeUndefined();
     expect(makeDraft(layout, 'principal', start).inputs.checkIn).toBeUndefined();
-    const fixture = component(),
-      view = fixture.componentInstance;
-    (fixture.nativeElement.querySelector('button.principal') as HTMLButtonElement).click();
-    http.expectOne('/api/scenes/scene/layout-versions').flush(withDesks);
-    fixture.detectChanges();
-    expect(view.checkInArea()).toEqual(desks);
-    // Without check-in operators passengers go straight to security; the first one opens a desk again.
-    for (const person of view.operators('checkIn')) view.removeOperator(person);
-    expect(view.draft!.inputs.checkIn).toBeNull();
-    view.addOperator('checkIn');
-    expect(view.draft!.inputs.checkIn).toEqual({
-      areaId: 'desks',
-      staffCount: 1,
-      holdBaggageShare: 0.4,
-    });
   });
   it('fills in the team of an older scenario as an unsaved change', () => {
     const fixture = component(),
@@ -242,6 +211,15 @@ describe('Scenario Studio', () => {
     expect(view.canAdd('checkIn')).toBe(false);
     view.removeOperator(view.operators('checkIn')[0]);
     expect(view.draft!.inputs.checkIn!.staffCount).toBe(1);
+    // Without check-in operators passengers go straight to security; the first one opens a desk again.
+    view.removeOperator(view.operators('checkIn')[0]);
+    expect(view.draft!.inputs.checkIn).toBeNull();
+    view.addOperator('checkIn');
+    expect(view.draft!.inputs.checkIn).toEqual({
+      areaId: 'desks',
+      staffCount: 1,
+      holdBaggageShare: 0.4,
+    });
     view.addOperator('checkIn');
     expect(view.draft!.inputs.checkIn!.staffCount).toBe(2);
     view.removeOperator(view.operators('security')[0]);
@@ -250,7 +228,6 @@ describe('Scenario Studio', () => {
     expect(view.draft!.inputs.staffAllocations).toEqual([
       { staffMemberId: 'staff', checkpointId: 'checkpoint' },
     ]);
-    expect(fixture.nativeElement.textContent).toContain('Echipa de operatori');
   });
   it('creates flights with their own passengers, allocates free gates and keeps edits coherent', () => {
     const fixture = component(),
@@ -276,9 +253,14 @@ describe('Scenario Studio', () => {
     };
     view.newScenario();
     http.expectOne('/api/scenes/scene/layout-versions').flush(wide);
+    shiftStart(view.draft!, '2026-10-16T10:00:00Z');
     view.addFlight();
     const flights = view.draft!.inputs.flights;
     expect(flights.map((flight) => flight.gateId)).toEqual(['gate', 'gate-2']);
+    expect(flights.map((flight) => flight.departureAtUtc)).toEqual([
+      '2026-10-16T11:00:00.000Z',
+      '2026-10-16T12:00:00.000Z',
+    ]);
     expect(view.flightsWithoutPassengers()).toEqual([]);
     expect(view.draft!.inputs.populations).toHaveLength(2);
     view.setPassengers(flights[0], 140);
@@ -286,10 +268,10 @@ describe('Scenario Studio', () => {
     expect(flights[0].passengerCapacity).toBe(140);
     view.setGate(flights[0], 'gate-2');
     expect(view.simpleGroup(flights[0])!.flow.routeId).toBe('route-gate-2');
-    view.setDeparture(flights[0], null);
-    view.setDeparture(flights[0], 75);
-    expect(view.minute(flights[0].boardingClosesAtUtc)).toBe(73);
-    expect(view.minute(view.simpleGroup(flights[0])!.flow.endsAtUtc)).toBe(73);
+    view.setDeparture(flights[0], '');
+    view.setDeparture(flights[0], '2026-10-16T11:15:00.000Z');
+    expect(flights[0].boardingClosesAtUtc).toBe('2026-10-16T11:13:00.000Z');
+    expect(view.simpleGroup(flights[0])!.flow.endsAtUtc).toBe('2026-10-16T11:13:00.000Z');
     view.removeFlightWithPassengers(flights[0]);
     expect(view.draft!.inputs.flights).toHaveLength(1);
     expect(view.draft!.inputs.populations).toHaveLength(1);
@@ -309,10 +291,35 @@ describe('Scenario Studio', () => {
     view.draft!.inputs.flows[1].populationId = view.draft!.inputs.flows[0].populationId;
     expect(view.simpleGroup(flight)).toBeNull();
   });
+  it('schedules flights and linked arrivals by absolute departure times over midnight', () => {
+    const view = component().componentInstance;
+    principal(view);
+    view.setStart('2026-10-31T21:30:00.000Z');
+    const flight = view.draft!.inputs.flights[0];
+    expect(view.clock(flight.departureAtUtc)).toBe('00:30 · 2026-11-01');
+    view.setDeparture(flight, '2026-10-31T22:15:00.000Z');
+    expect(flight.departureAtUtc).toBe('2026-10-31T22:15:00.000Z');
+    expect(flight.boardingOpensAtUtc).toBe('2026-10-31T22:03:00.000Z');
+    expect(view.simpleGroup(flight)!.flow.endsAtUtc).toBe('2026-10-31T22:13:00.000Z');
+    view.addIncident();
+    view.setTime(view.draft!.inputs.events[0], 'occurredAtUtc', '2026-10-31T21:45:00.000Z');
+    view.save();
+    const request = http.expectOne('/api/scenarios');
+    expect(request.request.body.inputs.flights[0].departureAtUtc).toBe('2026-10-31T22:15:00.000Z');
+    expect(request.request.body.inputs.events[0].occurredAtUtc).toBe('2026-10-31T21:45:00.000Z');
+    request.flush({}, { status: 503, statusText: 'Unavailable' });
+  });
+  it('asks for an absolute start time before adding flights to an incomplete draft', () => {
+    const view = component().componentInstance;
+    principal(view);
+    view.setStart('');
+    expect(() => view.addFlight()).not.toThrow();
+    expect(view.draft!.inputs.flights).toHaveLength(5);
+    expect(view.message()).toContain('data și ora de început');
+  });
   it('keeps the user on an invalid step and opens server errors in the relevant step', () => {
     const view = component().componentInstance;
-    view.newScenario('principal');
-    http.expectOne('/api/scenes/scene/layout-versions').flush(layout);
+    principal(view);
     view.draft!.name = '';
     view.goStep(2);
     expect(view.step()).toBe(1);
@@ -332,19 +339,97 @@ describe('Scenario Studio', () => {
     expect(view.advancedTraffic()).toBe(true);
     expect(view.draft!.name).toBe('Scenariu');
   });
-  it('reuses gates with nonoverlapping boarding windows and unique flight codes', () => {
+  it('blocks saving and validation when manually edited departures are less than an hour apart', () => {
     const view = component().componentInstance;
-    view.newScenario('principal');
-    http.expectOne('/api/scenes/scene/layout-versions').flush(layout);
-    view.addFlight();
-    const flight = view.draft!.inputs.flights.at(-1)!;
-    expect(view.minute(flight.boardingOpensAtUtc)).toBeGreaterThan(85);
-    expect(view.draft!.inputs.durationMinutes).toBe(100);
-    view.removeFlightWithPassengers(view.draft!.inputs.flights[1]);
-    view.addFlight();
-    expect(new Set(view.draft!.inputs.flights.map((f) => f.code)).size).toBe(
-      view.draft!.inputs.flights.length,
+    principal(view);
+    shiftStart(view.draft!, '2026-10-16T10:00:00Z');
+    view.setDeparture(view.draft!.inputs.flights[1], '2026-10-16T11:59:00.000Z');
+    view.save();
+    view.validate();
+    http.expectNone('/api/scenarios');
+    http.expectNone('/api/scenarios/validate');
+    expect(view.errors()['inputs.flights[0].departureAtUtc'][0]).toContain('minimum 60');
+    expect(view.errors()['inputs.flights[1].departureAtUtc'][0]).toContain('minimum 60');
+  });
+  it('shows live scheduling errors only while invalid and disables every way forward until corrected', () => {
+    const fixture = component(),
+      view = fixture.componentInstance;
+    principal(view);
+    shiftStart(view.draft!, '2026-10-16T10:00:00Z');
+    view.goStep(2);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const next = () => root.querySelector<HTMLButtonElement>('.wizard-footer .btn-primary')!;
+    const stepButtons = () => root.querySelectorAll<HTMLButtonElement>('.stepper button');
+    expect(root.querySelector('[data-testid=flight-rule-error]')).toBeNull();
+    expect(root.textContent).not.toContain('Zborurile adăugate sunt distanțate automat');
+    expect(next().disabled).toBe(false);
+    view.setDeparture(view.draft!.inputs.flights[1], '2026-10-16T11:59:00.000Z');
+    fixture.detectChanges();
+    expect(root.querySelectorAll('[data-testid=flight-rule-error]')).toHaveLength(1);
+    expect(root.querySelector('[data-testid=flight-rule-error]')?.textContent).toContain(
+      'minimum 60',
     );
+    expect(next().disabled).toBe(true);
+    expect(stepButtons()[2].disabled).toBe(true);
+    expect(stepButtons()[3].disabled).toBe(true);
+    expect(stepButtons()[0].disabled).toBe(false);
+    view.goStep(4);
+    expect(view.step()).toBe(2);
+    http.expectNone('/api/scenarios/validate');
+    view.setDeparture(view.draft!.inputs.flights[1], '2026-10-16T12:00:00.000Z');
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid=flight-rule-error]')).toBeNull();
+    expect(next().disabled).toBe(false);
+    expect(stepButtons()[2].disabled).toBe(false);
+    view.goStep(3);
+    expect(view.step()).toBe(3);
+  });
+  it('blocks invalid absolute times and prevents skipping flight validation from an earlier step', () => {
+    const fixture = component(),
+      view = fixture.componentInstance;
+    principal(view);
+    shiftStart(view.draft!, '2026-10-16T10:00:00Z');
+    view.goStep(2);
+    view.setDeparture(view.draft!.inputs.flights[0], '');
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid=flight-rule-error]').textContent,
+    ).toContain('HH:MM');
+    expect(view.navigationBlocked(3)).toBe(true);
+    view.goStep(1);
+    expect(view.navigationBlocked(2)).toBe(false);
+    expect(view.navigationBlocked(4)).toBe(true);
+    view.goStep(4);
+    expect(view.step()).toBe(2);
+    http.expectNone('/api/scenarios/validate');
+    view.setDeparture(view.draft!.inputs.flights[0], '2026-10-16T11:00:00.000Z');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid=flight-rule-error]')).toBeNull();
+    expect(view.navigationBlocked(3)).toBe(false);
+  });
+  it('updates the rule when a delay closes the gap and releases it when that flight is cancelled', async () => {
+    const fixture = component(),
+      view = fixture.componentInstance;
+    principal(view);
+    view.goStep(2);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const delay = root.querySelector<HTMLInputElement>('.flight-row input[max="10080"]')!;
+    delay.value = '1';
+    delay.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(view.flightRuleProblems().join()).toContain('minimum 60');
+    expect(view.navigationBlocked(3)).toBe(true);
+    const status = [...root.querySelectorAll<HTMLSelectElement>('.flight-row select')].find(
+      (select) => select.querySelector('option[value="cancelled"]'),
+    )!;
+    status.value = 'cancelled';
+    status.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+    expect(view.flightRuleProblems()).toEqual([]);
+    expect(view.navigationBlocked(3)).toBe(false);
   });
   it('preserves advanced settings, targets, payloads and precision while saving and reloading an edit', () => {
     const fixture = component(),
@@ -362,7 +447,6 @@ describe('Scenario Studio', () => {
       scenario: { ...source.scenario, name: 'Nume editat', revision: 5 },
     };
     update.flush(updated);
-    http.expectOne('/api/scenarios').flush([updated.scenario]);
     expect(view.dirty()).toBe(false);
     view.reload();
     http.expectOne('/api/scenarios/original').flush(updated);
@@ -373,8 +457,7 @@ describe('Scenario Studio', () => {
   it('adds and edits a typed incident through the designer, saves it and reloads without changing its ID', () => {
     const fixture = component(),
       view = fixture.componentInstance;
-    view.newScenario('principal');
-    http.expectOne('/api/scenes/scene/layout-versions').flush(layout);
+    principal(view);
     fixture.detectChanges();
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
       .find((button) => button.textContent?.trim() === 'Adaugă val de pasageri')!
@@ -409,7 +492,6 @@ describe('Scenario Studio', () => {
       inputs: structuredClone(request.request.body.inputs),
     };
     request.flush(response);
-    http.expectOne('/api/scenarios').flush([response.scenario]);
     view.reload();
     http.expectOne('/api/scenarios/incident-scenario').flush(response);
     http.expectOne('/api/scenes/scene/layout-versions/layout-7').flush(layout);
@@ -419,8 +501,7 @@ describe('Scenario Studio', () => {
   it('keeps an invalid incident draft and presents API errors at its exact payload field', () => {
     const fixture = component(),
       view = fixture.componentInstance;
-    view.newScenario('principal');
-    http.expectOne('/api/scenes/scene/layout-versions').flush(layout);
+    principal(view);
     view.addIncident();
     const event = view.draft!.inputs.events[0];
     view.updateIncident({ ...event, payloadJson: event.payloadJson.replace('0.5', '1.5') });
@@ -516,7 +597,6 @@ describe('Scenario Studio', () => {
         revision: 1,
       },
     });
-    http.expectOne('/api/scenarios').flush([original.scenario]);
     expect(view.saved()!.scenario.id).toBe('copy');
     expect(original).toEqual(snapshot);
     expect(view.draft!.inputs).toEqual(snapshot.inputs);

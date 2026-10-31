@@ -65,6 +65,23 @@ describe('Staff redistribution proposals', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  /** A solver reply without a configuration; tests override the outcome. */
+  const unsolved = (status = 'timeout', solverStatus = 'UNKNOWN') => ({
+    status,
+    solverStatus,
+    timedOut: status === 'timeout',
+    score: null,
+    assignments: [],
+    constraints: {
+      scenarioId: 'scenario-1',
+      scenarioRevision: 3,
+      availableStaff: 4,
+      timeLimitSeconds: 5,
+      staffPools: settings.staffPools,
+      checkpoints: [],
+    },
+    wallTimeSeconds: 5,
+  });
   function component() {
     const fixture = TestBed.createComponent(StaffingPanel);
     fixture.componentRef.setInput('scenario', structuredClone(scenario));
@@ -115,21 +132,7 @@ describe('Staff redistribution proposals', () => {
         },
       ],
     });
-    request.flush({
-      status: 'timeout',
-      solverStatus: 'UNKNOWN',
-      timedOut: true,
-      score: null,
-      assignments: [],
-      constraints: {
-        scenarioId: 'scenario-1',
-        scenarioRevision: 3,
-        availableStaff: 4,
-        timeLimitSeconds: 5,
-        checkpoints: [],
-      },
-      wallTimeSeconds: 5,
-    });
+    request.flush(unsolved());
     expect(view.result()?.score).toBeNull();
     expect(view.status(view.result()!)).toContain('fără o soluție');
   });
@@ -262,22 +265,7 @@ describe('Staff redistribution proposals', () => {
     );
     expect(fixture.nativeElement.textContent).not.toContain('Personal propus');
     view.propose();
-    http.expectOne('/api/scenarios/scenario-1/staffing/proposals').flush({
-      status: 'timeout',
-      solverStatus: 'UNKNOWN',
-      timedOut: true,
-      score: null,
-      assignments: [],
-      constraints: {
-        scenarioId: 'scenario-1',
-        scenarioRevision: 3,
-        availableStaff: 4,
-        timeLimitSeconds: 5,
-        staffPools: settings.staffPools,
-        checkpoints: [],
-      },
-      wallTimeSeconds: 5,
-    });
+    http.expectOne('/api/scenarios/scenario-1/staffing/proposals').flush(unsolved());
     expect(view.message()).toBe('');
     expect(view.result()?.score).toBeNull();
   });
@@ -286,21 +274,9 @@ describe('Staff redistribution proposals', () => {
     const view = fixture.componentInstance;
     view.rows[0].physicalLimit = 0;
     view.propose();
-    http.expectOne('/api/scenarios/scenario-1/staffing/proposals').flush({
-      status: 'infeasible',
-      solverStatus: 'INFEASIBLE',
-      timedOut: false,
-      score: null,
-      assignments: [],
-      constraints: {
-        scenarioId: 'scenario-1',
-        scenarioRevision: 3,
-        availableStaff: 4,
-        timeLimitSeconds: 5,
-        checkpoints: [],
-      },
-      wallTimeSeconds: 0.01,
-    });
+    http
+      .expectOne('/api/scenarios/scenario-1/staffing/proposals')
+      .flush(unsolved('infeasible', 'INFEASIBLE'));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Infeasible');
     expect(fixture.nativeElement.textContent).not.toContain('Personal propus');

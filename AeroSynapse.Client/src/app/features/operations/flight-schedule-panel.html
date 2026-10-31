@@ -2,59 +2,201 @@
   <header class="panel-heading">
     <div>
       <h2 id="schedule-title">Orar sintetic și porți</h2>
-
     </div>
-    <button class="btn-sm" type="button" [disabled]="busy() || disabled()" (click)="reload()">Reîncarcă orarul</button>
+    <button class="btn-sm" type="button" [disabled]="busy() || disabled()" (click)="reload()">
+      Reîncarcă orarul
+    </button>
   </header>
   <div class="panel-body">
-  @if (message()) { <p class="notice" role="status">{{ message() }}</p> }
-  @if (loading()) { <p role="status">Se încarcă orarul…</p> }
-  @if (schedule(); as schedule) {
-    <p>Revizia {{ schedule.revision }} · început {{ schedule.startsAtUtc | date:'yyyy-MM-dd HH:mm:ss':'UTC' }} UTC · {{ schedule.durationMinutes }} minute simulate</p>
-    <div class="toolbar">
-      <button class="btn-primary" type="button" [disabled]="blocked() || !schedule.gates.length" (click)="edit()">Adaugă zbor demo</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <caption>Momente efective UTC, cu întârzierea inclusă. Poarta este ocupată de la deschiderea îmbarcării până la plecare.</caption>
-        <thead><tr><th>Zbor DEMO</th><th>Poartă</th><th>Deschidere</th><th>Închidere</th><th>Plecare</th><th>Capacitate</th><th>Întârziere</th><th>Status demo</th><th>Acțiuni</th></tr></thead>
-        <tbody>
-          @for (flight of schedule.flights; track flight.id) {
-            <tr>
-              <td>{{ flight.code }} · DEMO</td><td>{{ gateName(flight.gateId) }}</td>
-              <td>{{ effective(flight.boardingOpensAtUtc, flight.delayMinutes) | date:'MM-dd HH:mm:ss':'UTC' }}</td>
-              <td>{{ effective(flight.boardingClosesAtUtc, flight.delayMinutes) | date:'MM-dd HH:mm:ss':'UTC' }}</td>
-              <td>{{ effective(flight.departureAtUtc, flight.delayMinutes) | date:'MM-dd HH:mm:ss':'UTC' }}</td>
-              <td>{{ flight.passengerCapacity }}</td><td>{{ flight.delayMinutes ?? 0 }} min</td><td>{{ statusName(flight.status) }}</td>
-              <td><div class="toolbar"><button class="btn-sm" type="button" [disabled]="blocked()" (click)="edit(flight)" [attr.aria-label]="'Editează ' + flight.code">Editează</button>
-                <button class="btn-sm btn-danger" type="button" [disabled]="blocked()" (click)="remove(flight)" [attr.aria-label]="'Șterge ' + flight.code">Șterge</button></div></td>
-            </tr>
-          } @empty { <tr><td colspan="9">Adaugă primul zbor demo.</td></tr> }
-        </tbody>
-      </table>
-    </div>
-    @if (draft; as draft) {
-      <form class="inset" (ngSubmit)="save()">
-        <h3>{{ draft.id ? 'Editează zborul' : 'Zbor nou' }}</h3>
-
-        <div class="fields">
-          <label>Număr zbor<input name="flightNumber" [(ngModel)]="draft.code" maxlength="64" required [disabled]="blocked()" /></label>
-          <label>Poartă demo<select name="gate" [(ngModel)]="draft.gateId" required [disabled]="blocked()">
-            @for (gate of schedule.gates; track gate.id) { <option [value]="gate.id">{{ gate.code }} · capacitate poartă {{ gate.capacity }}</option> }
-          </select></label>
-          <label>Capacitate zbor<input type="number" name="capacity" [(ngModel)]="draft.capacity" min="1" max="2147483647" required [disabled]="blocked()" /></label>
-          <label>Deschidere boarding (min)<input type="number" name="open" [(ngModel)]="draft.open" step="any" required [disabled]="blocked()" /></label>
-          <label>Închidere boarding (min)<input type="number" name="close" [(ngModel)]="draft.close" step="any" required [disabled]="blocked()" /></label>
-          <label>Plecare (min)<input type="number" name="departure" [(ngModel)]="draft.departure" min="0" [max]="schedule.durationMinutes" step="any" required [disabled]="blocked()" /></label>
-          <label>Întârziere (min)<input type="number" name="delay" [(ngModel)]="draft.delay" min="0" max="10080" required [disabled]="blocked()" /></label>
-          <label>Status demonstrativ<select name="status" [(ngModel)]="draft.status" [disabled]="blocked()">
-            @for (status of statuses; track status.value) { <option [value]="status.value">{{ status.label }}</option> }
-          </select></label>
-        </div>
-        <div class="toolbar"><button type="submit" [disabled]="blocked()">Salvează zborul demo</button>
-          <button type="button" [disabled]="blocked()" (click)="this.draft = null">Renunță</button></div>
-      </form>
+    @if (message()) {
+      <p class="notice" role="status">{{ message() }}</p>
     }
-  }
+    @if (loading()) {
+      <p role="status">Se încarcă orarul…</p>
+    }
+    @if (schedule(); as schedule) {
+      <p>
+        Revizia {{ schedule.revision }} · început
+        {{ schedule.startsAtUtc | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC ·
+        {{ schedule.durationMinutes }} minute simulate
+      </p>
+      <div class="toolbar">
+        <button
+          class="btn-primary"
+          type="button"
+          [disabled]="blocked() || !schedule.gates.length"
+          (click)="edit()"
+        >
+          Adaugă zbor demo
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>
+            Momente efective UTC, cu întârzierea inclusă. Poarta este ocupată de la deschiderea
+            îmbarcării până la plecare.
+          </caption>
+          <thead>
+            <tr>
+              <th>Zbor DEMO</th>
+              <th>Poartă</th>
+              <th>Deschidere</th>
+              <th>Închidere</th>
+              <th>Plecare</th>
+              <th>Capacitate</th>
+              <th>Întârziere</th>
+              <th>Status demo</th>
+              <th>Acțiuni</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (flight of schedule.flights; track flight.id) {
+              <tr>
+                <td>{{ flight.code }} · DEMO</td>
+                <td>{{ gateName(flight.gateId) }}</td>
+                <td>
+                  {{
+                    effective(flight.boardingOpensAtUtc, flight.delayMinutes)
+                      | date: 'MM-dd HH:mm:ss' : 'UTC'
+                  }}
+                </td>
+                <td>
+                  {{
+                    effective(flight.boardingClosesAtUtc, flight.delayMinutes)
+                      | date: 'MM-dd HH:mm:ss' : 'UTC'
+                  }}
+                </td>
+                <td>
+                  {{
+                    effective(flight.departureAtUtc, flight.delayMinutes)
+                      | date: 'MM-dd HH:mm:ss' : 'UTC'
+                  }}
+                </td>
+                <td>{{ flight.passengerCapacity }}</td>
+                <td>{{ flight.delayMinutes ?? 0 }} min</td>
+                <td>{{ statusName(flight.status) }}</td>
+                <td>
+                  <div class="toolbar">
+                    <button
+                      class="btn-sm"
+                      type="button"
+                      [disabled]="blocked()"
+                      (click)="edit(flight)"
+                      [attr.aria-label]="'Editează ' + flight.code"
+                    >
+                      Editează
+                    </button>
+                    <button
+                      class="btn-sm btn-danger"
+                      type="button"
+                      [disabled]="blocked()"
+                      (click)="remove(flight)"
+                      [attr.aria-label]="'Șterge ' + flight.code"
+                    >
+                      Șterge
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9">Adaugă primul zbor demo.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (draft; as draft) {
+        <form class="inset" (ngSubmit)="save()">
+          <h3>{{ draft.id ? 'Editează zborul' : 'Zbor nou' }}</h3>
+          <p class="hint">
+            Date și ore absolute (HH:MM), în fusul {{ scenario().inputs.timeZone }}.
+          </p>
+
+          <div class="fields">
+            <label
+              >Număr zbor<input
+                name="flightNumber"
+                [(ngModel)]="draft.code"
+                maxlength="64"
+                required
+                [disabled]="blocked()"
+            /></label>
+            <label
+              >Poartă demo<select
+                name="gate"
+                [(ngModel)]="draft.gateId"
+                required
+                [disabled]="blocked()"
+              >
+                @for (gate of schedule.gates; track gate.id) {
+                  <option [value]="gate.id">
+                    {{ gate.code }} · capacitate poartă {{ gate.capacity }}
+                  </option>
+                }
+              </select></label
+            >
+            <label
+              >Capacitate zbor<input
+                type="number"
+                name="capacity"
+                [(ngModel)]="draft.capacity"
+                min="1"
+                max="2147483647"
+                required
+                [disabled]="blocked()"
+            /></label>
+            <app-absolute-time-input
+              label="Deschidere îmbarcare"
+              [value]="draft.open"
+              [timeZone]="scenario().inputs.timeZone"
+              [disabled]="blocked()"
+              (changed)="draft.open = $event"
+            />
+            <app-absolute-time-input
+              label="Închidere îmbarcare"
+              [value]="draft.close"
+              [timeZone]="scenario().inputs.timeZone"
+              [disabled]="blocked()"
+              (changed)="draft.close = $event"
+            />
+            <app-absolute-time-input
+              label="Ora plecării"
+              [value]="draft.departure"
+              [timeZone]="scenario().inputs.timeZone"
+              [disabled]="blocked()"
+              (changed)="draft.departure = $event"
+            />
+            <label
+              >Întârziere (min)<input
+                type="number"
+                name="delay"
+                [(ngModel)]="draft.delay"
+                min="0"
+                max="10080"
+                required
+                [disabled]="blocked()"
+            /></label>
+            <label
+              >Status demonstrativ<select
+                name="status"
+                [(ngModel)]="draft.status"
+                [disabled]="blocked()"
+              >
+                @for (status of statuses; track status.value) {
+                  <option [value]="status.value">{{ status.label }}</option>
+                }
+              </select></label
+            >
+          </div>
+          <div class="toolbar">
+            <button type="submit" [disabled]="blocked()">Salvează zborul demo</button>
+            <button type="button" [disabled]="blocked()" (click)="this.draft = null">
+              Renunță
+            </button>
+          </div>
+        </form>
+      }
+    }
   </div>
 </section>

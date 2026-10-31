@@ -1,4 +1,4 @@
-import { presentable, runOverview } from './run-overview';
+import { runOverview } from './run-overview';
 import { storedRun } from './run-overview.testing';
 
 describe('Run overview', () => {
@@ -72,8 +72,5 @@ describe('Run overview', () => {
   it('refuses runs without valid results or captured inputs', () => {
     expect(runOverview(storedRun({ resultsValid: false }))).toBeNull();
     expect(runOverview(storedRun({ inputSnapshotJson: '{' }))).toBeNull();
-    expect(presentable(storedRun())).toBe(true);
-    expect(presentable(storedRun({ status: 'failed' }))).toBe(false);
-    expect(presentable(storedRun({ scenarioId: null }))).toBe(false);
   });
 });

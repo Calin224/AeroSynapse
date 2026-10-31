@@ -5,7 +5,7 @@ import {
   evaluationSummary,
   flightTimeline,
   shiftPlanView,
-  surgeStartMinute,
+  surgeStartTime,
 } from './workflow.models';
 import { baselineRunId, ids, workflowEvaluation } from './workflow.testing';
 
@@ -70,7 +70,7 @@ const surge: InputEvent = {
 
 describe('Decision flow presentation', () => {
   it('shows scenario times in the scenario time zone, like the simulation clock', () => {
-    expect(scenarioClock(inputs, 30)).toBe('13:30');
+    expect(scenarioClock(inputs, '2026-10-16T10:30:00Z')).toBe('13:30');
     expect(describeSurge(surge, inputs)).toBe(
       'Val de pasageri · RO 1 · 13:15–13:20 · 50% din pasageri',
     );
@@ -96,8 +96,10 @@ describe('Decision flow presentation', () => {
     ]);
   });
   it('starts a new surge 45 minutes before departure, inside the scenario', () => {
-    expect(surgeStartMinute(inputs, 'f-1', 5)).toBe(0);
-    expect(surgeStartMinute({ ...inputs, durationMinutes: 180 }, 'f-late', 5)).toBe(75);
+    expect(surgeStartTime(inputs, 'f-1', 5)).toBe('2026-10-16T10:00:00.000Z');
+    expect(surgeStartTime({ ...inputs, durationMinutes: 180 }, 'f-late', 5)).toBe(
+      '2026-10-16T11:15:00.000Z',
+    );
   });
   it('compares the baseline with the recommended candidate in plain outcomes', () => {
     const summary = evaluationSummary(workflowEvaluation())!;

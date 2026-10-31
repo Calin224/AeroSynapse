@@ -44,7 +44,7 @@ import {
   evaluationSummary,
   flightTimeline,
   shiftPlanView,
-  surgeStartMinute,
+  surgeStartTime,
   WorkflowStage,
   WORKFLOW_STEPS,
 } from './workflow.models';
@@ -305,15 +305,13 @@ export class OperatorWorkflowComponent {
       flight = scenario.inputs.flights.find((row) => row.id === flightId);
     if (!event || !flight) return;
     const duration = surgePayload(event)?.durationMinutes ?? 5;
-    const start =
-      Date.parse(scenario.inputs.startsAtUtc) +
-      surgeStartMinute(scenario.inputs, flight.id, duration) * 60000;
+    const start = surgeStartTime(scenario.inputs, flight.id, duration);
     this.draft.set({
       ...event,
       flightId: flight.id,
       gateId: flight.gateId,
       checkpointId: incidentCheckpoint(scenario.inputs, layout, flight.id),
-      occurredAtUtc: Number.isFinite(start) ? new Date(start).toISOString() : event.occurredAtUtc,
+      occurredAtUtc: start,
     });
   }
   describe(event: ScenarioEvent) {

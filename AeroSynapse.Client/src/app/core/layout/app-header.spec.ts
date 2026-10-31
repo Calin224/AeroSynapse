@@ -64,10 +64,7 @@ describe('Workspace menu on the current route', () => {
     expect(dialog.open).toBe(false);
   });
 
-  for (const [label, path] of [
-    ['Analiză', '/replay'],
-    ['Explorare', '/baggage'],
-  ]) {
+  for (const [label, path] of [['Analiză', '/replay']]) {
     it(`keeps ${label} expanded in both menus after leaving its pages`, async () => {
       const fixture = TestBed.createComponent(AppHeader);
       fixture.detectChanges();

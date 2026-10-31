@@ -1,6 +1,6 @@
 import { capturedHeatmapRun } from '../digital-twin/heatmap-adapters';
 import { TwinCheckpoint, TwinScene } from '../digital-twin/twin-model';
-import { RunDetails, RunSummary, ScenarioFlight } from '../operations/operations.models';
+import { RunDetails, ScenarioFlight } from '../operations/operations.models';
 
 /** Everything an overview page shows, derived only from one stored run and its captured inputs. */
 export interface RunOverview {
@@ -48,11 +48,6 @@ const STATUS: Record<string, [string, FlightRow['tone']]> = {
   departed: ['Plecat', 'taxi'],
   cancelled: ['Anulat', 'neutral'],
 };
-
-/** A run whose stored results can be shown: completed, validated, and captured from a scenario. */
-export function presentable(run: RunSummary): boolean {
-  return run.status === 'completed' && run.resultsValid === true && !!run.scenarioId;
-}
 
 export function runOverview(run: RunDetails): RunOverview | null {
   let captured: Json | null;

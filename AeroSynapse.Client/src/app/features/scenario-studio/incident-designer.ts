@@ -2,6 +2,8 @@ import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ScenarioInputs } from '../operations/operations.models';
 import { InputEvent, StudioLayout } from './studio.models';
+import { AbsoluteTimeInput } from '../../shared/ui/absolute-time-input';
+import { absoluteTimeLabel, addMinutes, clockTime } from '../../shared/absolute-time';
 
 export const PASSENGER_SURGE = 'incident.passenger-surge';
 export interface SurgePayload {
@@ -45,47 +47,38 @@ export function incidentCheckpoint(
       )[0]?.fromCheckpointId ?? null
   );
 }
-/** Scenario minute of an instant; NaN when either date is invalid. */
-export function scenarioMinute(inputs: ScenarioInputs, utc: string) {
-  return (Date.parse(utc) - Date.parse(inputs.startsAtUtc)) / 60000;
-}
 /** Match the API's derived profiles and effective boarding closure, including legacy flights. */
 export function incidentArrivalWindow(inputs: ScenarioInputs, flightId: string | null | undefined) {
   const flight = inputs.flights.find((row) => row.id === flightId);
   if (!flight || flight.status === 'cancelled') return null;
-  const departure = scenarioMinute(inputs, flight.departureAtUtc);
+  const scenarioStart = Date.parse(inputs.startsAtUtc);
+  const departure = Date.parse(flight.departureAtUtc);
+  const available = Math.max(0, departure - scenarioStart);
   const close =
     (flight.boardingClosesAtUtc
-      ? scenarioMinute(inputs, flight.boardingClosesAtUtc)
+      ? Date.parse(flight.boardingClosesAtUtc)
       : !flight.boardingOpensAtUtc
-        ? departure - Math.min(5, Math.min(30, Math.max(0, departure)) / 2)
-        : NaN) + (flight.delayMinutes ?? 0);
+        ? departure - Math.min(300000, Math.min(1800000, available) / 2)
+        : NaN) +
+    (flight.delayMinutes ?? 0) * 60000;
   const batch = inputs.passengerGeneration?.batches.find((row) => row.flightId === flightId);
   if (inputs.passengerGeneration && !batch) return null;
-  const minimum = Math.max(0, batch?.arrival.minimum ?? 0);
+  // Only the legacy passenger-profile contract uses offsets. Convert them to instants at this boundary.
+  const minimum = Math.max(
+    scenarioStart,
+    batch ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.minimum)) : scenarioStart,
+  );
   const maximum = Math.min(
-    inputs.durationMinutes,
-    batch?.arrival.maximum ?? Math.max(0, close),
+    Date.parse(addMinutes(inputs.startsAtUtc, inputs.durationMinutes)),
+    batch ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.maximum)) : close,
     close,
   );
   return Number.isFinite(minimum) && Number.isFinite(maximum) && maximum > minimum
-    ? { minimum, maximum }
+    ? { start: new Date(minimum).toISOString(), end: new Date(maximum).toISOString() }
     : null;
 }
-/** Wall-clock HH:MM of a scenario minute, in the scenario's own time zone like the simulation clock. */
-export function scenarioClock(inputs: ScenarioInputs, minute: number) {
-  const value = Date.parse(inputs.startsAtUtc) + minute * 60000;
-  if (!Number.isFinite(value) || Math.abs(value) > 8.64e15) return '—';
-  try {
-    return new Intl.DateTimeFormat('ro-RO', {
-      timeZone: inputs.timeZone || 'UTC',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    }).format(new Date(value));
-  } catch {
-    return new Date(value).toISOString().slice(11, 16);
-  }
+export function scenarioClock(inputs: ScenarioInputs, utc: string) {
+  return clockTime(utc, inputs.timeZone || 'UTC');
 }
 export function flightPassengers(inputs: ScenarioInputs, flightId: string) {
   const batch = inputs.passengerGeneration?.batches.find((row) => row.flightId === flightId);
@@ -103,7 +96,7 @@ export function flightLabel(inputs: ScenarioInputs, layout: StudioLayout, flight
   const gate = layout.layout.gates.find((row) => row.id === flight.gateId)?.code ?? 'poartă lipsă';
   return [
     flight.code,
-    `pleacă ${scenarioClock(inputs, scenarioMinute(inputs, flight.departureAtUtc))}`,
+    `pleacă ${scenarioClock(inputs, flight.departureAtUtc)}`,
     gate,
     `${flightPassengers(inputs, flight.id)} pasageri`,
     ...(flight.status === 'cancelled' ? ['anulat'] : []),
@@ -114,8 +107,7 @@ export function describeSurge(event: InputEvent, inputs: ScenarioInputs) {
   const payload = surgePayload(event);
   const flight = inputs.flights.find((row) => row.id === event.flightId)?.code ?? 'zbor lipsă';
   if (event.type !== PASSENGER_SURGE || !payload) return `Incident ${event.type} · ${flight}`;
-  const start = scenarioMinute(inputs, event.occurredAtUtc);
-  return `Val de pasageri · ${flight} · ${scenarioClock(inputs, start)}–${scenarioClock(inputs, start + payload.durationMinutes)} · ${Math.round(payload.share * 100)}% din pasageri`;
+  return `Val de pasageri · ${flight} · ${scenarioClock(inputs, event.occurredAtUtc)}–${scenarioClock(inputs, addMinutes(event.occurredAtUtc, payload.durationMinutes))} · ${Math.round(payload.share * 100)}% din pasageri`;
 }
 export const SURGE_PRESETS = [
   { label: 'Ușor', share: 0.25 },
@@ -125,19 +117,18 @@ export const SURGE_PRESETS = [
 export function newSurge(inputs: ScenarioInputs, layout: StudioLayout): InputEvent {
   const flight = inputs.flights.find((flight) => flight.status !== 'cancelled');
   const window = incidentArrivalWindow(inputs, flight?.id ?? null);
-  const minute = window?.minimum ?? 0;
-  const start = Date.parse(inputs.startsAtUtc) + minute * 60000;
   return {
     id: crypto.randomUUID(),
     type: PASSENGER_SURGE,
-    occurredAtUtc:
-      Number.isFinite(start) && Math.abs(start) <= 8.64e15 ? new Date(start).toISOString() : '',
+    occurredAtUtc: window?.start ?? flight?.boardingOpensAtUtc ?? inputs.startsAtUtc,
     flightId: flight?.id ?? null,
     gateId: flight?.gateId ?? null,
     checkpointId: flight ? incidentCheckpoint(inputs, layout, flight.id) : null,
     payloadJson: JSON.stringify({
       contractVersion: '1.0',
-      durationMinutes: window ? Math.min(5, window.maximum - window.minimum) : 5,
+      durationMinutes: window
+        ? Math.min(5, (Date.parse(window.end) - Date.parse(window.start)) / 60000)
+        : 5,
       share: 0.5,
       isSynthetic: true,
     }),
@@ -151,7 +142,8 @@ export function incidentProblems(
 ): string[] {
   const payload = surgePayload(event),
     errors: string[] = [];
-  const minute = (Date.parse(event.occurredAtUtc) - Date.parse(inputs.startsAtUtc)) / 60000;
+  const start = Date.parse(event.occurredAtUtc);
+  const end = Date.parse(addMinutes(event.occurredAtUtc, payload?.durationMinutes ?? NaN));
   if (event.type !== PASSENGER_SURGE) errors.push('Tip de incident nesuportat.');
   if (!payload)
     return [...errors, 'Payload invalid sau versiune nesuportată. Nu poate fi executat.'];
@@ -159,9 +151,10 @@ export function incidentProblems(
     errors.push('Ponderea trebuie să fie mai mare decât 0% și cel mult 100%.');
   if (
     payload.durationMinutes <= 0 ||
-    !Number.isFinite(minute) ||
-    minute < 0 ||
-    minute + payload.durationMinutes > inputs.durationMinutes
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start < Date.parse(inputs.startsAtUtc) ||
+    end > Date.parse(addMinutes(inputs.startsAtUtc, inputs.durationMinutes))
   )
     errors.push('Întregul interval trebuie să fie în scenariu și durata trebuie să fie pozitivă.');
   const flight = inputs.flights.find((f) => f.id === event.flightId);
@@ -169,9 +162,9 @@ export function incidentProblems(
   if (flight && flight.status !== 'cancelled') {
     const window = incidentArrivalWindow(inputs, flight.id);
     if (!window) errors.push('Zborul selectat nu are o fereastră validă de sosire.');
-    else if (minute < window.minimum || minute + payload.durationMinutes > window.maximum)
+    else if (start < Date.parse(window.start) || end > Date.parse(window.end))
       errors.push(
-        `Intervalul incidentului pentru ${flight.code} trebuie inclus în fereastra de sosire [${window.minimum}, ${window.maximum}] minute (${scenarioClock(inputs, window.minimum)}–${scenarioClock(inputs, window.maximum)}).`,
+        `Intervalul incidentului pentru ${flight.code} trebuie inclus în fereastra de sosire ${absoluteTimeLabel(window.start, inputs.timeZone)} – ${absoluteTimeLabel(window.end, inputs.timeZone)}.`,
       );
   }
   if (
@@ -187,7 +180,7 @@ export function incidentProblems(
 
 @Component({
   selector: 'app-incident-designer',
-  imports: [FormsModule],
+  imports: [FormsModule, AbsoluteTimeInput],
   template: `
     <fieldset [disabled]="disabled()">
       <div class="fields">
@@ -207,16 +200,16 @@ export function incidentProblems(
             }
           </select></label
         >
-        <label
-          >Minut de început<input
-            type="number"
-            step="any"
-            [min]="arrivalWindow()?.minimum ?? 0"
-            [max]="arrivalWindow()?.maximum ?? inputs().durationMinutes"
-            [ngModel]="minute()"
-            (ngModelChange)="setMinute($event)"
-          /><small>{{ timing() }}</small></label
-        >
+        <div>
+          <app-absolute-time-input
+            label="Ora de început a incidentului"
+            [value]="event().occurredAtUtc"
+            [timeZone]="inputs().timeZone"
+            [disabled]="disabled()"
+            (changed)="setTime($event)"
+          />
+          <small>{{ timing() }}</small>
+        </div>
         <label
           >Durată (minute)<input
             type="number"
@@ -255,15 +248,14 @@ export function incidentProblems(
     </fieldset>
     @if (arrivalWindow(); as window) {
       <p class="hint" data-testid="incident-arrival-window">
-        Fereastră de sosire acceptată: minutele {{ window.minimum }}–{{ window.maximum }} ({{
-          clock(window.minimum)
-        }}–{{ clock(window.maximum) }}).
+        Fereastră de sosire acceptată: {{ clock(window.start) }}–{{ clock(window.end) }} ({{
+          inputs().timeZone
+        }}).
       </p>
     }
     @if (payload(); as value) {
       <p class="impact">
-        Între {{ clock(minute()) }} și {{ clock(minute() + value.durationMinutes) }} (minutul
-        {{ minute() }} → {{ minute() + value.durationMinutes }}) aproximativ
+        Între {{ clock(event().occurredAtUtc) }} și {{ endClock() }} aproximativ
         {{ value.share * 100 }}% dintre pasagerii zborului sosesc în intervalul specificat la
         {{ impact() }}.
       </p>
@@ -351,8 +343,10 @@ export class IncidentDesigner {
   );
   readonly maximumDuration = computed(() => {
     const window = this.arrivalWindow(),
-      start = this.minute();
-    return window && Number.isFinite(start) ? Math.max(0, window.maximum - start) : null;
+      start = Date.parse(this.event().occurredAtUtc);
+    return window && Number.isFinite(start)
+      ? Math.max(0, (Date.parse(window.end) - start) / 60000)
+      : null;
   });
   readonly event = input.required<InputEvent>();
   readonly inputs = input.required<ScenarioInputs>();
@@ -380,8 +374,8 @@ export class IncidentDesigner {
       : null,
   );
   readonly payload = computed(() => surgePayload(this.event()));
-  readonly minute = computed(
-    () => (Date.parse(this.event().occurredAtUtc) - Date.parse(this.inputs().startsAtUtc)) / 60000,
+  readonly endClock = computed(() =>
+    this.clock(addMinutes(this.event().occurredAtUtc, this.duration() ?? NaN)),
   );
   readonly impact = computed(() => {
     const event = this.event(),
@@ -395,22 +389,19 @@ export class IncidentDesigner {
   /** Wall clock and distance to the chosen flight's departure, for the start field. */
   readonly timing = computed(() => {
     const inputs = this.inputs(),
-      minute = this.minute(),
+      utc = this.event().occurredAtUtc,
       flight = inputs.flights.find((row) => row.id === this.event().flightId);
-    if (!Number.isFinite(minute)) return 'Este necesar un minut valid din intervalul scenariului.';
-    const clock = `ora ${scenarioClock(inputs, minute)}`;
+    if (!Number.isFinite(Date.parse(utc))) return 'Introdu data și ora de început (HH:MM).';
+    const clock = `ora ${scenarioClock(inputs, utc)} · ${inputs.timeZone}`;
     if (!flight) return clock;
-    const before = Math.round(scenarioMinute(inputs, flight.departureAtUtc) - minute);
-    return before >= 0
-      ? `${clock} · cu ${before} min înainte de plecarea ${flight.code}`
-      : `${clock} · după plecarea ${flight.code}`;
+    return `${clock} · ${flight.code} pleacă la ${scenarioClock(inputs, flight.departureAtUtc)}`;
   });
   readonly problems = computed(() => incidentProblems(this.event(), this.inputs(), this.layout()));
   flightName(id: string) {
     return flightLabel(this.inputs(), this.layout(), id);
   }
-  clock(minute: number) {
-    return scenarioClock(this.inputs(), minute);
+  clock(utc: string) {
+    return scenarioClock(this.inputs(), utc);
   }
   setType(type: string) {
     this.changed.emit({ ...this.event(), type });
@@ -418,35 +409,33 @@ export class IncidentDesigner {
   setFlight(flightId: string | null) {
     const flight = this.inputs().flights.find((f) => f.id === flightId);
     const window = incidentArrivalWindow(this.inputs(), flightId);
-    const minute = this.minute(),
+    const current = Date.parse(this.event().occurredAtUtc),
       duration = this.duration();
     const start = window
       ? Math.max(
-          window.minimum,
+          Date.parse(window.start),
           Math.min(
-            Number.isFinite(minute) ? minute : window.minimum,
-            window.maximum - (duration !== null && Number.isFinite(duration) ? duration : 5),
+            Number.isFinite(current) ? current : Date.parse(window.start),
+            Date.parse(window.end) -
+              (duration !== null && Number.isFinite(duration) ? duration : 5) * 60000,
           ),
         )
-      : minute;
-    const time = Date.parse(this.inputs().startsAtUtc) + start * 60000;
+      : current;
     this.changed.emit({
       ...this.event(),
       flightId,
       gateId: flight?.gateId ?? null,
       checkpointId: flight ? incidentCheckpoint(this.inputs(), this.layout(), flight.id) : null,
       occurredAtUtc:
-        window && Number.isFinite(time) && Math.abs(time) <= 8.64e15
-          ? new Date(time).toISOString()
+        window && Number.isFinite(start) && Math.abs(start) <= 8.64e15
+          ? new Date(start).toISOString()
           : this.event().occurredAtUtc,
     });
   }
-  setMinute(value: number | null) {
-    const date = value === null ? NaN : Date.parse(this.inputs().startsAtUtc) + value * 60000;
+  setTime(utc: string) {
     this.changed.emit({
       ...this.event(),
-      occurredAtUtc:
-        Number.isFinite(date) && Math.abs(date) <= 8.64e15 ? new Date(date).toISOString() : '',
+      occurredAtUtc: utc,
     });
   }
   setPayload(field: 'durationMinutes' | 'share', value: number | null) {

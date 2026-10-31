@@ -2,9 +2,14 @@
   <header class="panel-heading">
     <div>
       <h2 id="events-title">Evenimente programate</h2>
-
     </div>
-    <button appWriteAccess class="btn-primary" type="button" [disabled]="blocked() || !settings()" (click)="add()">
+    <button
+      appWriteAccess
+      class="btn-primary"
+      type="button"
+      [disabled]="blocked() || !settings()"
+      (click)="add()"
+    >
       Adaugă eveniment
     </button>
   </header>
@@ -26,17 +31,13 @@
               }
             </select></label
           >
-          <label
-            >Minut virtual<input
-              type="number"
-              name="minute"
-              [(ngModel)]="draft.minute"
-              min="0"
-              [max]="scenario().inputs.durationMinutes - 1"
-              step="1"
-              required
-              [disabled]="blocked()"
-          /></label>
+          <app-absolute-time-input
+            label="Ora evenimentului"
+            [value]="draft.occurredAtUtc"
+            [timeZone]="scenario().inputs.timeZone"
+            [disabled]="blocked()"
+            (changed)="draft.occurredAtUtc = $event"
+          />
           @if (draft.type === 'resume') {
             <label
               >Reia<select name="target" [(ngModel)]="draft.target" [disabled]="blocked()">
@@ -47,7 +48,12 @@
           }
           @if (uses(draft, 'checkpointId')) {
             <label
-              >Control<select name="checkpoint" [(ngModel)]="draft.checkpointId" required [disabled]="blocked()">
+              >Control<select
+                name="checkpoint"
+                [(ngModel)]="draft.checkpointId"
+                required
+                [disabled]="blocked()"
+              >
                 @for (checkpoint of settings()?.checkpoints ?? []; track checkpoint.id) {
                   <option [value]="checkpoint.id">{{ checkpoint.name }}</option>
                 }
@@ -56,7 +62,12 @@
           }
           @if (uses(draft, 'zoneId')) {
             <label
-              >Coridor / zonă<select name="zone" [(ngModel)]="draft.zoneId" required [disabled]="blocked() || !zones().length">
+              >Coridor / zonă<select
+                name="zone"
+                [(ngModel)]="draft.zoneId"
+                required
+                [disabled]="blocked() || !zones().length"
+              >
                 @for (zone of zones(); track zone.id) {
                   <option [value]="zone.id">{{ zone.name }}</option>
                 }
@@ -65,11 +76,8 @@
           }
           @if (uses(draft, 'flightId')) {
             <label
-              >{{ draft.type === 'passenger_surge' ? 'Zbor (opțional)' : 'Zbor' }}<select
-                name="flight"
-                [(ngModel)]="draft.flightId"
-                [disabled]="blocked()"
-              >
+              >{{ draft.type === 'passenger_surge' ? 'Zbor (opțional)' : 'Zbor'
+              }}<select name="flight" [(ngModel)]="draft.flightId" [disabled]="blocked()">
                 @if (draft.type === 'passenger_surge') {
                   <option value="">Fără zbor · fără termen de boarding</option>
                 }
@@ -81,20 +89,54 @@
           }
           @if (uses(draft, 'passengerCount')) {
             <label
-              >Pasageri suplimentari<input type="number" name="passengers" [(ngModel)]="draft.passengerCount" min="1" max="10000" step="1" required [disabled]="blocked()"
+              >Pasageri suplimentari<input
+                type="number"
+                name="passengers"
+                [(ngModel)]="draft.passengerCount"
+                min="1"
+                max="10000"
+                step="1"
+                required
+                [disabled]="blocked()"
             /></label>
             <label
-              >Fereastră de sosire (min)<input type="number" name="window" [(ngModel)]="draft.windowMinutes" min="1" step="1" required [disabled]="blocked()"
+              >Fereastră de sosire (min)<input
+                type="number"
+                name="window"
+                [(ngModel)]="draft.windowMinutes"
+                min="1"
+                step="1"
+                required
+                [disabled]="blocked()"
             /></label>
           }
           @if (uses(draft, 'staffCount')) {
             <label
-              >Operatori rămași în serviciu<input type="number" name="staff" [(ngModel)]="draft.staffCount" min="0" step="1" required [disabled]="blocked()"
+              >Operatori rămași în serviciu<input
+                type="number"
+                name="staff"
+                [(ngModel)]="draft.staffCount"
+                min="0"
+                step="1"
+                required
+                [disabled]="blocked()"
             /></label>
           }
           @if (uses(draft, 'delayMinutes')) {
             <label
-              >{{ scenario().inputs.journey ? 'Întârziere zbor (min)' : 'Mutare termen boarding (min)' }}<input type="number" name="delay" [(ngModel)]="draft.delayMinutes" [min]="scenario().inputs.journey ? 1 : -1440" max="1440" step="1" required [disabled]="blocked()"
+              >{{
+                scenario().inputs.journey
+                  ? 'Întârziere zbor (min)'
+                  : 'Mutare termen boarding (min)'
+              }}<input
+                type="number"
+                name="delay"
+                [(ngModel)]="draft.delayMinutes"
+                [min]="scenario().inputs.journey ? 1 : -1440"
+                max="1440"
+                step="1"
+                required
+                [disabled]="blocked()"
             /></label>
           }
         </div>
@@ -102,33 +144,62 @@
           <p>Activează rutarea din tabul Trasee pentru a închide sau redeschide coridoare.</p>
         }
         <div class="toolbar">
-          <button appWriteAccess type="submit" [disabled]="blocked()">Programează evenimentul</button>
-          <button appWriteAccess type="button" [disabled]="blocked()" (click)="cancel()">Renunță</button>
+          <button appWriteAccess type="submit" [disabled]="blocked()">
+            Programează evenimentul
+          </button>
+          <button appWriteAccess type="button" [disabled]="blocked()" (click)="cancel()">
+            Renunță
+          </button>
         </div>
       </form>
     }
 
     <div class="table-wrap">
       <table>
-        <caption>Ordinea de aplicare: minut, apoi tip (infrastructură → capacitate → cerere), apoi ID.</caption>
+        <caption>
+          Ordine cronologică, apoi tip (infrastructură → capacitate → cerere), apoi ID. Orele sunt
+          în
+          {{
+            scenario().inputs.timeZone
+          }}.
+        </caption>
         <thead>
-          <tr><th>#</th><th>Minut</th><th>Tip</th><th>Țintă</th><th>Parametri</th><th>Acțiuni</th></tr>
+          <tr>
+            <th>#</th>
+            <th>Ora</th>
+            <th>Tip</th>
+            <th>Țintă</th>
+            <th>Parametri</th>
+            <th>Acțiuni</th>
+          </tr>
         </thead>
         <tbody>
           @for (entry of timeline(); track entry.item.id; let index = $index) {
             <tr>
               <td>{{ index + 1 }}</td>
-              <td>{{ entry.minute }}</td>
+              <td>{{ entry.time }}</td>
               <td>{{ label(entry.item.type) }}</td>
               <td>{{ target(entry.item) }}</td>
               <td>{{ details(entry.item) }}</td>
               <td>
-                <button appWriteAccess class="btn-sm btn-danger" type="button" [disabled]="blocked()" (click)="remove(entry.item)"
-                  [attr.aria-label]="'Șterge evenimentul ' + (index + 1)">Șterge</button>
+                <button
+                  appWriteAccess
+                  class="btn-sm btn-danger"
+                  type="button"
+                  [disabled]="blocked()"
+                  (click)="remove(entry.item)"
+                  [attr.aria-label]="'Șterge evenimentul ' + (index + 1)"
+                >
+                  Șterge
+                </button>
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6">Niciun eveniment programat. Rularea folosește capacitatea și cererea capturate.</td></tr>
+            <tr>
+              <td colspan="6">
+                Niciun eveniment programat. Rularea folosește capacitatea și cererea capturate.
+              </td>
+            </tr>
           }
         </tbody>
       </table>

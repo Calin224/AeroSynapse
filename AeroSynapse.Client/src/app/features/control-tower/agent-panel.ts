@@ -458,7 +458,7 @@ export class AgentPanel {
       agent.staffMoves ? 'mută operatori' : '',
       reserveOf(agent) ? `cheamă până la ${reserveOf(agent)} operatori din rezervă` : '',
       agent.checkInDesks ? 'deschide ghișee' : '',
-      agent.gateChoices ? 'alege porțile la întârzieri' : '',
+      agent.gateChoices ? 'alege porțile la întârzieri și deschide porți inactive' : '',
     ]
       .filter(Boolean)
       .join(', ');

@@ -106,10 +106,6 @@ export class ControlTowerStore {
       context?.scenario.inputs.staffShifts ? this.minute() : null,
     );
   });
-  readonly population = computed(
-    () =>
-      this.context()?.scenario.inputs.populations.reduce((sum, row) => sum + row.count, 0) ?? null,
-  );
   readonly canLaunch = computed(
     () =>
       this.online() &&
@@ -252,7 +248,11 @@ export class ControlTowerStore {
           captured && activeRun(run.status) ? mergeHeatmapRuns(this.heatmap(), captured) : captured,
         );
         this.observeMinute();
-        this.runs.update((rows) => [run, ...rows.filter((row) => row.id !== run.id)]);
+        this.runs.update((rows) =>
+          rows.some((row) => row.id === run.id)
+            ? rows.map((row) => (row.id === run.id ? run : row))
+            : [run, ...rows],
+        );
       });
     this.live.updates.pipe(takeUntilDestroyed(this.destroy)).subscribe((state) => {
       if (state.scenarioId !== this.selected()?.scenario.id) return;
@@ -391,10 +391,6 @@ export class ControlTowerStore {
           this.actionError.set(this.describe(error));
         },
       });
-  }
-  returnToCommand() {
-    const command = this.command();
-    if (command) this.accepted.next({ scenarioId: command.scenarioId, runId: null });
   }
   private saveCommand(command: { scenarioId: string; revision: number; key: string } | null) {
     this.command.set(command);

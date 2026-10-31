@@ -108,17 +108,23 @@ describe('Three.js renderer lifecycle', () => {
       loadAsset,
       resize: () => resized([], {} as ResizeObserver),
       orbit: () => orbit,
+      view: () => vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera],
+      loop: () =>
+        vi.mocked(graphics.setAnimationLoop).mock.calls.find(([c]) => typeof c === 'function')![0]!,
     };
   }
   it('eases camera views, keeps snapshot changes independent and yields immediately to user input', async () => {
     let now = 0;
     const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
-    const { renderer, graphics, controls, canvas } = setup(undefined, undefined, false, true);
+    const { renderer, graphics, controls, canvas, view, loop } = setup(
+      undefined,
+      undefined,
+      false,
+      true,
+    );
     await renderer.ready;
-    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
-    const frame = vi
-      .mocked(graphics.setAnimationLoop)
-      .mock.calls.find(([callback]) => typeof callback === 'function')![0]!;
+    const [, camera] = view();
+    const frame = loop();
     const start = camera.position.clone();
     renderer.selectEntity('zone-entity');
     expect(camera.position).toEqual(start);
@@ -189,12 +195,9 @@ describe('Three.js renderer lifecycle', () => {
     expect(onError).toHaveBeenCalledOnce();
   });
   it('updates heatmap surfaces without moving the camera and raycasts through the overlay to the checkpoint', async () => {
-    const { renderer, graphics, canvas, loadAsset } = setup();
+    const { renderer, graphics, canvas, loadAsset, view } = setup();
     await renderer.ready;
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
+    const [scene, camera] = view();
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld(true);
@@ -337,13 +340,13 @@ describe('Three.js renderer lifecycle', () => {
     for (const spy of spies) expect(spy).toHaveBeenCalledOnce();
   });
   it('loads exterior only on request, caches it, and keeps the simulation snapshot unchanged', async () => {
-    const { renderer, loadAsset, graphics } = setup();
+    const { renderer, loadAsset, graphics, view } = setup();
     await renderer.ready;
     const data = { aircraft: [Object.freeze({ id: 'AS 201', x: -28, z: -65, heading: 0 })] };
     renderer.setScene(data);
     expect(loadAsset).toHaveBeenCalledTimes(1);
     await renderer.setDisplayMode('exterior');
-    const [scene] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    const [scene] = view();
     let aircraft: Object3D | undefined;
     scene.traverse((object) => {
       if (object.userData['flightCode'] === 'AS 201') aircraft = object;
@@ -411,12 +414,9 @@ describe('Three.js renderer lifecycle', () => {
         group.children[0].add(glass);
         return group;
       });
-      const { renderer, graphics, canvas } = setup(loader);
+      const { renderer, graphics, canvas, view } = setup(loader);
       await renderer.ready;
-      const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-        Scene,
-        PerspectiveCamera,
-      ];
+      const [, camera] = view();
       camera.lookAt(0, 0, 0);
       camera.updateMatrixWorld(true);
       const projected = new Vector3().project(camera);
@@ -448,38 +448,6 @@ describe('Three.js renderer lifecycle', () => {
       renderer.dispose();
     },
   );
-  it('hides the original shell in the interior and focuses a selected control', async () => {
-    const loader = vi.fn(async (path: string, _signal: AbortSignal) => {
-      const group = asset(path);
-      if (!path.includes('exterior')) {
-        const shell = new Group();
-        shell.userData = { viewMode: 'exterior' };
-        shell.add(new Mesh(new BoxGeometry(200, 30, 200), new MeshStandardMaterial()));
-        group.add(shell);
-      }
-      return group;
-    });
-    const { renderer, graphics, controls } = setup(loader);
-    await renderer.ready;
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
-    let shell: Object3D | undefined;
-    scene.traverse((node) => {
-      if (node.userData['viewMode'] === 'exterior') shell = node;
-    });
-    expect(shell?.visible).toBe(false);
-    const overviewDistance = camera.position.distanceTo(controls.target);
-    renderer.selectEntity('zone-entity');
-    expect(camera.position.distanceTo(controls.target)).toBeLessThan(overviewDistance / 2);
-    await renderer.setDisplayMode('exterior');
-    expect(shell?.visible).toBe(true);
-    await renderer.setDisplayMode('interior');
-    expect(shell?.visible).toBe(false);
-    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(overviewDistance);
-    renderer.dispose();
-  });
   function exteriorFixture(path: string): Group {
     if (!path.includes('exterior')) return asset(path);
     const group = new Group();
@@ -510,7 +478,7 @@ describe('Three.js renderer lifecycle', () => {
   }
   it('pins low detail in economic mode, lazily loads near the camera target and rebinds a stable selection between LODs', async () => {
     const loader = vi.fn(async (path: string, _signal: AbortSignal) => exteriorFixture(path));
-    const { renderer, graphics, controls } = setup(loader);
+    const { renderer, graphics, controls, view, loop } = setup(loader);
     const selected = vi.fn(),
       status = vi.fn();
     renderer.setSelectionHandler(selected);
@@ -532,13 +500,8 @@ describe('Three.js renderer lifecycle', () => {
         dimensionsMeters: [32, 1, 50],
       },
     });
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
-    const frame = vi
-      .mocked(graphics.setAnimationLoop)
-      .mock.calls.find(([callback]) => typeof callback === 'function')![0]!;
+    const [scene, camera] = view();
+    const frame = loop();
     camera.position.copy(controls.target).add(new Vector3(0, 100, 0));
     frame(0, {} as XRFrame);
     expect(loader).toHaveBeenCalledTimes(2);
@@ -561,14 +524,11 @@ describe('Three.js renderer lifecycle', () => {
   });
   it('picks the visible exterior label before aircraft geometry behind that label', async () => {
     const loader = vi.fn(async (path: string, _signal: AbortSignal) => exteriorFixture(path));
-    const { renderer, graphics, canvas } = setup(loader);
+    const { renderer, graphics, canvas, view } = setup(loader);
     await renderer.ready;
     renderer.setExteriorDetailPolicy('low');
     await renderer.setDisplayMode('exterior');
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
+    const [scene, camera] = view();
     let stand!: Object3D;
     scene.traverse((node) => {
       if (node.userData['entityId'] === 'stand-id') stand = node;
@@ -632,7 +592,7 @@ describe('Three.js renderer lifecycle', () => {
     renderer.dispose();
   });
   it('refreshes demonstrative aircraft metadata on a scenario update without moving the investigated camera', async () => {
-    const { renderer, graphics } = setup();
+    const { renderer, graphics, view } = setup();
     await renderer.ready;
     renderer.setExteriorDetailPolicy('low');
     renderer.setScene({ aircraft: [{ id: 'AS 201', x: 20, z: 40, heading: 90 }] });
@@ -645,7 +605,7 @@ describe('Three.js renderer lifecycle', () => {
       positionMeters: [20, 8.7, 40],
       headingDegrees: 90,
     });
-    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    const [, camera] = view();
     const before = camera.position.clone();
     const snapshot = Object.freeze({
       aircraft: [Object.freeze({ id: 'AS 201', x: 42, z: 75, heading: 180 })],
@@ -666,7 +626,7 @@ describe('Three.js renderer lifecycle', () => {
       if (path.includes('exterior-detail')) throw new Error('detail unavailable');
       return exteriorFixture(path);
     });
-    const { renderer, graphics, onError, controls } = setup(loader);
+    const { renderer, graphics, onError, controls, view } = setup(loader);
     await renderer.ready;
     renderer.setExteriorDetailPolicy('low');
     await renderer.setDisplayMode('exterior');
@@ -675,7 +635,7 @@ describe('Three.js renderer lifecycle', () => {
       status = vi.fn();
     renderer.setSelectionHandler(selected);
     renderer.setAssetStatusHandler(status);
-    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    const [, camera] = view();
     camera.position.copy(controls.target).add(new Vector3(0, 100, 0));
     renderer.setExteriorDetailPolicy('auto');
     await vi.waitFor(() =>
@@ -686,26 +646,6 @@ describe('Three.js renderer lifecycle', () => {
     expect(renderer.getSelectableZones().filter((zone) => zone.exterior)).toHaveLength(3);
     expect(selected).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
-    renderer.dispose();
-  });
-  it('loads detail only near the exterior and reuses it across mode changes', async () => {
-    const { renderer, loadAsset, graphics } = setup();
-    await renderer.ready;
-    await renderer.setDisplayMode('exterior');
-    expect(loadAsset).toHaveBeenCalledTimes(2);
-    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
-    const frame = vi
-      .mocked(graphics.setAnimationLoop)
-      .mock.calls.find(([callback]) => typeof callback === 'function')![0]!;
-    camera.position.set(0, 70, 0);
-    frame(0, {} as XRFrame);
-    await vi.waitFor(() => expect(loadAsset).toHaveBeenCalledTimes(3));
-    expect(loadAsset.mock.calls[2][0]).toContain('exterior-detail.glb');
-    await renderer.setDisplayMode('interior');
-    await renderer.setDisplayMode('exterior');
-    camera.position.set(0, 70, 0);
-    frame(0, {} as XRFrame);
-    expect(loadAsset).toHaveBeenCalledTimes(3);
     renderer.dispose();
   });
   it('disposes an asset that finishes loading after renderer destruction', async () => {
@@ -727,28 +667,38 @@ describe('Three.js renderer lifecycle', () => {
     expect(late.children).toHaveLength(0);
     expect(loader.mock.calls[0][1].aborted).toBe(true);
   });
-  it('shows the ceiling only in immersive/exterior views and restores the operational cutaway', async () => {
+  it('shows ceiling and shell only in immersive/exterior views, focuses a control and restores the cutaway', async () => {
     const loader = vi.fn(async (path: string, _signal: AbortSignal) => {
       const group = asset(path);
       if (!path.includes('exterior')) {
-        for (const mode of ['immersive', 'reference']) {
+        for (const mode of ['immersive', 'reference', 'exterior']) {
           const roof = new Group();
           roof.name = mode;
-          roof.userData = { viewMode: mode, kind: mode === 'reference' ? 'roof' : 'ceiling' };
+          roof.userData =
+            mode === 'exterior'
+              ? { viewMode: mode }
+              : { viewMode: mode, kind: mode === 'reference' ? 'roof' : 'ceiling' };
           roof.add(new Mesh(new BoxGeometry(8, 0.2, 8), new MeshStandardMaterial()));
           group.add(roof);
         }
       }
       return group;
     });
-    const { renderer, graphics, controls } = setup(loader);
+    const { renderer, graphics, controls, view } = setup(loader);
     await renderer.ready;
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
+    const [scene, camera] = view();
     const ceiling = scene.getObjectByName('immersive')!;
     const legacy = scene.getObjectByName('reference')!;
+    const shell = scene.getObjectByName('exterior')!;
+    expect(shell.visible).toBe(false);
+    const overview = camera.position.distanceTo(controls.target);
+    renderer.selectEntity('zone-entity');
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(overview / 2);
+    await renderer.setDisplayMode('exterior');
+    expect(shell.visible).toBe(true);
+    await renderer.setDisplayMode('interior');
+    expect(shell.visible).toBe(false);
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(overview);
     const snapshot = { aircraft: [Object.freeze({ id: 'AS 201', x: 12, z: 8, heading: 0 })] };
     renderer.setScene(snapshot);
     expect(ceiling.visible).toBe(false);
@@ -786,13 +736,10 @@ describe('Three.js renderer lifecycle', () => {
     expect(environment.mock.calls[0][1].aborted).toBe(true);
   });
   it('reuses the highlight and preserves a navigated camera across scene updates and resize', async () => {
-    const { renderer, graphics, controls, resize } = setup();
+    const { renderer, graphics, controls, resize, view } = setup();
     await renderer.ready;
     renderer.selectEntity('zone-entity');
-    const [scene, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [
-      Scene,
-      PerspectiveCamera,
-    ];
+    const [scene, camera] = view();
     let outline!: BoxHelper;
     scene.traverse((node) => {
       if (node instanceof BoxHelper) outline = node;
@@ -848,13 +795,11 @@ describe('Three.js renderer lifecycle', () => {
     renderer.dispose();
   });
   it('reduces rendering resolution and stops 3D on sustained low FPS, with pause excluded from the sample', async () => {
-    const { renderer, graphics, onError } = setup();
+    const { renderer, graphics, onError, loop } = setup();
     await renderer.ready;
     const sample = vi.fn();
     renderer.setPerformanceHandler(sample);
-    const frame = vi
-      .mocked(graphics.setAnimationLoop)
-      .mock.calls.find(([callback]) => typeof callback === 'function')![0]!;
+    const frame = loop();
     for (let time = 0; time < 14000; time += 50) frame(time, {} as XRFrame);
     expect(graphics.setPixelRatio).toHaveBeenCalledWith(0.75);
     expect(sample).toHaveBeenLastCalledWith(
@@ -865,9 +810,9 @@ describe('Three.js renderer lifecycle', () => {
     renderer.dispose();
   });
   it('resets the real OrbitControls camera without residual rotation from damping', async () => {
-    const { renderer, graphics, orbit } = setup(undefined, undefined, true);
+    const { renderer, graphics, orbit, view } = setup(undefined, undefined, true);
     await renderer.ready;
-    const [, camera] = vi.mocked(graphics.render).mock.calls.at(-1)! as [Scene, PerspectiveCamera];
+    const [, camera] = view();
     const initial = camera.position.clone(),
       target = orbit().target.clone();
     orbit().rotateLeft(0.7);

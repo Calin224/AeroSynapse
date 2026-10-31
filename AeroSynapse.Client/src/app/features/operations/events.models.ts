@@ -13,7 +13,6 @@ export interface ScenarioEvent {
   id: string; type: string; occurredAtUtc: string;
   checkpointId?: string | null; gateId?: string | null; flightId?: string | null; payloadJson: string;
 }
-export interface AppliedEvent { eventId: string; type: string; minute: number; sequence: number }
 
 export function eventLabel(type: string): string {
   return EVENT_TYPES.find((item) => item.value === type)?.label ?? type;

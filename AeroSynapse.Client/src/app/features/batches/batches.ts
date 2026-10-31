@@ -1,6 +1,5 @@
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TERMINAL_MAP_ZONES } from '../digital-twin/terminal-zones';
-import { SimulationJourney } from '../../shared/ui/simulation-journey';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
@@ -81,7 +80,6 @@ const STABILITY: Record<Stability, { tone: string; badge: string; headline: stri
     DatePipe,
     DecimalPipe,
     DataState,
-    SimulationJourney,
     RouterLink,
     BatchSpread,
     CountUp,

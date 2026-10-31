@@ -27,6 +27,7 @@ import type {
 } from './recommendation-review.models';
 import type { ScenarioInputs } from './operations.models';
 import { scenarioClock } from '../scenario-studio/incident-designer';
+import { addMinutes } from '../../shared/absolute-time';
 
 /** One line per checkpoint: today's staffing and the shift plan's range, with the hour it peaks. */
 export function scheduleSummary(
@@ -46,7 +47,12 @@ export function scheduleSummary(
       name: row.name,
       before: range(row.before),
       after: range(row.after),
-      peak: peak ? scenarioClock(inputs, row.after.indexOf(peak) * slotMinutes) : null,
+      peak: peak
+        ? scenarioClock(
+            inputs,
+            addMinutes(inputs.startsAtUtc, row.after.indexOf(peak) * slotMinutes),
+          )
+        : null,
       most: peak,
     };
   });

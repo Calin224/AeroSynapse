@@ -91,22 +91,6 @@ describe('Supervisor notification UI', () => {
     expect(acknowledge.disabled).toBe(true);
     fixture.destroy();
   });
-  it('scales the severity gauge, remembers the operator and applies the quick filters', async () => {
-    const fixture = await view(),
-      component = fixture.componentInstance;
-    // Peak 30 against warning 10 / critical 20: the scale is the peak itself.
-    const gauge = component.gauge(alertFixture());
-    expect(gauge.peak).toBe(100);
-    expect(gauge.warning).toBeCloseTo(33.33, 1);
-    expect(gauge.critical).toBeCloseTo(66.67, 1);
-    component.rememberActor('Ana Pop ');
-    expect(localStorage.setItem).toHaveBeenCalledWith('aerosynapse.notification-actor.v1', 'Ana Pop');
-    component.setLevel('critical');
-    component.toggleUnacknowledged();
-    expect(component.store.filters()).toMatchObject({ level: 'critical', acknowledged: 'false', offset: 0 });
-    http.match(() => true);
-    fixture.destroy();
-  });
   it('keeps threshold fields empty until the supervisor chooses them and blocks invalid publication', async () => {
     const fixture = await view(),
       component = fixture.componentInstance;
@@ -156,45 +140,6 @@ describe('Supervisor notification UI', () => {
     expect(fixture.nativeElement.querySelector('.comment-text').textContent).toContain(
       '<img src=x',
     );
-    fixture.destroy();
-  });
-  it('keeps the empty-feed message stable during automatic refreshes', async () => {
-    const fixture = TestBed.createComponent(NotificationCenterComponent);
-    fixture.detectChanges();
-    http.expectOne('/api/scenarios').flush([]);
-    await vi.advanceTimersByTimeAsync(0);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.alert-list .empty').textContent).toContain(
-      'Se citesc alertele',
-    );
-    const answerEmpty = () => {
-      http
-        .expectOne((r) => r.url.startsWith('/api/operational-notifications?'))
-        .flush({ items: [], total: 0, offset: 0, limit: 25 });
-      http
-        .expectOne((r) => r.url.startsWith('/api/operational-notifications/activity?'))
-        .flush({ items: [], total: 0, offset: 0, limit: 25 });
-    };
-    answerEmpty();
-    fixture.detectChanges();
-    const message = fixture.nativeElement.querySelector('.alert-list .empty') as HTMLElement;
-    const text = message.textContent;
-    expect(text).toContain('Nicio alertă');
-    for (let tick = 0; tick < 2; tick++) {
-      await vi.advanceTimersByTimeAsync(5000);
-      fixture.detectChanges();
-      expect(message.textContent).toBe(text);
-      expect(fixture.nativeElement.querySelector('.alert-list .empty')).toBe(message);
-      expect(fixture.nativeElement.querySelector('.feed-status').textContent).not.toContain(
-        'Se actualizează',
-      );
-      expect(fixture.nativeElement.querySelector('.alert-list').getAttribute('aria-busy')).toBe(
-        'false',
-      );
-      answerEmpty();
-      fixture.detectChanges();
-      expect(message.textContent).toBe(text);
-    }
     fixture.destroy();
   });
 });

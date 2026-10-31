@@ -15,7 +15,8 @@ describe('Workspace navigation', () => {
       providers: [
         provideRouter([
           { path: 'control-tower', component: TestPage },
-          { path: 'scenario-studio', component: TestPage },
+          { path: 'control-tower/configure', component: TestPage },
+          { path: 'notifications', component: TestPage },
         ]),
       ],
     });
@@ -48,7 +49,8 @@ describe('Workspace navigation', () => {
       expect(paths).not.toContain('/evacuation-training');
       expect(navigation.groups().some((group) => group.label === 'Explorare')).toBe(false);
       expect(routes.some((route) => route.path === 'operation-bottleneck')).toBe(false);
-      expect(paths.includes('/scenario-studio')).toBe(workspaceRole !== 'Viewer');
+      expect(paths).not.toContain('/scenario-studio');
+      expect(navigation.groups().some((group) => group.label === 'Simulare')).toBe(false);
       expect(navigation.groups().some((group) => group.label === 'Administrare')).toBe(false);
       for (const path of ['/external-data', '/audit', '/admin/ai-governance', '/admin/users'])
         expect(paths).not.toContain(path);
@@ -68,7 +70,7 @@ describe('Workspace navigation', () => {
     role('Operator');
     const navigation = TestBed.inject(WorkspaceNavigation);
     expect(navigation.search('  RULARI scenarii  ').map((item) => item.path)).toEqual([
-      '/operations',
+      '/control-tower',
     ]);
     expect(navigation.search('alerte').map((item) => item.path)).toContain('/notifications');
     expect(navigation.search('guvernanta')).toEqual([]);
@@ -90,9 +92,10 @@ describe('Workspace navigation', () => {
     role('Operator');
     const navigation = TestBed.inject(WorkspaceNavigation),
       router = TestBed.inject(Router);
-    await router.navigateByUrl('/scenario-studio?scenarioId=private-context');
-    await router.navigateByUrl('/control-tower');
-    expect(navigation.recent().map((item) => item.path)).toEqual(['/scenario-studio']);
+    await router.navigateByUrl('/control-tower/configure?scenarioId=private-context');
+    expect(navigation.current()?.label).toBe('Control Tower');
+    await router.navigateByUrl('/notifications');
+    expect(navigation.recent().map((item) => item.path)).toEqual(['/control-tower']);
     expect(navigation.current()?.group).toBe('Operațiuni');
     TestBed.inject(SessionState).session.set(null);
     expect(navigation.recent()).toEqual([]);

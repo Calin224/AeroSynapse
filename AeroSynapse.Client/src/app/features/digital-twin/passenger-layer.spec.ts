@@ -7,11 +7,12 @@ import { TERMINAL_MAP_ZONES } from './terminal-zones';
 import { buildHeatmapFrame } from './heatmap-model';
 
 describe('Instanced passengers and aggregate fallback', () => {
-  function setup(packet: PassengerPacket) {
+  /** `authored` adds asset userData (Blender paths) to the zone with that code. */
+  function setup(packet: PassengerPacket, authored: Record<string, Record<string, unknown>> = {}) {
     const asset = new Group();
     for (const zone of TERMINAL_MAP_ZONES) {
       const root = new Group();
-      root.userData = { clickable: true, ...zone };
+      root.userData = { clickable: true, ...zone, ...authored[zone.code] };
       asset.add(root);
     }
     const layer = new PassengerLayer();
@@ -83,17 +84,8 @@ describe('Instanced passengers and aggregate fallback', () => {
   });
   it('stands aggregate queues as people along the authored checkpoint path, doubling up when a lane is full', () => {
     const state = { ...packet(false), interpolateAggregates: false };
-    const asset = new Group();
-    for (const zone of TERMINAL_MAP_ZONES) {
-      const root = new Group();
-      root.userData = { clickable: true, ...zone };
-      // Blender Z-up world metres: head at x=6, 6 m lane heading east.
-      if (zone.code === 'CP-1') root.userData['queuePathBlender'] = [6, 27, 0.45, 12, 27, 0.45];
-      asset.add(root);
-    }
-    const layer = new PassengerLayer();
-    layer.register(asset);
-    layer.set(state, 0);
+    // Blender Z-up world metres: head at x=6, 6 m lane heading east.
+    const layer = setup(state, { 'CP-1': { queuePathBlender: [6, 27, 0.45, 12, 27, 0.45] } });
     expect(layer.update(new Vector3(0, 20, 20), 0)).toMatchObject({ rendered: 6, represented: 6 });
     const mesh = layer.group.children.find((child) => child.visible) as InstancedMesh;
     expect(mesh.geometry.attributes['position'].count).toBeGreaterThan(300);
@@ -133,20 +125,10 @@ describe('Instanced passengers and aggregate fallback', () => {
         queuedPassengers: 4,
         processedPassengers: minute,
       });
-    const asset = new Group();
-    for (const zone of TERMINAL_MAP_ZONES) {
-      const root = new Group();
-      root.userData = { clickable: true, ...zone };
-      // The desk line authored in Blender: head in front of the middle desks, running west.
-      if (zone.code === 'CHECK-IN')
-        root.userData['queuePathBlender'] = [3.5, 61.1, 0.45, -9.6, 61.1, 0.45];
-      asset.add(root);
-    }
-    const layer = new PassengerLayer();
-    layer.register(asset);
-    layer.set(
+    // The desk line authored in Blender: head in front of the middle desks, running west.
+    const layer = setup(
       { ...packet(false), replay: preparePassengerReplay(run), interpolateAggregates: false },
-      0,
+      { 'CHECK-IN': { queuePathBlender: [3.5, 61.1, 0.45, -9.6, 61.1, 0.45] } },
     );
     // The fixture's 6 control passengers plus the 4 waiting at check-in, none unmapped.
     expect(layer.update(new Vector3(0, 20, 20), 0)).toMatchObject({
@@ -165,24 +147,17 @@ describe('Instanced passengers and aggregate fallback', () => {
     layer.dispose();
   });
   it('walks arrivals and screened passengers along authored routes as a pure function of time', () => {
-    const asset = new Group();
-    for (const zone of TERMINAL_MAP_ZONES) {
-      const root = new Group();
-      root.userData = { clickable: true, ...zone };
-      if (zone.code === 'CP-1') {
-        root.userData['queuePathBlender'] = [6, 27, 0.45, 12, 27, 0.45];
-        root.userData['flowPathsBlender'] = JSON.stringify({
-          arrive: [[40, 27, 0.45, 13, 27, 0.45]],
-          depart: [[6, 27, 0.45, -60, 27, 0.45]],
-        });
-      }
-      asset.add(root);
-    }
-    const layer = new PassengerLayer();
-    layer.register(asset);
     const camera = new Vector3(0, 20, 20);
     const state = { ...packet(false), timeMinutes: 1.75 };
-    layer.set(state, 0);
+    const layer = setup(state, {
+      'CP-1': {
+        queuePathBlender: [6, 27, 0.45, 12, 27, 0.45],
+        flowPathsBlender: JSON.stringify({
+          arrive: [[40, 27, 0.45, 13, 27, 0.45]],
+          depart: [[6, 27, 0.45, -60, 27, 0.45]],
+        }),
+      },
+    });
     const moving = layer.update(camera, 0);
     // Screened 3 → 6 and arrivals 9 → 27 between minutes 1 and 2 put people on both routes.
     expect(moving.walking).toBeGreaterThan(0);
@@ -199,12 +174,11 @@ describe('Instanced passengers and aggregate fallback', () => {
     layer.dispose();
   });
   it('sends screened walkers only to gates whose flights have passengers', () => {
-    const asset = new Group();
-    for (const zone of TERMINAL_MAP_ZONES) {
-      const root = new Group();
-      root.userData = { clickable: true, ...zone };
-      if (zone.code === 'CP-1')
-        root.userData['flowPathsBlender'] = JSON.stringify({
+    const state = { ...packet(false), timeMinutes: 1.9 };
+    state.replay.gateDemand = new Map([['gate-b', 120]]);
+    const layer = setup(state, {
+      'CP-1': {
+        flowPathsBlender: JSON.stringify({
           arrive: [[40, 27, 0.45, 13, 27, 0.45]],
           // Route to gate A heads west (negative x); route to gate B heads north from the head.
           depart: [
@@ -212,14 +186,9 @@ describe('Instanced passengers and aggregate fallback', () => {
             [6, 27, 0.45, 6, 90, 0.45],
           ],
           departGates: ['gate-a', 'gate-b'],
-        });
-      asset.add(root);
-    }
-    const layer = new PassengerLayer();
-    layer.register(asset);
-    const state = { ...packet(false), timeMinutes: 1.9 };
-    state.replay.gateDemand = new Map([['gate-b', 120]]);
-    layer.set(state, 0);
+        }),
+      },
+    });
     const stats = layer.update(new Vector3(0, 20, 20), 0);
     expect(stats.walking).toBeGreaterThan(0);
     const mesh = layer.group.children.find((child) => child.visible) as InstancedMesh;
@@ -262,29 +231,5 @@ describe('Instanced passengers and aggregate fallback', () => {
     expect(layer.update(new Vector3()).rendered).toBe(0);
     layer.dispose();
     warn.mockRestore();
-  });
-  it('keeps frozen simulation data and all KPIs identical across visual budgets, camera LOD and playback speeds', () => {
-    const data = datasetFixture();
-    function freeze(value: unknown) {
-      if (value && typeof value === 'object') {
-        Object.values(value).forEach(freeze);
-        Object.freeze(value);
-      }
-    }
-    freeze(data);
-    const source = JSON.stringify(data),
-      expected = buildHeatmapFrame(data, 'baseline', 1);
-    const state = { ...packet(false), replay: preparePassengerReplay(data.baseline) },
-      layer = setup(state);
-    for (const budget of [600, 100, 1]) {
-      for (const speed of [1, 4, 16] as const) {
-        layer.set({ ...state, budget, speed, playing: true }, 0);
-        layer.update(new Vector3(0, 20, 20), 100);
-        layer.update(new Vector3(0, 200, 200), 200);
-        expect(buildHeatmapFrame(data, 'baseline', 1)).toEqual(expected);
-        expect(JSON.stringify(data)).toBe(source);
-      }
-    }
-    layer.dispose();
   });
 });

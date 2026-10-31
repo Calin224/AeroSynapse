@@ -1,4 +1,5 @@
 import { ScenarioDetails, ScenarioInputs, SceneSummary } from '../operations/operations.models';
+import { addMinutes } from '../../shared/absolute-time';
 
 export interface StudioLayout {
   version: { id: string; version: number; sceneId: string; createdAtUtc: string };
@@ -83,34 +84,34 @@ export interface StudioDraft {
 }
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
 export type InputEvent = ScenarioInputs['events'][number];
+export const MINIMUM_DEPARTURE_SPACING_MINUTES = 60;
 export const PRESETS = [
   {
     id: 'principal',
     name: 'Aurora · orar principal',
-    detail: '90 minute · 5 zboruri · 600 pasageri',
+    detail: '6 ore · 5 zboruri · 600 pasageri',
     count: 120,
   },
-  { id: 'calm', name: 'Trafic redus', detail: '90 minute · 5 zboruri · 250 pasageri', count: 50 },
+  { id: 'calm', name: 'Trafic redus', detail: '6 ore · 5 zboruri · 250 pasageri', count: 50 },
   {
     id: 'bottleneck',
     name: 'Bottleneck · DEMO',
-    detail: '90 minute · 600 pasageri · un control aglomerat',
+    detail: '6 ore · 600 pasageri · un control aglomerat',
     count: 120,
   },
   {
     id: 'peak',
     name: 'Vârf de trafic',
-    detail: '90 minute · 5 zboruri · 900 pasageri',
+    detail: '6 ore · 5 zboruri · 900 pasageri',
     count: 180,
   },
   {
     id: 'workday',
     name: 'Zi de lucru · 8 ore',
-    detail: '8 ore · 12 zboruri în trei valuri · 1440 pasageri',
+    detail: '8 ore · 8 zboruri · 960 pasageri',
     count: 120,
     durationMinutes: 480,
-    // Three waves of four departures: morning, midday and afternoon, so staffing has to follow them.
-    departures: [80, 95, 110, 125, 230, 245, 260, 275, 380, 395, 410, 425],
+    flightCount: 8,
   },
 ] as const;
 
@@ -130,10 +131,14 @@ export function fromScenario(value: ScenarioDetails): StudioDraft {
 export const BOTTLENECK_RATE = 3;
 /** Screening lanes the Bottleneck checkpoint can physically open, one operator each. */
 export const BOTTLENECK_LANES = 3;
-/** Bottleneck passengers reach security 45 to 10 minutes before their own flight, in minutes from the start. */
+/** Absolute arrival window anchored to the flight's departure. */
 export function bottleneckArrivalWindow(departureAtUtc: string, startsAtUtc: string) {
-  const departure = (Date.parse(departureAtUtc) - Date.parse(startsAtUtc)) / 60000;
-  return { minimum: Math.max(0, departure - 45), maximum: departure - 10 };
+  return {
+    start: new Date(
+      Math.max(Date.parse(startsAtUtc), Date.parse(addMinutes(departureAtUtc, -45))),
+    ).toISOString(),
+    end: addMinutes(departureAtUtc, -10),
+  };
 }
 export function makeDraft(
   layout: StudioLayout,
@@ -143,13 +148,13 @@ export function makeDraft(
   const preset = PRESETS.find((item) => item.id === presetId);
   const start = new Date(now);
   start.setUTCSeconds(0, 0);
-  const at = (minute: number) => new Date(+start + minute * 60000).toISOString();
   const inputs: ScenarioInputs = {
-    startsAtUtc: at(0),
-    durationMinutes: preset && 'durationMinutes' in preset ? preset.durationMinutes : 90,
+    startsAtUtc: start.toISOString(),
+    durationMinutes: preset && 'durationMinutes' in preset ? preset.durationMinutes : 360,
     seed: 42,
     timeZone: 'Europe/Bucharest',
     snapshotIntervalMinutes: 1,
+    minimumDepartureSpacingMinutes: MINIMUM_DEPARTURE_SPACING_MINUTES,
     flights: [],
     populations: [],
     flows: [],
@@ -178,9 +183,10 @@ export function makeDraft(
   const gates = [...new Set(routes.map((route) => route.toGateId))];
   const checkpointCode = (id: string) =>
     layout.layout.checkpoints.find((checkpoint) => checkpoint.id === id)?.code ?? id;
-  const departures: readonly number[] =
-    'departures' in preset ? preset.departures : [25, 40, 55, 70, 85];
-  for (const [index, departure] of departures.entries()) {
+  const flightCount = 'flightCount' in preset ? preset.flightCount : 5;
+  let departureAtUtc = inputs.startsAtUtc;
+  for (let index = 0; index < flightCount; index++) {
+    departureAtUtc = addMinutes(departureAtUtc, MINIMUM_DEPARTURE_SPACING_MINUTES);
     const gateId = gates[index % gates.length];
     // Flights take the checkpoints toward their gate in turn, so no single control carries the whole day.
     const toGate = routes
@@ -196,9 +202,9 @@ export function makeDraft(
       code: `DEMO ${101 + index}`,
       gateId,
       passengerCapacity: preset.count,
-      departureAtUtc: at(departure),
-      boardingOpensAtUtc: at(departure - 12),
-      boardingClosesAtUtc: at(departure - 2),
+      departureAtUtc,
+      boardingOpensAtUtc: addMinutes(departureAtUtc, -12),
+      boardingClosesAtUtc: addMinutes(departureAtUtc, -2),
       delayMinutes: 0,
       status: 'scheduled',
       isSynthetic: true,
@@ -215,8 +221,10 @@ export function makeDraft(
       routeId: route.id,
       passengerCount: preset.count,
       // A long day's passengers arrive in the 90 minutes before their flight, not all at the start.
-      startsAtUtc: at('departures' in preset ? Math.max(0, departure - 90) : 0),
-      endsAtUtc: at(departure - 2),
+      startsAtUtc: new Date(
+        Math.max(+start, Date.parse(addMinutes(departureAtUtc, -90))),
+      ).toISOString(),
+      endsAtUtc: addMinutes(departureAtUtc, -2),
     });
   }
   inputs.staffAllocations = layout.layout.staff
@@ -259,8 +267,11 @@ export function makeDraft(
     }
     const bottleneckArrival = (departureAtUtc: string) => {
       const window = bottleneckArrivalWindow(departureAtUtc, start.toISOString());
-      const mean = (window.minimum + window.maximum) / 2;
-      return { kind: 'uniform', ...window, mean, stdDev: 0, mode: mean };
+      // Adapt absolute scheduling to the legacy generator's distribution contract only here.
+      const minimum = (Date.parse(window.start) - +start) / 60000;
+      const maximum = (Date.parse(window.end) - +start) / 60000;
+      const mean = (minimum + maximum) / 2;
+      return { kind: 'uniform', minimum, maximum, mean, stdDev: 0, mode: mean };
     };
     const constant = (value: number) => ({
       kind: 'constant',
@@ -326,6 +337,13 @@ export function basicErrors(draft: StudioDraft): FieldErrors {
   integer(input.seed, 'inputs.seed', 0);
   if (input.snapshotIntervalMinutes != null)
     integer(input.snapshotIntervalMinutes, 'inputs.snapshotIntervalMinutes', 1, 5);
+  if (input.minimumDepartureSpacingMinutes != null)
+    integer(
+      input.minimumDepartureSpacingMinutes,
+      'inputs.minimumDepartureSpacingMinutes',
+      1,
+      10080,
+    );
   timestamp(input.startsAtUtc, 'inputs.startsAtUtc');
   try {
     if (input.timeZone !== 'UTC' && !input.timeZone.includes('/')) throw new Error();
@@ -345,6 +363,7 @@ export function basicErrors(draft: StudioDraft): FieldErrors {
     if (flight.boardingClosesAtUtc != null)
       timestamp(flight.boardingClosesAtUtc, path + '.boardingClosesAtUtc');
   });
+  Object.assign(errors, departureSpacingErrors(input));
   input.populations.forEach((row, index) =>
     integer(row.count, `inputs.populations[${index}].count`, 1),
   );
@@ -356,6 +375,38 @@ export function basicErrors(draft: StudioDraft): FieldErrors {
   input.events.forEach((row, index) =>
     timestamp(row.occurredAtUtc, `inputs.events[${index}].occurredAtUtc`),
   );
+  return errors;
+}
+
+export function departureSpacingErrors(input: ScenarioInputs): FieldErrors {
+  const minimum = input.minimumDepartureSpacingMinutes;
+  if (!Number.isInteger(minimum) || minimum! < 1 || minimum! > 10080) return {};
+  const departures = input.flights
+    .map((flight, index) => ({
+      flight,
+      index,
+      time: Date.parse(flight.departureAtUtc) + (flight.delayMinutes ?? 0) * 60000,
+    }))
+    .filter(
+      ({ flight, time }) =>
+        flight.status !== 'cancelled' &&
+        Number.isFinite(time) &&
+        Number.isInteger(flight.delayMinutes ?? 0) &&
+        (flight.delayMinutes ?? 0) >= 0 &&
+        (flight.delayMinutes ?? 0) <= 10080,
+    )
+    .sort((a, b) => a.time - b.time);
+  const errors: Record<string, string[]> = {};
+  for (let index = 1; index < departures.length; index++) {
+    const first = departures[index - 1],
+      second = departures[index];
+    if (second.time - first.time >= minimum! * 60000) continue;
+    const message = `Plecările ${first.flight.code} și ${second.flight.code} trebuie distanțate cu minimum ${minimum} de minute, inclusiv întârzierile configurate.`;
+    for (const departure of [first, second]) {
+      const field = `inputs.flights[${departure.index}].departureAtUtc`;
+      (errors[field] ??= []).push(message);
+    }
+  }
   return errors;
 }
 

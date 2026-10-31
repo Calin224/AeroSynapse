@@ -119,18 +119,19 @@ describe('Bottleneck demo preset', () => {
       draft = makeDraft(layout, 'bottleneck', new Date('2026-10-17T08:00:00Z'));
     expect(draft.name).toBe('Bottleneck · DEMO');
     expect(draft.inputs.seed).toBe(42);
-    expect(draft.inputs.durationMinutes).toBe(90);
+    expect(draft.inputs.durationMinutes).toBe(360);
     expect(draft.inputs.populations.reduce((sum, row) => sum + row.count, 0)).toBe(600);
     expect(draft.inputs.flights).toHaveLength(5);
     expect(draft.inputs.staffAllocations).toHaveLength(1);
     expect(
       draft.inputs.passengerGeneration!.batches.every(
-        (row) =>
+        (row, index) =>
           row.checkpointId === ids.cp &&
           Math.abs(row.service.mean / layout.layout.checkpoints[0].capacityPerMinute - 1 / 3) <
             1e-12 &&
           row.arrival.maximum - row.arrival.minimum <= 35 &&
-          row.arrival.maximum <= 75,
+          row.arrival.maximum ===
+            (Date.parse(draft.inputs.flights[index].departureAtUtc) - Date.parse(draft.inputs.startsAtUtc)) / 60000 - 10,
       ),
     ).toBe(true);
     expect(basicErrors(draft)).toEqual({});

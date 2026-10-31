@@ -13,15 +13,6 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectNone('/api/health');
-    TestBed.inject(HttpTestingController).expectNone('/intelligence/health');
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
   it('offers the feature routes in the application header', async () => {
     TestBed.inject(SessionState).session.set({
       username: 'navigation-test',
@@ -35,10 +26,12 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('a[href="/control-tower"]')).toBeTruthy();
-    expect(compiled.querySelector('a[href="/scenario"]')).toBeTruthy();
-    expect(compiled.querySelector('app-header nav a[href="/operations"]')).toBeTruthy();
-    expect(compiled.querySelector('app-header nav a[href="/batches"]')).toBeTruthy();
-    expect(compiled.querySelector('app-header nav a[href="/scenario-studio"]')).toBeTruthy();
+    expect(
+      compiled.querySelector('app-header nav a[href="/control-tower/configure"]'),
+    ).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/operations"]')).toBeNull();
+    expect(compiled.querySelector('app-header nav a[href="/control-tower/batches"]')).toBeTruthy();
+    expect(compiled.querySelector('app-header nav a[href="/control-tower/compare"]')).toBeTruthy();
     expect(compiled.querySelector('app-header nav a[href="/passenger"]')).toBeNull();
     expect(compiled.querySelector('app-header nav a[href="/evacuation-training"]')).toBeNull();
   });

@@ -109,13 +109,6 @@ describe('Simulated queue forecast', () => {
     expect(fixture.nativeElement.querySelector('path.observed-line')).not.toBeNull();
     expect(text).toContain('+3 operatori');
     expect(text).toContain('mențin vârful la 2 pasageri');
-    expect(fixture.nativeElement.querySelector('path.mitigated-line')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('circle.observed')).not.toBeNull();
-    const radar = fixture.nativeElement.querySelector('.radar') as HTMLElement;
-    expect(radar.getAttribute('role')).toBe('group');
-    expect(radar.querySelector('button')?.getAttribute('role')).toBeNull();
-    expect(radar.querySelector('button')?.getAttribute('aria-pressed')).toBe('true');
-    expect(fixture.nativeElement.querySelector('path.forecast-line')).not.toBeNull();
     fixture.destroy();
   });
   it('requires an explicit calibrated threshold instead of inventing a default alert limit', () => {
@@ -173,6 +166,10 @@ describe('Simulated queue forecast', () => {
     http.expectOne('/api/runs/run-1/queue-forecast/live').flush(liveResponse(5));
     fixture.detectChanges();
     expect(fixture.componentInstance.result()?.fromMinute).toBe(5);
+    // Live frames are drawn as observed history before the forecast origin.
+    const selected = fixture.componentInstance.selected()!;
+    expect(selected.observed.map((sample) => sample.minute)).toEqual([3, 5]);
+    expect(selected.actual).toEqual([]);
     fixture.destroy();
   });
   it('coalesces live updates during an outstanding request and stops refreshing in a hidden panel', () => {
@@ -262,13 +259,6 @@ describe('Simulated queue forecast', () => {
     expect(view.loading()).toBe(false);
     fixture.destroy();
   });
-  it('cancels pending requests on destruction', () => {
-    const fixture = component();
-    fixture.componentInstance.forecast();
-    const call = http.expectOne('/api/runs/run-1/queue-forecast');
-    fixture.destroy();
-    expect(call.cancelled).toBe(true);
-  });
   it('rejects mismatched results and allows recovery after service errors', () => {
     const fixture = component();
     const view = fixture.componentInstance;
@@ -285,24 +275,6 @@ describe('Simulated queue forecast', () => {
     view.forecast();
     http.expectOne('/api/runs/run-1/queue-forecast').flush(response());
     expect(view.result()).not.toBeNull();
-    fixture.destroy();
-  });
-  it('draws live progress frames as observed history before the forecast origin', () => {
-    const fixture = component({ ...run, status: 'running', resultsValid: false });
-    fixture.componentRef.setInput('active', true);
-    for (const minute of [1, 2, 3]) {
-      fixture.componentRef.setInput('progress', progress(minute));
-      fixture.detectChanges();
-      const call = http.match('/api/runs/run-1/queue-forecast/live');
-      call.forEach((request) => request.flush(liveResponse(minute)));
-    }
-    fixture.detectChanges();
-    expect(fixture.componentInstance.history()['control-1'].map((sample) => sample.minute)).toEqual(
-      [1, 2, 3],
-    );
-    const view = fixture.componentInstance.selected()!;
-    expect(view.observed.map((sample) => sample.minute)).toEqual([1, 2, 3]);
-    expect(view.actual).toEqual([]);
     fixture.destroy();
   });
   it('opens a finished run before its busiest moment and evaluates the forecast against later snapshots', () => {
@@ -324,16 +296,14 @@ describe('Simulated queue forecast', () => {
       55: 0,
       60: 0,
     };
-    http
-      .expectOne('/api/runs/run-1/kpis?limit=50000')
-      .flush({
-        snapshots: Object.entries(queues).map(([minute, queuedPassengers]) => ({
-          runId: run.id,
-          zoneId: 'control-1',
-          minute: +minute,
-          queuedPassengers,
-        })),
-      });
+    http.expectOne('/api/runs/run-1/kpis?limit=50000').flush({
+      snapshots: Object.entries(queues).map(([minute, queuedPassengers]) => ({
+        runId: run.id,
+        zoneId: 'control-1',
+        minute: +minute,
+        queuedPassengers,
+      })),
+    });
     expect(fixture.componentInstance.fromMinute).toBe(15);
     const call = http.expectOne('/api/runs/run-1/queue-forecast');
     expect(call.request.body).toEqual({

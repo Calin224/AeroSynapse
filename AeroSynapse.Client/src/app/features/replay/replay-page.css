@@ -98,13 +98,9 @@ h1 {
   font-size: 32px;
   color: var(--accent);
 }
-.replay-empty h2 {
-  font-size: 20px;
-  margin: 18px 0 10px;
-}
 .replay-empty p {
   max-width: 450px;
-  margin: auto;
+  margin: 18px auto 0;
   color: var(--text-muted);
 }
 @media (max-width: 650px) {

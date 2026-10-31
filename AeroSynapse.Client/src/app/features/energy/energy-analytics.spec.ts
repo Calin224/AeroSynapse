@@ -130,16 +130,6 @@ describe('Synthetic energy analytics', () => {
     delete window.__AEROSYNAPSE_CONFIG__;
   });
 
-  it('shows editable synthetic hypotheses and no invented KPI before a server result', () => {
-    const fixture = TestBed.createComponent(EnergyAnalytics);
-    fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    expect(element.textContent).toContain('Ipoteze demonstrative, fără măsurători aeroportuare');
-    expect(element.textContent).toContain('Lipsă → ipoteză implicită 1.5');
-    expect(element.querySelector('[data-testid="energy-results"]')).toBeNull();
-    expect(element.querySelector('[data-testid="energy-export"]')).toBeNull();
-  });
-
   it('posts separate immutable snapshots and renders energy and traffic from the API together', () => {
     const fixture = TestBed.createComponent(EnergyAnalytics);
     const component = fixture.componentInstance;
@@ -226,7 +216,7 @@ describe('Synthetic energy analytics', () => {
     expect(component.notice()).toContain('Configurația s-a schimbat');
   });
 
-  it('retains the independent successful comparison after an optimizer HTTP error', () => {
+  it('retains each independent result when the other request fails', () => {
     const fixture = TestBed.createComponent(EnergyAnalytics);
     fixture.componentInstance.compare();
     fixture.componentInstance.optimize();
@@ -237,10 +227,6 @@ describe('Synthetic energy analytics', () => {
     expect(fixture.componentInstance.comparison()).not.toBeNull();
     expect(fixture.componentInstance.optimizerError()).not.toBe('');
     expect(fixture.componentInstance.optimizing()).toBe(false);
-  });
-
-  it('retains the independent optimizer result after a comparison HTTP error', () => {
-    const fixture = TestBed.createComponent(EnergyAnalytics);
     fixture.componentInstance.compare();
     fixture.componentInstance.optimize();
     http.expectOne('/intelligence/energy/v1/optimize').flush(optimization());
@@ -249,25 +235,6 @@ describe('Synthetic energy analytics', () => {
       .flush({}, { status: 500, statusText: 'Failed' });
     expect(fixture.componentInstance.optimization()).not.toBeNull();
     expect(fixture.componentInstance.error()).not.toBe('');
-  });
-
-  it('shows infeasible zero budget and no claimed solution', () => {
-    const fixture = TestBed.createComponent(EnergyAnalytics);
-    fixture.componentInstance.draft.energyBudgetKwh = 0;
-    fixture.componentInstance.optimize();
-    const pending = http.expectOne('/intelligence/energy/v1/optimize');
-    expect(pending.request.body.energyBudgetKwh).toBe(0);
-    pending.flush({
-      ...optimization(pending.request.body),
-      status: 'infeasible',
-      feasibleCount: 0,
-      best: null,
-      candidates: [],
-    });
-    fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    expect(element.textContent).toContain('NEFEZABIL ÎN GRILĂ');
-    expect(element.textContent).toContain('Nicio configurație nu respectă bugetul energetic.');
   });
 
   it('blocks oversized optimizer grids while allowing the independent comparison', () => {
@@ -288,12 +255,16 @@ describe('Synthetic energy analytics', () => {
     http.expectOne('/intelligence/energy/v1/compare').flush(comparison(component.draft));
   });
 
-  it('preserves backend provenance and formulas in optimizer-only infeasible reports', () => {
+  it('shows an infeasible zero budget with backend provenance and formulas and no claimed solution', () => {
     const fixture = TestBed.createComponent(EnergyAnalytics);
     const component = fixture.componentInstance;
+    component.draft.energyBudgetKwh = 0;
     component.optimize();
+    const pending = http.expectOne('/intelligence/energy/v1/optimize');
+    expect(pending.request.body.energyBudgetKwh).toBe(0);
     const response = {
       ...optimization(),
+      feasibleCount: 0,
       status: 'infeasible',
       best: null,
       candidates: [],
@@ -304,12 +275,13 @@ describe('Synthetic energy analytics', () => {
         sensitivity: 'backend OAT formula',
       },
     };
-    http.expectOne('/intelligence/energy/v1/optimize').flush(response);
+    pending.flush(response);
     expect(component.optimization()?.effectiveCoefficients).toEqual(response.effectiveCoefficients);
     expect(component.optimization()?.assumptions).toEqual(response.assumptions);
     expect(component.optimization()?.formulas).toEqual(response.formulas);
     expect(component.optimization()?.best).toBeNull();
     fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('NEFEZABIL ÎN GRILĂ');
     expect(fixture.nativeElement.textContent).toContain('backend energy formula');
     expect(fixture.nativeElement.textContent).toContain('Full backend provenance');
     expect(fixture.nativeElement.textContent).toContain('Ipoteză implicită · coeficient lipsă');

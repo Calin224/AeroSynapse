@@ -44,8 +44,7 @@
   font-size: 12px;
   margin-top: 3px;
 }
-.empty,
-.panel-note {
+.empty {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
@@ -53,21 +52,12 @@
 .empty {
   padding: 13px 0;
 }
-.panel-note {
-  margin: 0;
-  padding: 8px 14px;
-}
 @media (min-width: 1101px) and (max-height: 820px) {
   .panel-title {
     padding: 8px 12px;
   }
   .panel-scroll {
     max-height: 90px;
-  }
-  .panel-note {
-    padding: 4px 14px;
-    font-size: 12px;
-    line-height: 1.35;
   }
 }
 @media (max-width: 550px) {

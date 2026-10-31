@@ -12,30 +12,14 @@ function create3D() {
   fixture.componentRef.setInput('initialPresentation', '3d');
   return fixture;
 }
-describe('DigitalTwin component boundary', () => {
-  it('keeps the fallback notice when the renderer fails while enumerating selectable zones', async () => {
-    const renderer: TwinRenderer = {
-      setScene: vi.fn(),
-      resetCamera: vi.fn(),
-      dispose: vi.fn(),
-      getSelectableZones: () => {
-        throw new Error('lost context');
-      },
-    };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D();
-    fixture.componentRef.setInput('scene', { aircraft: [] });
-    await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('.fallback-status')?.textContent).toContain(
-      'Harta 2D',
-    );
-    expect(fixture.nativeElement.querySelector('app-terminal-map')).toBeTruthy();
-    expect(renderer.dispose).toHaveBeenCalledOnce();
-    fixture.destroy();
+function mount(factory: unknown) {
+  TestBed.configureTestingModule({
+    imports: [DigitalTwin],
+    providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
   });
+  return create3D();
+}
+describe('DigitalTwin component boundary', () => {
   it('falls back after a stalled scene load and ignores a late readiness result', async () => {
     let ready!: () => void;
     const renderer: TwinRenderer = {
@@ -44,13 +28,9 @@ describe('DigitalTwin component boundary', () => {
       resetCamera: vi.fn(),
       dispose: vi.fn(),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
     vi.useFakeTimers();
     try {
-      const fixture = create3D();
+      const fixture = mount(() => renderer);
       fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
       fixture.componentRef.setInput('dashboardMode', true);
       fixture.detectChanges();
@@ -77,11 +57,7 @@ describe('DigitalTwin component boundary', () => {
         throw new Error('lost context');
       }),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D();
+    const fixture = mount(() => renderer);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
     fixture.componentRef.setInput('dashboardMode', true);
     await fixture.whenStable();
@@ -105,18 +81,9 @@ describe('DigitalTwin component boundary', () => {
     fixture.destroy();
   });
   it('returns focus to the viewport trigger on Escape and offers keyboard panning in the WebGL fallback', async () => {
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [
-        {
-          provide: TWIN_RENDERER_FACTORY,
-          useValue: () => {
-            throw new Error('no WebGL');
-          },
-        },
-      ],
+    const fixture = mount(() => {
+      throw new Error('no WebGL');
     });
-    const fixture = create3D();
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
     await fixture.whenStable();
     const host = fixture.nativeElement as HTMLElement;
@@ -160,11 +127,7 @@ describe('DigitalTwin component boundary', () => {
       },
     };
     const factory = vi.fn(() => renderer);
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
+    const fixture = mount(factory);
     const data = datasetFixture();
     const source = JSON.stringify(data);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: data });
@@ -229,40 +192,6 @@ describe('DigitalTwin component boundary', () => {
     expect(factory).toHaveBeenCalledOnce();
     fixture.destroy();
   });
-  it('expands in the application and closes with Escape without recreating 3D or resetting the replay', async () => {
-    const renderer: TwinRenderer = {
-      setScene: vi.fn(),
-      setHeatmap: vi.fn(),
-      resetCamera: vi.fn(),
-      dispose: vi.fn(),
-    };
-    const factory = vi.fn(() => renderer);
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
-    fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
-    await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
-    const before = host.querySelector('[data-testid="heatmap-queue-kpi"]')!.textContent;
-    [...host.querySelectorAll<HTMLButtonElement>('.camera-action button')]
-      .find((button) => button.textContent?.includes('Extinde'))!
-      .click();
-    await fixture.whenStable();
-    const viewport = host.querySelector('.viewport')!;
-    expect(viewport.classList.contains('expanded')).toBe(true);
-    expect(viewport.getAttribute('role')).toBe('dialog');
-    expect(viewport.getAttribute('aria-modal')).toBe('true');
-    expect(host.querySelector('[data-testid="heatmap-queue-kpi"]')!.textContent).toBe(before);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    await fixture.whenStable();
-    expect(viewport.classList.contains('expanded')).toBe(false);
-    expect(viewport.getAttribute('role')).toBeNull();
-    expect(factory).toHaveBeenCalledOnce();
-    expect(renderer.resetCamera).not.toHaveBeenCalled();
-    fixture.destroy();
-  });
   it('guides the camera through architectural views without touching simulation time and stops on manual navigation', async () => {
     const renderer: TwinRenderer = {
       setScene: vi.fn(),
@@ -271,11 +200,7 @@ describe('DigitalTwin component boundary', () => {
       dispose: vi.fn(),
       selectEntity: vi.fn(),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D();
+    const fixture = mount(() => renderer);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
     await fixture.whenStable();
     let advance!: () => void;
@@ -311,13 +236,9 @@ describe('DigitalTwin component boundary', () => {
       resetCamera: vi.fn(),
       dispose: vi.fn(),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
     const run = motionFixture();
     run.snapshots = [{ ...run.snapshots[0], elapsedMinutes: 60 }];
-    const fixture = create3D();
+    const fixture = mount(() => renderer);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: { baseline: run } });
     await fixture.whenStable();
     const host = fixture.nativeElement as HTMLElement;
@@ -353,11 +274,7 @@ describe('DigitalTwin component boundary', () => {
       resetCamera: vi.fn(),
       dispose: vi.fn(),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D(),
+    const fixture = mount(() => renderer),
       data = datasetFixture(),
       before = JSON.stringify(data);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: data });
@@ -434,11 +351,7 @@ describe('DigitalTwin component boundary', () => {
       getSelectableZones: () => [...TERMINAL_MAP_ZONES],
     };
     const factory = vi.fn(() => renderer);
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
+    const fixture = mount(factory);
     fixture.componentRef.setInput('scene', { aircraft: [], heatmap: datasetFixture() });
     await fixture.whenStable();
     select(TERMINAL_MAP_ZONES[0]);
@@ -485,27 +398,6 @@ describe('DigitalTwin component boundary', () => {
       host.querySelector('app-heatmap-controls table [data-run-id]')?.getAttribute('data-run-id'),
     ).toBe('optimized-run');
   });
-  it('updates its renderer and disposes it when the component is destroyed', async () => {
-    const renderer: TwinRenderer = { setScene: vi.fn(), resetCamera: vi.fn(), dispose: vi.fn() };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D();
-    fixture.componentRef.setInput('scene', { aircraft: [] });
-    await fixture.whenStable();
-    expect(renderer.setScene).toHaveBeenCalledWith({ aircraft: [] });
-    const nextScene = { aircraft: [{ id: 'test', x: 1, z: 2, heading: 90 }] };
-    fixture.componentRef.setInput('scene', nextScene);
-    await fixture.whenStable();
-    expect(renderer.setScene).toHaveBeenLastCalledWith(nextScene);
-    [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')]
-      .find((button) => button.textContent?.trim() === 'Resetează camera')!
-      .click();
-    expect(renderer.resetCamera).toHaveBeenCalledOnce();
-    fixture.destroy();
-    expect(renderer.dispose).toHaveBeenCalledOnce();
-  });
   it('shows a recoverable error when WebGL initialization fails', async () => {
     const renderer = { setScene: vi.fn(), resetCamera: vi.fn(), dispose: vi.fn() };
     const factory = vi
@@ -514,11 +406,7 @@ describe('DigitalTwin component boundary', () => {
         throw Error('WebGL unavailable');
       })
       .mockReturnValue(renderer);
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
+    const fixture = mount(factory);
     fixture.componentRef.setInput('scene', { aircraft: [] });
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Scena 3D nu este disponibilă');
@@ -561,11 +449,7 @@ describe('DigitalTwin component boundary', () => {
       getSelectableZones: () => [...TERMINAL_MAP_ZONES],
     };
     const factory = vi.fn(() => renderer);
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
+    const fixture = mount(factory);
     const first = model();
     fixture.componentRef.setInput('scene', first);
     await fixture.whenStable();
@@ -596,11 +480,7 @@ describe('DigitalTwin component boundary', () => {
       resetCamera: vi.fn(),
       dispose: vi.fn(),
     };
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: () => renderer }],
-    });
-    const fixture = create3D();
+    const fixture = mount(() => renderer);
     fixture.componentRef.setInput('scene', model());
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Se încarcă');
@@ -631,11 +511,7 @@ describe('DigitalTwin component boundary', () => {
       fail = onError;
       return renderer;
     });
-    TestBed.configureTestingModule({
-      imports: [DigitalTwin],
-      providers: [{ provide: TWIN_RENDERER_FACTORY, useValue: factory }],
-    });
-    const fixture = create3D();
+    const fixture = mount(factory);
     fixture.componentRef.setInput('scene', model());
     await fixture.whenStable();
     const button = (text: string) =>

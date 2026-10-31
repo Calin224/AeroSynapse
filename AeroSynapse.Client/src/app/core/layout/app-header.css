@@ -303,6 +303,12 @@ dialog::backdrop {
     display: none;
   }
 }
+/* Desktop has the sidebar; the bar only carries the mobile menu button. */
+@media (min-width: 1101px) {
+  .topbar {
+    display: none;
+  }
+}
 @media (max-height: 760px) and (min-width: 1101px) {
   .sidebar {
     padding-top: 16px;
@@ -310,4 +316,42 @@ dialog::backdrop {
   .sidebar-bottom {
     padding-top: 0;
   }
+}
+
+.nav-entry {
+  display: flex;
+  align-items: stretch;
+}
+.nav-entry > a {
+  flex: 1;
+  min-width: 0;
+}
+.nav-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 0;
+  min-height: 44px;
+  background: var(--panel);
+  color: var(--text);
+}
+.nav-toggle i.collapsed {
+  transform: rotate(-90deg);
+}
+.nav-entry:has(> a.active) .nav-toggle {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.nav-entry:has(> a.active) .nav-toggle:hover {
+  background: var(--accent-hover);
+}
+.nav-children {
+  margin: 4px 0 10px 20px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+.nav-children a {
+  gap: 8px;
+  font-size: 12px;
 }
