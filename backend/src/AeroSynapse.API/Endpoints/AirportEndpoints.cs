@@ -1,5 +1,6 @@
 using AeroSynapse.Application.Airports;
 using AeroSynapse.Domain.Airports;
+using AeroSynapse.Domain.DigitalTwin;
 using MediatR;
 
 namespace AeroSynapse.API.Endpoints;
@@ -27,6 +28,21 @@ public static class AirportEndpoints
             }
         }).WithTags("Airports").WithSummary("Validate and create a complete airport map")
             .Produces<AirportMapSnapshot>(201).Produces(422).Produces(409).Produces(400);
+
+        app.MapGet("/api/airports/{airportId:guid}/navigation", async (Guid airportId, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var snapshot = await sender.Send(new GetAirportSnapshotQuery(airportId), cancellationToken);
+            if (snapshot is null) return Results.NotFound();
+            try
+            {
+                return Results.Ok(NavigationGraphImporter.FromMap(snapshot.Map));
+            }
+            catch (AirportMapValidationException exception)
+            {
+                return Results.UnprocessableEntity(new { message = "Map cannot be exported for navigation.", issues = exception.Issues });
+            }
+        }).WithTags("Airports").WithSummary("Export an airport map as a navigation graph")
+            .Produces<NavigationConfig>().Produces(404).Produces(422);
 
         app.MapGet("/api/airports/{airportId:guid}/snapshot", async (Guid airportId, ISender sender, CancellationToken cancellationToken) =>
         {

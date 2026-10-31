@@ -63,6 +63,7 @@ Rutele de mai jos sunt disponibile doar în mediul `Development`, pentru lucrul 
 | `POST /api/airports` | 201 cu snapshot-ul hărții și antetul `Location`; 400 pentru JSON invalid; 422 cu `issues` pentru erori de domeniu; 409 pentru ID-uri deja folosite. |
 | `GET /api/airports` | 200 cu cel mult 100 de aeroporturi, ordonate după nume și ID. |
 | `GET /api/airports/{airportId}/snapshot` | 200 cu snapshot-ul versionat sau 404 dacă aeroportul nu există. |
+| `GET /api/airports/{airportId}/navigation` | 200 cu graful de navigație, 404 dacă aeroportul nu există sau 422 cu `issues` dacă harta depășește limitele de navigație. |
 
 Exemplu de creare și listare, rulat din rădăcina repository-ului:
 
@@ -104,7 +105,7 @@ Zonele și muchiile indisponibile rămân în graf cu `IsActive = false`. Dispon
 
 Importul verifică structura hărții și limitele contractului de navigație: 1–2000 de zone, maximum 10000 de rute, 1000 de checkpoint-uri și 1000 de porți, nume de zone de maximum 160 de caractere, coordonate între −1000000 și 1000000 metri, distanțe de maximum 1000000 metri și durate între 0,001 și 604800 de secunde. Valorile invalide produc `AirportMapValidationException` cu detalii despre câmp.
 
-O hartă poate fi proiectată în graf chiar dacă are zone inactive sau componente deconectate. Importul folosește `AirportMapValidator.Validate(map, validateNavigation: false)` pentru verificările structurale; salvarea hărților folosește în continuare validarea completă implicită. Componenta este disponibilă în Application; calculul traseelor și un endpoint HTTP pentru graf vor fi integrate separat.
+O hartă poate fi proiectată în graf chiar dacă are zone inactive sau componente deconectate. Importul folosește `AirportMapValidator.Validate(map, validateNavigation: false)` pentru verificările structurale; salvarea hărților folosește în continuare validarea completă implicită. Graful unei hărți salvate este disponibil prin `GET /api/airports/{airportId}/navigation`, doar în `Development`. Exportul nu modifică harta; o hartă validă pentru stocare poate primi 422 la export dacă depășește limitele mai stricte ale navigației. Calculul traseelor va fi integrat separat.
 
 ## Scop
 

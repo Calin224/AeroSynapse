@@ -216,6 +216,51 @@ public sealed class AirportMapApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Navigation_endpoint_exports_the_stored_map_as_a_graph()
+    {
+        var map = MapFixture.Create();
+        using var created = await client.PostAsJsonAsync("/api/airports", map, MapFixture.Json);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        using var response = await client.GetAsync($"/api/airports/{map.Airport.Id}/navigation");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var graph = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("1.0", graph.GetProperty("navigationVersion").GetString());
+        Assert.Equal(map.Zones.Select(zone => zone.Id).Order(),
+            graph.GetProperty("graph").GetProperty("nodes").EnumerateArray().Select(node => node.GetProperty("id").GetGuid()).Order());
+        Assert.Equal(map.Routes.Select(route => route.Id).Order(),
+            graph.GetProperty("graph").GetProperty("edges").EnumerateArray().Select(edge => edge.GetProperty("id").GetGuid()).Order());
+        Assert.Equal(map.Gates[0].Id, graph.GetProperty("gateBindings")[0].GetProperty("resourceId").GetGuid());
+    }
+
+    [Fact]
+    public async Task Navigation_limits_return_field_issues_without_changing_the_stored_map()
+    {
+        var map = MapFixture.Create();
+        map.Zones[0].Name = new string('x', 161);
+        using var created = await client.PostAsJsonAsync("/api/airports", map, MapFixture.Json);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        using var response = await client.GetAsync($"/api/airports/{map.Airport.Id}/navigation");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains(error.GetProperty("issues").EnumerateArray(), issue =>
+            issue.GetProperty("code").GetString() == "navigation_limit"
+            && issue.GetProperty("objectId").GetGuid() == map.Zones[0].Id
+            && issue.GetProperty("field").GetString() == "name");
+        var snapshot = await client.GetFromJsonAsync<AirportMapSnapshot>(created.Headers.Location, MapFixture.Json);
+        Assert.NotNull(snapshot);
+        Assert.Equal(map.Zones[0].Name, snapshot.Map.Zones.Single(zone => zone.Id == map.Zones[0].Id).Name);
+    }
+
+    [Fact]
+    public async Task Navigation_for_an_unknown_airport_returns_not_found()
+    {
+        using var response = await client.GetAsync($"/api/airports/{Guid.NewGuid()}/navigation");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private sealed class AirportApiFactory(string path) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
