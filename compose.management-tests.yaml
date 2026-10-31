@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: local-test-only
+    healthcheck:
+      test: [CMD, pg_isready, -U, aerosynapse, -d, postgres]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  intelligence:
+    build:
+      context: .
+      dockerfile: intelligence/Dockerfile
+      target: runtime
+    environment:
+      LOG_LEVEL: warning
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: local-test-only
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  management-tests:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: management-tests
+    environment:
+      Postgres__Host: postgres
+      Postgres__Database: postgres
+      Postgres__Username: aerosynapse
+      Postgres__Password: local-test-only
+      SIMULATION_TEST_URL: http://intelligence:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      intelligence:
+        condition: service_healthy

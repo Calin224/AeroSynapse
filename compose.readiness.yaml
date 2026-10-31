@@ -1,0 +1,8 @@
+# Only used with compose.critical-tests.yaml and a fresh, owned project.
+services:
+  browser-tests:
+    entrypoint: [npm, run, test:readiness]
+    environment:
+      READINESS_PHASE: ${READINESS_PHASE:-prepare}
+      QA_RUN_BUDGET_MS: ${QA_RUN_BUDGET_MS:-120000}
+      QA_READ_P95_MS: ${QA_READ_P95_MS:-2000}

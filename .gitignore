@@ -1,15 +1,36 @@
 **/bin/
 **/obj/
 .vs/
-.idea/
 *.user
 *.suo
 .DS_Store
 .env
 .env.*
 !.env.example
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
 appsettings.*.Local.json
-*.db
-*.db-*
-TestResults/
-coverage/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local airport map storage
+airport-maps.db*
+identity.db*
+
+# Isolated critical-suite reports (can include synthetic snapshots and screenshots).
+/artifacts/
+/.local-demo/
+**/database.dump
+**/api-data.tar.gz
+**/.ruff_cache/
+
+# Blender backups and generated previews.
+/assets/blender/*.blend[0-9]*
+/assets/blender/*.png
+/assets/blender/*.jpg
+/assets/blender/*.jpeg

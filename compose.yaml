@@ -1,0 +1,188 @@
+name: ${COMPOSE_PROJECT_NAME:-aerosynapse}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aerosynapse}
+      POSTGRES_USER: ${POSTGRES_USER:-aerosynapse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run node scripts/init-demo.mjs}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" && PGPASSWORD="$$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -tAc "SELECT 1" | grep -q 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    build: &api-build
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: &api-environment
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Logging__LogLevel__Default: ${API_LOG_LEVEL:-Information}
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Postgres__Host: postgres
+      Postgres__Port: "5432"
+      Postgres__Database: ${POSTGRES_DB:-aerosynapse}
+      Postgres__Username: ${POSTGRES_USER:-aerosynapse}
+      Postgres__Password: ${POSTGRES_PASSWORD:?Run node scripts/init-demo.mjs}
+      Database__ApplyMigrations: ${APPLY_MIGRATIONS:-true}
+      Database__SeedSynthetic: ${SEED_SYNTHETIC_DATA:-true}
+      Intelligence__BaseUrl: http://intelligence:8000/
+      Intelligence__TimeoutSeconds: ${SIMULATION_TIMEOUT_SECONDS:-10}
+      Intelligence__ReconciliationSeconds: ${SIMULATION_RECONCILIATION_SECONDS:-120}
+      Simulation__BaseUrl: http://intelligence:8000
+      Simulation__WorkerEnabled: ${SIMULATION_WORKER_ENABLED:-true}
+      Copilot__Enabled: ${COPILOT_ENABLED:-false}
+      Copilot__Endpoint: ${COPILOT_ENDPOINT:-http://host.docker.internal:11434/api/chat}
+      Copilot__Model: ${COPILOT_MODEL:-}
+      Copilot__ApiKey: ${COPILOT_API_KEY:-}
+      Copilot__TimeoutSeconds: ${COPILOT_TIMEOUT_SECONDS:-8}
+      # Live AI agent (Gemini). Without an answer from it, a deterministic fallback rule decides and runs continue.
+      Agent__ApiKey: ${GEMINI_API_KEY:-}
+      Agent__Model: ${AGENT_MODEL:-gemini-2.5-flash}
+      CopilotTranscripts__DefaultRetentionHours: ${COPILOT_TRANSCRIPT_RETENTION_HOURS:-24}
+      CopilotTranscripts__MaxRetentionHours: ${COPILOT_TRANSCRIPT_MAX_HOURS:-168}
+      CopilotTranscripts__KeyDirectory: /data/copilot-keys
+      Identity__KeyDirectory: /data/copilot-keys
+      Identity__Session__DurationMinutes: ${IDENTITY_SESSION_MINUTES:-30}
+      Audit__RetentionDays: ${AUDIT_RETENTION_DAYS:-90}
+      Security__ReadPerMinute: ${SECURITY_READ_PER_MINUTE:-600}
+      Security__WritePerMinute: ${SECURITY_WRITE_PER_MINUTE:-120}
+      Security__OptimizationPerMinute: ${SECURITY_OPTIMIZATION_PER_MINUTE:-20}
+      Security__MaxJsonBytes: ${SECURITY_MAX_JSON_BYTES:-2097152}
+      Identity__Demo__Enabled: ${IDENTITY_DEMO_ENABLED:-false}
+      Identity__Demo__ViewerPassword: ${IDENTITY_DEMO_VIEWER_PASSWORD:-}
+      Identity__Demo__OperatorPassword: ${IDENTITY_DEMO_OPERATOR_PASSWORD:-}
+      Identity__Demo__AdminPassword: ${IDENTITY_DEMO_ADMIN_PASSWORD:-}
+      Operations__Enabled: ${OPERATIONS_ENABLED:-true}
+      Operations__BroadcastIntervalMilliseconds: ${OPERATIONS_BROADCAST_MILLISECONDS:-500}
+      Operations__MaxEventsPerBatch: ${OPERATIONS_EVENTS_PER_BATCH:-32}
+      Operations__EnginePollMilliseconds: ${OPERATIONS_ENGINE_POLL_MILLISECONDS:-1000}
+    ports:
+      - "${HOST_BIND_IP:-127.0.0.1}:${API_PORT:-5080}:8080"
+    volumes:
+      - airport-maps-data:/data
+    networks: [backend, edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --show-error, --max-time, "4", http://127.0.0.1:8080/health/ready]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+    logging: *logging
+
+  intelligence:
+    build:
+      context: .
+      dockerfile: intelligence/Dockerfile
+      target: runtime
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${INTELLIGENCE_LOG_LEVEL:-info}
+      ROOT_PATH: /intelligence
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-aerosynapse}
+      POSTGRES_USER: ${POSTGRES_USER:-aerosynapse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run node scripts/init-demo.mjs}
+      SIMULATION_DEMO_BUDGET_MS: ${SIMULATION_DEMO_BUDGET_MS:-5000}
+      QUEUE_ML_PREDICTOR: ${QUEUE_ML_PREDICTOR:-disabled}
+      BAGGAGE_TWIN_ENABLED: ${BAGGAGE_TWIN_ENABLED:-false}
+      AIRSIDE_TWIN_ENABLED: ${AIRSIDE_TWIN_ENABLED:-false}
+      ENERGY_ANALYTICS_ENABLED: ${ENERGY_ANALYTICS_ENABLED:-false}
+    ports:
+      - "${HOST_BIND_IP:-127.0.0.1}:${INTELLIGENCE_PORT:-8000}:8000"
+    networks: [backend, edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./AeroSynapse.Client
+    environment:
+      API_UPSTREAM: api:8080
+      INTELLIGENCE_UPSTREAM: intelligence:8000
+      FRONTEND_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api}
+      FRONTEND_INTELLIGENCE_BASE_URL: ${FRONTEND_INTELLIGENCE_BASE_URL:-/intelligence}
+      BAGGAGE_TWIN_ENABLED: ${BAGGAGE_TWIN_ENABLED:-false}
+      AIRSIDE_TWIN_ENABLED: ${AIRSIDE_TWIN_ENABLED:-false}
+      ENERGY_ANALYTICS_ENABLED: ${ENERGY_ANALYTICS_ENABLED:-false}
+    ports:
+      - "${HOST_BIND_IP:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
+    networks: [edge]
+    depends_on:
+      api:
+        condition: service_healthy
+      intelligence:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1/health]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+    logging: *logging
+
+  # Explicit tool profile: never runs during ordinary compose up.
+  reset-data:
+    build: *api-build
+    profiles: [tools]
+    environment: *api-environment
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: [--reset-synthetic]
+    restart: "no"
+    logging: *logging
+
+  storage-tests:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: storage-tests
+    profiles: [tools]
+    environment: *api-environment
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+volumes:
+  postgres-data:
+  airport-maps-data:
+
+networks:
+  backend:
+    internal: true
+  edge:

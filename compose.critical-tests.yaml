@@ -1,0 +1,146 @@
+# No host ports or existing volumes: this stack is owned by scripts/test-critical.mjs.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: aerosynapse
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: ${CRITICAL_DB_PASSWORD:?Use the critical test runner}
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -U, aerosynapse, -d, aerosynapse]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  intelligence:
+    build: { context: ., dockerfile: intelligence/Dockerfile, target: runtime }
+    environment:
+      LOG_LEVEL: warning
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: aerosynapse
+      POSTGRES_USER: aerosynapse
+      POSTGRES_PASSWORD: ${CRITICAL_DB_PASSWORD}
+      QUEUE_ML_PREDICTOR: disabled
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  api:
+    build: { context: ., dockerfile: backend/Dockerfile, target: runtime }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Logging__LogLevel__Default: Warning
+      Postgres__Host: postgres
+      Postgres__Database: aerosynapse
+      Postgres__Username: aerosynapse
+      Postgres__Password: ${CRITICAL_DB_PASSWORD}
+      Database__ApplyMigrations: "true"
+      Database__SeedSynthetic: "true"
+      Intelligence__BaseUrl: http://intelligence:8000
+      Simulation__WorkerEnabled: "true"
+      Identity__Demo__Enabled: "true"
+      Identity__Demo__ViewerPassword: ${CRITICAL_VIEWER_PASSWORD}
+      Identity__Demo__OperatorPassword: ${CRITICAL_OPERATOR_PASSWORD}
+      Identity__Demo__AdminPassword: ${CRITICAL_ADMIN_PASSWORD}
+      Identity__KeyDirectory: /data/keys
+      Copilot__Enabled: "false"
+      # The differential corpus sends hundreds of validation POSTs within one minute.
+      Security__WritePerMinute: "1000"
+    depends_on: { intelligence: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8080/health/ready]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+  frontend:
+    build: { context: AeroSynapse.Client, dockerfile: Dockerfile }
+    environment:
+      API_UPSTREAM: api:8080
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1/health]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  dotnet-tests:
+    build:
+      { context: ., dockerfile: backend/Dockerfile, target: critical-tests }
+    environment:
+      Postgres__Host: postgres
+      Postgres__Database: aerosynapse
+      Postgres__Username: aerosynapse
+      Postgres__Password: ${CRITICAL_DB_PASSWORD}
+      SIMULATION_TEST_URL: http://intelligence:8000
+    volumes:
+      - {
+          type: bind,
+          source: "${CRITICAL_ARTIFACTS}/dotnet",
+          target: /artifacts,
+        }
+  python-tests:
+    build:
+      {
+        context: .,
+        dockerfile: intelligence/Dockerfile,
+        target: critical-tests,
+      }
+    environment:
+      CRITICAL_SUITE: "1"
+      CONTRACT_API_URL: http://api:8080
+      CONTRACT_PYTHON_URL: http://intelligence:8000
+      CRITICAL_API_URL: http://api:8080
+      CRITICAL_ENGINE_URL: http://intelligence:8000
+      CRITICAL_OPERATOR_PASSWORD: ${CRITICAL_OPERATOR_PASSWORD}
+      PGHOST: postgres
+      PGDATABASE: aerosynapse
+      PGUSER: aerosynapse
+      PGPASSWORD: ${CRITICAL_DB_PASSWORD}
+    volumes:
+      - {
+          type: bind,
+          source: "${CRITICAL_ARTIFACTS}/python",
+          target: /artifacts,
+        }
+  browser-tests:
+    image: ${COMPOSE_PROJECT_NAME}-client-tests
+    build: { context: AeroSynapse.Client, dockerfile: Dockerfile.critical }
+    init: true
+    shm_size: 1gb
+    # localhost is a secure browser context for Web Crypto without HTTPS test certificates.
+    network_mode: service:frontend
+    environment:
+      CRITICAL_WEB_URL: http://127.0.0.1
+      CRITICAL_ENGINE_URL: http://intelligence:8000
+      CRITICAL_OPERATOR_PASSWORD: ${CRITICAL_OPERATOR_PASSWORD}
+      CRITICAL_VIEWER_PASSWORD: ${CRITICAL_VIEWER_PASSWORD}
+    volumes:
+      - {
+          type: bind,
+          source: "${CRITICAL_ARTIFACTS}/browser",
+          target: /artifacts,
+        }
+  angular-tests:
+    image: ${COMPOSE_PROJECT_NAME}-client-tests
+    entrypoint:
+      [npm, test, --, --watch=false, --runner-config=vitest.critical.config.mjs]
+    environment:
+      NG_BUILD_MAX_WORKERS: "2"
+      NODE_OPTIONS: --max-old-space-size=2048
+    volumes:
+      - {
+          type: bind,
+          source: "${CRITICAL_ARTIFACTS}/angular",
+          target: /artifacts,
+        }
+networks:
+  default:
+    internal: true

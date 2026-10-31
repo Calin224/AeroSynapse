@@ -1,0 +1,78 @@
+trigger:
+  batch: true
+  branches:
+    include: [main]
+# Azure Repos PR validation is configured through the main branch build policy.
+pr: none
+pool:
+  vmImage: ubuntu-latest
+jobs:
+  - job: DemoRelease
+    timeoutInMinutes: 40
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 1
+      - task: NodeTool@0
+        inputs: { versionSpec: "24.x" }
+      - script: node --test scripts/local-release/lib.test.mjs
+        displayName: Validate artifact integrity and private configuration guards
+      - script: node scripts/test-critical.mjs
+        displayName: Build .NET, Angular and Docker; lint Python; run critical tests
+      - script: node --test scripts/readiness/acceptance.test.mjs scripts/readiness/scope.test.mjs
+        displayName: Verify that development evidence cannot approve a presentation
+      - script: node scripts/validate-demo.mjs
+        displayName: Timed offline demo, accessibility, modest load and local crash recovery
+      - script: node scripts/prepare-release.mjs --out artifacts/release
+        displayName: Save versioned images and portable offline release
+      - script: node scripts/test-release.mjs --bundle artifacts/release
+        displayName: Offline startup, seed, checkpoint and local rollback smoke
+      - task: PublishTestResults@2
+        condition: always()
+        inputs:
+          testResultsFormat: VSTest
+          testResultsFiles: "artifacts/critical/**/dotnet/domain-api.trx"
+          failTaskOnFailedTests: true
+          testRunTitle: Domain and API
+      - task: PublishTestResults@2
+        condition: always()
+        inputs:
+          testResultsFormat: XUnit
+          testResultsFiles: |
+            artifacts/critical/**/dotnet/contracts.xml
+            artifacts/critical/**/dotnet/domain-management.xml
+          failTaskOnFailedTests: true
+          testRunTitle: Contracts and scenario management
+      - task: PublishTestResults@2
+        condition: always()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: |
+            artifacts/critical/**/python/pytest.xml
+            artifacts/critical/**/angular/results.xml
+            artifacts/critical/**/browser/results.xml
+            artifacts/readiness/**/browser/*/results.xml
+          failTaskOnFailedTests: true
+          testRunTitle: Python, Angular and Chromium
+      - task: PublishPipelineArtifact@1
+        condition: always()
+        inputs:
+          targetPath: artifacts/critical
+          artifact: critical-test-reports
+      - task: PublishPipelineArtifact@1
+        condition: and(always(), ne(variables['Agent.JobStatus'], 'Canceled'))
+        inputs:
+          targetPath: artifacts/readiness
+          artifact: demo-readiness-reports
+        continueOnError: true
+      - task: PublishPipelineArtifact@1
+        condition: and(always(), ne(variables['Agent.JobStatus'], 'Canceled'))
+        inputs:
+          targetPath: artifacts/release-smoke
+          artifact: release-smoke-reports
+        continueOnError: true
+      - task: PublishPipelineArtifact@1
+        condition: succeeded()
+        inputs:
+          targetPath: artifacts/release
+          artifact: local-demo-release

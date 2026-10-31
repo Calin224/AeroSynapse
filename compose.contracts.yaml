@@ -1,0 +1,49 @@
+name: aerosynapse-contracts
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Logging__LogLevel__Default: Warning
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/health]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  intelligence:
+    build:
+      context: .
+      dockerfile: intelligence/Dockerfile
+      target: runtime
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: warning
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  dotnet-tests:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: contract-tests
+  contract-tests:
+    build:
+      context: .
+      dockerfile: intelligence/Dockerfile
+      target: contract-tests
+    environment:
+      CONTRACT_API_URL: http://api:8080
+      CONTRACT_PYTHON_URL: http://intelligence:8000
+    depends_on:
+      api:
+        condition: service_healthy
+      intelligence:
+        condition: service_healthy
+      dotnet-tests:
+        condition: service_completed_successfully
