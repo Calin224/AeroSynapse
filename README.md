@@ -96,6 +96,16 @@ Componenta de persistență este disponibilă prin MediatR, în namespace-ul `Ae
 
 Hărțile cu erori sunt respinse prin `AirportMapValidationException`, iar reutilizarea unui ID existent, inclusiv între tipuri diferite de obiecte, produce `AirportMapConflictException`. Tranzacțiile împiedică salvarea parțială, iar constrângerile SQL protejează referințele, capacitățile, ratele și coordonatele și în cazul scrierilor directe.
 
+## Graf de navigație
+
+`NavigationGraphImporter.FromMap(map)` convertește o hartă într-un `NavigationConfig` versiunea `1.0`, fără acces la baza de date sau servicii externe. Păstrează ID-urile, coordonatele în metri, direcția și durata rutelor, precum și legăturile dintre checkpoint-uri, porți și zone. Distanțele muchiilor sunt calculate din coordonatele 3D.
+
+Zonele și muchiile indisponibile rămân în graf cu `IsActive = false`. Disponibilitatea ține cont de aeroport, terminal, etaj, checkpoint-uri, porți și resurse, inclusiv zona în care se află resursele. Scările și muchiile care le ating au `IsStepFree = false`. Importul generează profilurile `solo`, `family`, `business` și `tour`.
+
+Importul verifică structura hărții și limitele contractului de navigație: 1–2000 de zone, maximum 10000 de rute, 1000 de checkpoint-uri și 1000 de porți, nume de zone de maximum 160 de caractere, coordonate între −1000000 și 1000000 metri, distanțe de maximum 1000000 metri și durate între 0,001 și 604800 de secunde. Valorile invalide produc `AirportMapValidationException` cu detalii despre câmp.
+
+O hartă poate fi proiectată în graf chiar dacă are zone inactive sau componente deconectate. Importul folosește `AirportMapValidator.Validate(map, validateNavigation: false)` pentru verificările structurale; salvarea hărților folosește în continuare validarea completă implicită. Componenta este disponibilă în Application; calculul traseelor și un endpoint HTTP pentru graf vor fi integrate separat.
+
 ## Scop
 
-Backendul include modelele, validarea, stocarea hărților și endpoint-urile HTTP pentru dezvoltare locală. Frontend-ul include Control Tower și scenarii cu date demonstrative locale; conectarea lui la API, autentificarea, simularea și serviciul Python vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.
+Backendul include modelele, validarea, stocarea hărților, conversia lor în grafuri de navigație și endpoint-urile HTTP pentru dezvoltare locală. Frontend-ul include Control Tower și scenarii cu date demonstrative locale; conectarea lui la API, autentificarea, simularea și serviciul Python vor fi integrate separat. Rutele hărților vor putea fi activate în producție după integrarea autentificării și autorizării.
