@@ -21,42 +21,65 @@ describe('HTTP infrastructure', () => {
   afterEach(() => http.verify());
   it('joins the configured base URL and relative path', () => {
     const result = vi.fn();
-    api.get('/data/scenarios.json').subscribe(result);
-    http.expectOne('https://api.example.test/data/scenarios.json').flush([]);
+    api.get('/scenarios').subscribe(result);
+    http.expectOne('https://api.example.test/scenarios').flush([]);
     expect(result).toHaveBeenCalledWith([]);
   });
-  it('explains validation fields without exposing unrelated server details', () => {
+  it('preserves every validation field for editors while keeping the summary concise', () => {
     const onError = vi.fn();
-    api.post('scenarios', {}).subscribe({ error: onError });
-    http.expectOne('https://api.example.test/scenarios').flush(
-      { errors: { code: ['Codul este obligatoriu.', 42] }, internal: 'private server details' },
-      { status: 422, statusText: 'Unprocessable Entity' },
+    api.post('scenarios/validate', {}).subscribe({ error: onError });
+    const errors = Object.fromEntries(
+      Array.from({ length: 8 }, (_, index) => [
+        `inputs.flights[${index}].gateId`,
+        ['Gate unavailable.'],
+      ]),
     );
+    http
+      .expectOne('https://api.example.test/scenarios/validate')
+      .flush({ code: 'validation_failed', errors }, { status: 400, statusText: 'Invalid' });
     const error = onError.mock.calls[0][0] as ApiError;
-    expect(error.status).toBe(422);
-    expect(error.message).toBe('code: Codul este obligatoriu.');
+    expect(error.fieldErrors).toEqual(errors);
+    expect(error.code).toBe('validation_failed');
+    expect(error.message).not.toContain('flights[7]');
   });
-  it('asks the user to refresh when a scenario write conflicts', () => {
+  it('preserves versioned contract error paths without exposing arbitrary server details', () => {
     const onError = vi.fn();
-    api.post('scenarios', {}).subscribe({ error: onError });
-    http.expectOne('https://api.example.test/scenarios').flush(
-      { details: 'private server details' },
-      { status: 409, statusText: 'Conflict' },
+    api.post('scenarios/validate', {}).subscribe({ error: onError });
+    http.expectOne('https://api.example.test/scenarios/validate').flush(
+      {
+        errors: [
+          {
+            field: '/inputs/navigation/graph/nodes/0/id',
+            code: 'required',
+            message: 'Required.',
+          },
+        ],
+      },
+      { status: 422, statusText: 'Invalid' },
     );
-    const error = onError.mock.calls[0][0] as ApiError;
-    expect(error.status).toBe(409);
-    expect(error.message).toContain('Actualizează');
-    expect(error.message).not.toContain('private server details');
+    expect((onError.mock.calls[0][0] as ApiError).fieldErrors).toEqual({
+      '/inputs/navigation/graph/nodes/0/id': ['Required.'],
+    });
   });
   it.each([0, 404, 500])('normalizes status %s without leaking server details', (status) => {
     const onError = vi.fn();
-    api.get('data/scenarios.json').subscribe({ error: onError });
-    const request = http.expectOne('https://api.example.test/data/scenarios.json');
+    api.get('scenarios').subscribe({ error: onError });
+    const request = http.expectOne('https://api.example.test/scenarios');
     if (status === 0) request.error(new ProgressEvent('error'));
     else request.flush({ secret: 'server details' }, { status, statusText: 'Failure' });
     const error = onError.mock.calls[0][0] as ApiError;
     expect(error).toBeInstanceOf(ApiError);
     expect(error.status).toBe(status);
+    expect(error.message).not.toContain('server details');
+  });
+  it('identifies unavailable staffing planning without exposing server details', () => {
+    const onError = vi.fn();
+    api.post('scenarios/scenario-1/staffing/proposals', {}).subscribe({ error: onError });
+    http.expectOne('https://api.example.test/scenarios/scenario-1/staffing/proposals').flush(
+      { code: 'staffing_planner_unavailable', detail: 'server details' }, { status: 502, statusText: 'Bad Gateway' });
+    const error = onError.mock.calls[0][0] as ApiError;
+    expect(error.code).toBe('staffing_planner_unavailable');
+    expect(error.message).toContain('optimizare a personalului');
     expect(error.message).not.toContain('server details');
   });
 });

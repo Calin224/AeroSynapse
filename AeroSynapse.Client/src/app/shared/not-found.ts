@@ -2,34 +2,73 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
-  template: `<section class="panel not-found">
-    <p class="code" aria-hidden="true">404</p>
+  template: `<section class="not-found">
+    <div class="board" aria-hidden="true">
+      <div class="row head"><span>Zbor</span><span>Destinație</span><span>Status</span></div>
+      <div class="row">
+        <span class="code">AS 404</span><span>Pagină necunoscută</span
+        ><span class="cancelled">Anulat</span>
+      </div>
+    </div>
     <h1>Pagina nu există</h1>
-    <p>Adresa solicitată nu corespunde unei pagini AeroSynapse.</p>
-    <a class="back" routerLink="/control-tower">Înapoi la Control Tower</a>
+
+    <a class="back" routerLink="/control-tower"
+      ><i class="pi pi-arrow-left" aria-hidden="true"></i> Înapoi la Control Tower</a
+    >
   </section>`,
   styles: `
     .not-found {
       display: grid;
       justify-items: center;
-      gap: 12px;
-      padding: 72px 24px;
+      gap: 14px;
+      max-width: 640px;
+      margin: 8vh auto 0;
       text-align: center;
     }
+    .board {
+      width: 100%;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--text);
+      color: var(--on-accent);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      text-align: left;
+      overflow: hidden;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 12px;
+      padding: 16px 20px;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+    }
+    .row.head {
+      padding-block: 10px;
+      border-bottom: 1px solid var(--border);
+      color: #d4d4d4;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+    }
     .code {
-      font-size: clamp(64px, 12vw, 112px);
-      font-weight: 700;
-      letter-spacing: -0.05em;
-      line-height: 1;
-      background: linear-gradient(180deg, var(--accent), #1f6f5f);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      color: var(--on-accent);
+    }
+    .cancelled {
+      color: var(--on-accent);
+      text-decoration: underline;
+      text-decoration-color: var(--signal);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
     }
     p {
       color: var(--text-muted);
     }
     .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       margin-top: 8px;
       padding: 10px 18px;
       border-radius: var(--radius-sm);
@@ -41,6 +80,15 @@ import { RouterLink } from '@angular/router';
     .back:hover {
       color: var(--on-accent);
       background: var(--accent-hover);
+    }
+    @media (max-width: 520px) {
+      .row {
+        grid-template-columns: 1fr 1.6fr;
+        font-size: 13px;
+      }
+      .row > :last-child {
+        grid-column: 1 / -1;
+      }
     }
   `,
   imports: [RouterLink],

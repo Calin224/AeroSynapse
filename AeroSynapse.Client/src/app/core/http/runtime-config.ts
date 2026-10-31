@@ -1,6 +1,9 @@
 export interface RuntimeConfig {
   apiBaseUrl: string;
   intelligenceBaseUrl: string;
+  baggageTwinEnabled?: boolean;
+  airsideTwinEnabled?: boolean;
+  energyAnalyticsEnabled?: boolean;
 }
 
 declare global {

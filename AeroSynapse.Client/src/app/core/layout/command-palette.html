@@ -1,0 +1,80 @@
+<dialog
+  #palette
+  class="command-palette"
+  aria-labelledby="search-heading"
+  (click)="dismissBackdrop($event)"
+  (close)="closed.emit()"
+>
+  <header class="palette-heading">
+    <span class="eyebrow" id="search-heading">NAVIGARE RAPIDĂ</span
+    ><button
+      class="icon-button"
+      type="button"
+      aria-label="Închide căutarea"
+      (click)="palette.close()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </header>
+  <div class="search-field">
+    <i class="pi pi-search" aria-hidden="true"></i>
+    <input
+      #searchInput
+      autofocus
+      type="search"
+      role="combobox"
+      aria-label="Caută pagini și instrumente"
+      aria-autocomplete="list"
+      aria-controls="workspace-results"
+      aria-expanded="true"
+      [attr.aria-activedescendant]="results().length ? 'destination-' + activeResult() : null"
+      autocomplete="off"
+      [value]="query()"
+      (input)="updateQuery($event)"
+      (keydown)="searchKey($event)"
+    />
+    <kbd>esc</kbd>
+  </div>
+  <div class="results-caption" aria-live="polite">
+    {{
+      query().trim()
+        ? results().length + ' rezultate'
+        : navigation.recent().length
+          ? 'Vizitate recent și toate instrumentele'
+          : 'Explorează spațiul de lucru'
+    }}
+  </div>
+  <div id="workspace-results" class="search-results" role="listbox" aria-label="Destinații">
+    @for (item of results(); track item.path; let index = $index) {
+      <a
+        [id]="'destination-' + index"
+        role="option"
+        tabindex="-1"
+        [attr.aria-selected]="activeResult() === index"
+        [routerLink]="item.path"
+        (click)="closeOnCurrentPage(item.path)"
+        (pointermove)="activeResult.set(index)"
+      >
+        <span class="result-icon"><i [class]="'pi pi-' + item.icon" aria-hidden="true"></i></span
+        ><span class="result-copy"
+          ><strong>{{ item.label }}</strong></span
+        ><span class="result-group">{{ item.group }}</span
+        ><i class="pi pi-arrow-up-right result-arrow" aria-hidden="true"></i>
+      </a>
+    }
+  </div>
+  @if (!results().length) {
+    <div class="search-empty">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <h2>Nicio destinație găsită</h2>
+
+      <button type="button" (click)="query.set(''); activeResult.set(0); searchInput.focus()">
+        Șterge căutarea
+      </button>
+    </div>
+  }
+  <footer class="palette-footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navighează</span><span><kbd>↵</kbd> deschide</span
+    ><span>Instrumentele disponibile rolului tău</span>
+  </footer>
+</dialog>

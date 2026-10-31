@@ -1,0 +1,178 @@
+<ng-template #brand>
+  <a class="brand" routerLink="/control-tower">
+    <svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true">
+      <rect width="36" height="36" fill="currentColor" />
+      <path
+        d="m10 25 8-16 8 16M13 20h10"
+        fill="none"
+        stroke="var(--dp-color-ground)"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <circle cx="18" cy="9" r="2.5" fill="var(--dp-color-ground)" />
+    </svg>
+    <span>AeroSynapse</span>
+  </a>
+</ng-template>
+<ng-template #navigationLinks let-surface="surface">
+  <nav aria-label="Navigare principală">
+    @for (group of navigation.groups(); track group.label) {
+      <details class="nav-group" [open]="expandedGroups().has(group.label)">
+        <summary (click)="toggleGroup(group.label, $event)">
+          {{ group.label }}<i class="pi pi-angle-down" aria-hidden="true"></i>
+        </summary>
+        @for (item of group.items; track item.path) {
+          <div class="nav-entry">
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              (click)="closeOnCurrentPage(item.path)"
+            >
+              <i [class]="'pi pi-' + item.icon" aria-hidden="true"></i><span>{{ item.label }}</span>
+            </a>
+            @if (item.children && session.canWrite()) {
+              <button
+                class="nav-toggle"
+                type="button"
+                [attr.aria-label]="'Paginile ' + item.label"
+                [attr.aria-expanded]="expandedDestinations().has(item.path)"
+                [attr.aria-controls]="surface + '-control-tower-pages'"
+                (click)="toggleDestination(item.path)"
+              >
+                <i
+                  class="pi pi-angle-down"
+                  [class.collapsed]="!expandedDestinations().has(item.path)"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            }
+          </div>
+          @if (item.children && session.canWrite()) {
+            <div
+              class="nav-children"
+              role="group"
+              [hidden]="!expandedDestinations().has(item.path)"
+              [id]="surface + '-control-tower-pages'"
+              [attr.aria-label]="'Paginile ' + item.label"
+            >
+              @for (child of item.children; track child.id) {
+                <a
+                  [routerLink]="child.path"
+                  [queryParams]="childQueryParams(child.path)"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="exactPathMatch"
+                  ariaCurrentWhenActive="page"
+                  (click)="closeOnCurrentPage(child.path)"
+                >
+                  <i [class]="'pi pi-' + child.icon" aria-hidden="true"></i
+                  ><span>{{ child.label }}</span>
+                </a>
+              }
+            </div>
+          }
+        }
+      </details>
+    }
+  </nav>
+</ng-template>
+<header class="app-shell">
+  <aside class="sidebar" aria-label="Spațiu de lucru">
+    <ng-container *ngTemplateOutlet="brand" />
+    <button
+      class="search-trigger"
+      type="button"
+      (click)="commandSearch.openSearch()"
+      aria-label="Caută o pagină Ctrl K"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Control+k Meta+k"
+    >
+      <i class="pi pi-search" aria-hidden="true"></i><span>Caută o pagină</span
+      ><kbd aria-hidden="true">Ctrl K</kbd>
+    </button>
+    <ng-container *ngTemplateOutlet="navigationLinks; context: { surface: 'sidebar' }" />
+    <div class="sidebar-bottom">
+      @if (session.session(); as account) {
+        <div class="sidebar-footer">
+          <span class="avatar">{{ account.username.slice(0, 2).toUpperCase() }}</span>
+          <span
+            ><strong>{{ account.username }}</strong
+            ><small>{{ account.roles.join(' · ') }}</small></span
+          >
+          <button
+            class="logout"
+            type="button"
+            aria-label="Deconectare"
+            title="Deconectare"
+            [disabled]="loggingOut()"
+            (click)="logout()"
+          >
+            <i class="pi pi-sign-out" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+      @if (logoutError()) {
+        <p class="logout-error" role="alert">{{ logoutError() }}</p>
+      }
+    </div>
+  </aside>
+  <div class="topbar">
+    <button
+      #menuButton
+      class="mobile-menu icon-button"
+      type="button"
+      aria-label="Deschide meniul"
+      aria-haspopup="dialog"
+      aria-controls="workspace-drawer"
+      [attr.aria-expanded]="drawer.open"
+      (click)="drawer.showModal()"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+    <div class="context">
+      <span class="context-mark"></span
+      ><span class="context-group">{{ navigation.current()?.group ?? 'Spațiu de lucru' }}</span
+      ><span class="context-separator">/</span
+      ><strong>{{ navigation.current()?.label ?? 'AeroSynapse' }}</strong>
+    </div>
+  </div>
+</header>
+<dialog
+  #drawer
+  id="workspace-drawer"
+  class="mobile-drawer"
+  aria-label="Meniu de navigare"
+  (click)="dismissBackdrop($event)"
+  (close)="restoreMenuFocus()"
+>
+  <div class="drawer-heading">
+    <ng-container *ngTemplateOutlet="brand" /><button
+      class="icon-button"
+      type="button"
+      aria-label="Închide meniul"
+      (click)="drawer.close()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </div>
+  <button
+    class="search-trigger"
+    type="button"
+    aria-haspopup="dialog"
+    (click)="commandSearch.openSearch()"
+  >
+    <i class="pi pi-search" aria-hidden="true"></i>Caută o pagină
+  </button>
+  <ng-container *ngTemplateOutlet="navigationLinks; context: { surface: 'drawer' }" />
+  @if (session.session()) {
+    <div class="drawer-account">
+      <span>{{ session.session()?.username }}</span
+      ><button type="button" [disabled]="loggingOut()" (click)="logout()">Deconectare</button>
+    </div>
+    @if (logoutError()) {
+      <p class="logout-error" role="alert">{{ logoutError() }}</p>
+    }
+  }
+</dialog>
+<app-command-palette #commandSearch (opened)="drawer.close()" (closed)="restoreMenuFocus()" />

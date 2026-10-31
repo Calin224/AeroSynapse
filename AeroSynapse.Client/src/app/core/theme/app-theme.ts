@@ -1,45 +1,49 @@
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 
-// PrimeNG tokens follow the palette declared in src/styles.css (--accent, --panel, --border…),
-// so PrimeNG widgets and native controls read as one design system.
+// PrimeNG shares the native controls' monochrome palette and square geometry.
 export const AeroSynapseTheme = definePreset(Aura, {
+  primitive: {
+    borderRadius: { none: '0', xs: '0', sm: '0', md: '0', lg: '0', xl: '0' },
+  },
   semantic: {
-    primary: {
-      50: '#edfdf8',
-      100: '#d1faee',
-      200: '#a6f3de',
-      300: '#7ae6cc',
-      400: '#59d9ba',
-      500: '#2fbf9f',
-      600: '#1f9a82',
-      700: '#1e7a69',
-      800: '#1e6154',
-      900: '#1c5046',
-      950: '#0a2f29',
-    },
-    formField: { borderRadius: '8px' },
+    transitionDuration: '0s',
+    focusRing: { width: '3px', style: 'solid', color: '#000000', offset: '3px' },
+    formField: { borderRadius: '0', focusBorderColor: '#000000' },
     colorScheme: {
-      dark: {
+      light: {
+        primary: {
+          color: '#000000',
+          contrastColor: '#ffffff',
+          hoverColor: '#333333',
+          activeColor: '#555555',
+        },
+        highlight: {
+          background: '#000000',
+          focusBackground: '#333333',
+          color: '#ffffff',
+          focusColor: '#ffffff',
+        },
         surface: {
           0: '#ffffff',
-          50: '#f3f6fa',
-          100: '#e9eff6',
-          200: '#c8d3df',
-          300: '#9bacbf',
-          400: '#7a8da3',
-          500: '#5d7188',
-          600: '#44586e',
-          700: '#2f4258',
-          800: '#213042',
-          900: '#172433',
-          950: '#0c1520',
+          50: '#f0f0f0',
+          100: '#e6e6e6',
+          200: '#d4d4d4',
+          300: '#bfbfbf',
+          400: '#999999',
+          500: '#777777',
+          600: '#555555',
+          700: '#444444',
+          800: '#333333',
+          900: '#111111',
+          950: '#000000',
         },
       },
     },
   },
   components: {
-    button: { root: { borderRadius: '8px', paddingY: '0.55rem' } },
-    message: { root: { borderRadius: '10px' } },
+    button: { root: { borderRadius: '0', paddingY: '0.75rem' } },
+    message: { root: { borderRadius: '0' } },
+    dialog: { root: { borderRadius: '0', shadow: 'none' } },
   },
 });
