@@ -61,6 +61,7 @@ Rutele de mai jos sunt disponibile doar în mediul `Development`, pentru lucrul 
 | Metodă și rută | Răspuns |
 | --- | --- |
 | `POST /api/airports` | 201 cu snapshot-ul hărții și antetul `Location`; 400 pentru JSON invalid; 422 cu `issues` pentru erori de domeniu; 409 pentru ID-uri deja folosite. |
+| `POST /api/airports/validate` | Verifică harta fără salvare: 200 cu snapshot și eventuale avertismente, 422 cu `issues` pentru erori de domeniu sau 400 pentru JSON invalid. |
 | `GET /api/airports` | 200 cu cel mult 100 de aeroporturi, ordonate după nume și ID. |
 | `GET /api/airports/{airportId}/snapshot` | 200 cu snapshot-ul versionat sau 404 dacă aeroportul nu există. |
 | `GET /api/airports/{airportId}/navigation` | 200 cu graful de navigație, 404 dacă aeroportul nu există sau 422 cu `issues` dacă harta depășește limitele de navigație. |
@@ -73,6 +74,8 @@ curl http://localhost:5080/api/airports
 ```
 
 Pentru citirea hărții, folosește URL-ul din antetul `Location`. Enumerările din JSON sunt șiruri, de exemplu `"Entrance"`; valorile numerice pentru enum și câmpurile necunoscute sunt respinse cu 400. Coordonatele nefinite sunt respinse cu 422 și detalii despre câmp. Repetarea unei cereri de creare cu aceleași ID-uri produce 409.
+
+Pentru verificarea unei hărți înainte de creare, trimite același JSON la `/api/airports/validate`. Validarea verifică structura și navigabilitatea, fără să scrie în repository; nu verifică dacă ID-urile sunt deja folosite în baza de date. Este disponibilă doar în `Development`, ca celelalte rute de hărți.
 
 ## Verificare
 

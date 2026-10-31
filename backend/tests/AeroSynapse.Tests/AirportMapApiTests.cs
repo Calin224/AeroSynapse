@@ -261,6 +261,42 @@ public sealed class AirportMapApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("valid", HttpStatusCode.OK)]
+    [InlineData("warning", HttpStatusCode.OK)]
+    [InlineData("invalid", HttpStatusCode.UnprocessableEntity)]
+    public async Task Validation_reports_issues_without_saving_the_map(string variant, HttpStatusCode expected)
+    {
+        var map = MapFixture.Create();
+        if (variant == "warning") map.Zones[2].IsActive = false;
+        if (variant == "invalid") map.Zones[0].Capacity = 0;
+
+        using var response = await client.PostAsJsonAsync("/api/airports/validate", map, MapFixture.Json);
+        Assert.Equal(expected, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var issues = body.GetProperty("issues").EnumerateArray().ToArray();
+        if (variant == "valid") Assert.Empty(issues);
+        else Assert.Contains(issues, issue => issue.GetProperty("code").GetString()
+            == (variant == "warning" ? "inactive_zone" : "invalid_value"));
+        if (expected == HttpStatusCode.OK)
+        {
+            Assert.Equal(1, body.GetProperty("schemaVersion").GetInt32());
+            Assert.True(body.GetProperty("isNavigable").GetBoolean());
+        }
+        Assert.Empty((await client.GetFromJsonAsync<Airport[]>("/api/airports"))!);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{\"unknown\":true}")]
+    [InlineData("{\"airport\":")]
+    public async Task Validation_rejects_malformed_requests(string json)
+    {
+        using var body = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/api/airports/validate", body);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private sealed class AirportApiFactory(string path) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)

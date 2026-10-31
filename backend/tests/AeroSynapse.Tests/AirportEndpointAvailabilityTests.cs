@@ -33,5 +33,7 @@ public sealed class AirportEndpointAvailabilityTests
         Assert.Equal(HttpStatusCode.NotFound, snapshot.StatusCode);
         using var navigation = await client.GetAsync($"/api/airports/{Guid.NewGuid()}/navigation");
         Assert.Equal(HttpStatusCode.NotFound, navigation.StatusCode);
+        using var validation = await client.PostAsJsonAsync("/api/airports/validate", MapFixture.Create(), MapFixture.Json);
+        Assert.Equal(HttpStatusCode.NotFound, validation.StatusCode);
     }
 }

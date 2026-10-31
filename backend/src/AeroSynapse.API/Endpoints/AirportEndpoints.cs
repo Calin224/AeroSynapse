@@ -9,6 +9,15 @@ public static class AirportEndpoints
 {
     public static void MapAirportEndpoints(this WebApplication app)
     {
+        app.MapPost("/api/airports/validate", (AirportMap map) =>
+        {
+            var issues = AirportMapValidator.Validate(map);
+            if (issues.Any(issue => issue.Severity == MapIssueSeverity.Error))
+                return Results.UnprocessableEntity(new { message = "Invalid airport map.", issues });
+            return Results.Ok(new AirportMapSnapshot(map, issues));
+        }).WithTags("Airports").WithSummary("Validate an airport map without saving it")
+            .Produces<AirportMapSnapshot>().Produces(422).Produces(400);
+
         app.MapGet("/api/airports", async (ISender sender, CancellationToken token) => Results.Ok(await sender.Send(new ListAirportsQuery(), token)))
             .WithTags("Airports").WithSummary("List airport maps").Produces<IReadOnlyList<Airport>>();
         app.MapPost("/api/airports", async (AirportMap map, ISender sender, CancellationToken cancellationToken) =>
