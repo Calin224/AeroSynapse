@@ -67,7 +67,7 @@ public sealed class CopilotExplanationTests
         VerifyFacts(tool, tool.Explanation!); Assert.NotNull(tool.Receipt);
         await using var scope = host.Services.CreateAsyncScope();
         Assert.Empty(await scope.ServiceProvider.GetRequiredService<TwinDbContext>().CopilotTranscripts.ToArrayAsync(Token));
-        var missing = await Ask(host, s, path, "De ce a crescut coada?");
+        var missing = await Ask(host, s, path, "Ce se întâmplă dacă aloc mai mult personal?");
         Assert.Empty(missing.Explanation!.Facts); Assert.Contains("Nu pot concluziona", missing.Explanation.Summary);
     }
 

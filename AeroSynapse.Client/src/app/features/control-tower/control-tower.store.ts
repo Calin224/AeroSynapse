@@ -120,7 +120,8 @@ export class ControlTowerStore {
     () => !!this.command() && this.command()?.scenarioId === this.selected()?.scenario.id,
   );
   readonly pendingScenarioId = computed(() => this.command()?.scenarioId ?? null);
-  readonly accepted = new Subject<{ scenarioId: string; runId: string | null }>();
+  /** `browse` asks the page to show the gallery because a stale remembered scenario was replaced. */
+  readonly accepted = new Subject<{ scenarioId: string; runId: string | null; browse?: boolean }>();
 
   constructor() {
     try {
@@ -155,10 +156,17 @@ export class ControlTowerStore {
                 throw new Error('Identificatorul rulării este invalid.');
               if (selection.runId && !selection.scenarioId)
                 throw new Error('Selectează scenariul căruia îi aparține rularea.');
-              const id = selection.scenarioId ?? rows[0]?.id;
+              let id = selection.scenarioId ?? rows[0]?.id;
+              let browse = false;
+              if (id && !rows.some((row) => row.id === id)) {
+                // The tab's remembered scenario can outlive a deletion or data reset; explicit links keep the error.
+                if (id !== this.simulation.current()?.scenarioId)
+                  throw new Error('Scenariul selectat nu se află în catalogul activ.');
+                this.requested = { scenarioId: null, runId: null };
+                id = rows[0]?.id;
+                browse = true;
+              }
               if (!id) return of(null);
-              if (!rows.some((row) => row.id === id))
-                throw new Error('Scenariul selectat nu se află în catalogul activ.');
               return this.api.get<ScenarioDetails>(`scenarios/${id}`).pipe(
                 switchMap((scenario) => {
                   if (scenario.scenario.id !== id)
@@ -169,6 +177,7 @@ export class ControlTowerStore {
                       `scenes/${scenario.scenario.sceneId}/layout-versions/${scenario.scenario.layoutVersionId}`,
                     ),
                     runs: this.api.get<RunSummary[]>(`scenarios/${id}/runs?limit=100`),
+                    browse: of(browse),
                   });
                 }),
               );
@@ -201,7 +210,7 @@ export class ControlTowerStore {
         this.requested = { scenarioId: value.scenario.scenario.id, runId };
         this.live.connect(value.scenario.scenario.id, runId);
         this.watch.next(runId);
-        this.accepted.next({ scenarioId: value.scenario.scenario.id, runId });
+        this.accepted.next({ scenarioId: value.scenario.scenario.id, runId, browse: value.browse });
       });
     this.watch
       .pipe(

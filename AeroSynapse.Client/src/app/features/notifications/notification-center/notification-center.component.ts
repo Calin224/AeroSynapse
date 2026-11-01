@@ -45,7 +45,6 @@ export class NotificationCenterComponent {
   warningThreshold: number | null = null;
   criticalThreshold: number | null = null;
   horizonMinutes = 15;
-  fromMinute = 0;
   fromDate = '';
   toDate = '';
   level = '';
@@ -60,25 +59,17 @@ export class NotificationCenterComponent {
         resolved: 0,
       }),
   );
-  origins() {
-    const capture = this.store.capture();
-    if (!capture) return [];
-    return Array.from(
-      {
-        length: Math.max(
-          0,
-          Math.floor((capture.duration - this.horizonMinutes) / capture.interval) + 1,
-        ),
-      },
-      (_, index) => index * capture.interval,
-    );
+  /** A running simulation is forecast ahead; otherwise completed runs are checked over their whole period. */
+  live() {
+    return this.store.run()?.status === 'running';
+  }
+  canPublishRun() {
+    const run = this.store.run();
+    return (run?.status === 'completed' && run.resultsValid) || (this.live() && !!this.store.capture());
   }
   canPublish() {
-    const run = this.store.run();
     return (
-      !!run &&
-      (run.status === 'running' || (run.status === 'completed' && run.resultsValid)) &&
-      !!this.store.capture() &&
+      (!this.store.selection().runId || this.canPublishRun()) &&
       !this.store.working() &&
       !this.store.pending() &&
       !this.store.contextLoading() &&
@@ -87,16 +78,15 @@ export class NotificationCenterComponent {
       Number.isInteger(this.criticalThreshold) &&
       this.criticalThreshold! > this.warningThreshold! &&
       this.criticalThreshold! <= 100000 &&
-      Number.isInteger(this.horizonMinutes) &&
-      this.horizonMinutes >= 15 &&
-      this.horizonMinutes <= 30 &&
-      (run.status === 'running' || this.origins().includes(this.fromMinute))
+      (!this.live() ||
+        (Number.isInteger(this.horizonMinutes) &&
+          this.horizonMinutes >= 15 &&
+          this.horizonMinutes <= 30))
     );
   }
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const horizon = Number(params.get('horizonMinutes')),
-        minute = Number(params.get('fromMinute')),
         threshold = params.get('warningThreshold');
       if (
         params.has('horizonMinutes') &&
@@ -105,8 +95,6 @@ export class NotificationCenterComponent {
         horizon <= 30
       )
         this.horizonMinutes = horizon;
-      if (params.has('fromMinute') && Number.isInteger(minute) && minute >= 0)
-        this.fromMinute = minute;
       if (
         threshold !== null &&
         Number.isInteger(Number(threshold)) &&
@@ -175,14 +163,15 @@ export class NotificationCenterComponent {
   }
   publish() {
     if (!this.canPublish()) return;
+    if (!this.live()) return this.store.publishRuns(this.warningThreshold!, this.criticalThreshold!);
     this.store.publish({
       scenarioId: this.store.selection().scenarioId!,
       runId: this.store.run()!.id,
-      fromMinute: this.fromMinute,
+      fromMinute: 0,
       horizonMinutes: this.horizonMinutes,
       warningThreshold: this.warningThreshold!,
       criticalThreshold: this.criticalThreshold!,
-      useLatest: this.store.run()!.status === 'running',
+      useLatest: true,
     });
   }
   links(alert: { scenarioId: string; runId: string; zoneId: string }) {
@@ -203,6 +192,9 @@ export class NotificationCenterComponent {
     } catch {
       // The name only has to survive this page when storage is unavailable.
     }
+  }
+  recorded(alert: OperationalAlert) {
+    return alert.source === 'recorded_queue';
   }
   /** Peak and both thresholds as percentages of one scale, for the severity gauge. */
   gauge(alert: OperationalAlert) {

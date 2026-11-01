@@ -35,10 +35,10 @@ export const statusLabels: Record<string, string> = {
 };
 
 /** "acum 5 minute", "ieri"… for an ISO timestamp; empty when the value is missing. */
-export function fromNow(iso?: string | null) {
+export function fromNow(iso?: string | null, now = Date.now()) {
   const at = iso ? Date.parse(iso) : 0;
   if (!at) return '';
-  const minutes = Math.round((at - Date.now()) / 60000);
+  const minutes = Math.round((at - now) / 60000);
   if (Math.abs(minutes) < 60) return relative.format(minutes, 'minute');
   const hours = Math.round(minutes / 60);
   if (Math.abs(hours) < 48) return relative.format(hours, 'hour');

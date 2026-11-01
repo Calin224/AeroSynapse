@@ -1,158 +1,210 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { OperationalReport } from './operational-report';
 import { ids, replayData, replayEnvelope } from '../replay/replay.testing';
 import { candidateData, comparisonFixture } from './report.testing';
 
-describe('Operational report selection and persisted data loading', () => {
+const otherScenario = '30000000-0000-0000-0000-000000000002';
+const thirdRun = '10000000-0000-0000-0000-000000000003';
+const scenario = (id: string, name: string) => ({
+  id,
+  name,
+  code: name.toLowerCase(),
+  description: '',
+  sceneId: ids.scene,
+  layoutVersionId: ids.layout,
+  revision: 1,
+});
+const listed = (id: string, status: string, hoursAgo: number) => ({
+  id,
+  status,
+  revision: 1,
+  seed: 42,
+  scenarioRevision: 1,
+  retryOfRunId: null,
+  resultsValid: status === 'completed',
+  finishedAtUtc: new Date(Date.now() - hoursAgo * 3600000).toISOString(),
+});
+const details = (id: string) => ({
+  id,
+  status: 'completed',
+  resultsValid: true,
+  failureReason: null,
+  error: null,
+  provenance: replayData(id).run.provenance,
+});
+
+describe('Operational report page', () => {
   let http: HttpTestingController;
-  beforeEach(async () => {
+  async function setup(query: Record<string, string> = {}) {
     vi.stubGlobal(
       'crypto',
       (await vi.importActual<{ webcrypto: Crypto }>('node:crypto')).webcrypto,
     );
     TestBed.configureTestingModule({
       imports: [OperationalReport],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap(query)) } },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
-  });
+    const fixture = TestBed.createComponent(OperationalReport);
+    await fixture.whenStable();
+    return { fixture, view: fixture.componentInstance, host: fixture.nativeElement as HTMLElement };
+  }
   afterEach(() => {
-    // The run pickers list scenarios on render; these specs set run ids directly.
-    http
-      .match('/api/scenarios')
-      .filter((request) => !request.cancelled)
-      .forEach((request) => request.flush([]));
     http.verify();
     vi.unstubAllGlobals();
   });
-  async function component() {
-    const fixture = TestBed.createComponent(OperationalReport);
-    await fixture.whenStable();
-    // Both run pickers list scenarios on render; an empty library keeps them idle.
-    http
-      .match((request) => request.method === 'GET' && request.url === '/api/scenarios')
-      .forEach((request) => request.flush([]));
-    return fixture;
-  }
   async function until(predicate: () => boolean) {
     await vi.waitFor(() => expect(predicate()).toBe(true), { timeout: 3000, interval: 10 });
   }
-  const completed = (id = ids.run) => ({
-    id,
-    status: 'completed',
-    resultsValid: true,
-    failureReason: null,
-    provenance: replayData(id).run.provenance,
-  });
-  async function flushPair(view: OperationalReport) {
-    http.expectOne(`/api/runs/${ids.run}`).flush(completed());
-    http.expectOne(`/api/runs/${ids.otherRun}`).flush(completed(ids.otherRun));
-    http.expectOne(`/api/runs/${ids.run}/replay`).flush(await replayEnvelope());
-    http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
-    http.expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`).flush(comparisonFixture());
+  /** The run picker lists scenarios, ranks them by their newest run, then lists the first one's runs. */
+  function flushPicker(runs: ReturnType<typeof listed>[]) {
+    http.expectOne('/api/scenarios').flush([scenario(ids.scenario, 'Demo')]);
+    http.expectOne(`/api/scenarios/${ids.scenario}/runs?limit=1`).flush(runs.slice(0, 1));
+    http.expectOne(`/api/scenarios/${ids.scenario}/runs?limit=8`).flush(runs);
+  }
+  async function flushRun(view: OperationalReport, id: string, data = replayData(id)) {
+    http.expectOne(`/api/runs/${id}`).flush(details(id));
+    http.expectOne(`/api/runs/${id}/replay`).flush(await replayEnvelope(data));
     await until(() => !view.loading());
   }
-  it('synchronizes summary, chart and table around the same pair, then changes zones locally', async () => {
-    const fixture = await component(),
-      view = fixture.componentInstance;
-    view.baselineId = ids.run;
-    view.candidateId = ids.otherRun;
-    view.load();
-    await flushPair(view);
+
+  it('opens the newest finished run of the scenario and summarises it without any setup', async () => {
+    const { fixture, view, host } = await setup();
+    flushPicker([
+      listed(thirdRun, 'failed', 1),
+      listed(ids.run, 'completed', 2),
+      listed(ids.otherRun, 'completed', 5),
+    ]);
+    await flushRun(view, ids.run);
     await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('[data-summary-metric="queuedPassengers"]')!.textContent).toContain(
-      '-50%',
+    expect(host.querySelector('[data-run-id]')?.getAttribute('data-run-id')).toBe(ids.run);
+    expect(host.textContent).toContain(
+      'Din 20 de pasageri, 12 au trecut de control (60%); nu avem date despre întârzieri la îmbarcare.',
     );
-    expect(host.querySelectorAll('[data-chart-run-id]')).toHaveLength(2);
-    expect(host.querySelector('[data-baseline-run-id]')!.getAttribute('data-baseline-run-id')).toBe(
-      ids.run,
+    expect(host.querySelectorAll('[data-card]')).toHaveLength(4);
+    expect(host.querySelector('[data-card="meanWait"] .value')?.textContent).toContain('1,3 min');
+    expect(host.textContent).toContain('Ce înseamnă:');
+    expect(host.textContent).toContain('Cea mai lungă coadă: 20 de pasageri, la 13:00.');
+    expect(host.querySelectorAll('details:not([open])')).toHaveLength(1);
+    expect(host.querySelectorAll('[data-checkpoint]').length).toBeGreaterThan(0);
+    // Only other finished runs can be chosen for the optional comparison.
+    const options = [...host.querySelectorAll<HTMLOptionElement>('.compare option')].map(
+      (o) => o.value,
     );
-    view.page.set(9);
-    view.zoneId.set(ids.otherCp);
-    view.metricKey.set('meanWaitMinutes');
-    view.filterChanged();
-    await fixture.whenStable();
-    expect(view.page()).toBe(0);
-    expect(view.summary().find((row) => row.metric.key === 'meanWaitMinutes')?.percent).toBe(-50);
-    expect(view.rows().at(-1)?.percent).toBe(-50);
-    expect(view.chart()?.series[0].runId).toBe(ids.run);
-    http.expectNone((request) => true);
+    expect(options).toEqual(['', ids.otherRun]);
+    expect(host.querySelector('path.other')).toBeNull();
   });
-  it('shows failed diagnostics without requesting a replay or fabricating valid KPI for that run', async () => {
-    const fixture = await component(),
-      view = fixture.componentInstance;
-    view.baselineId = ids.run;
-    view.load();
+
+  it('adds a comparison run on request, in the cards and as a dashed line', async () => {
+    const { fixture, view, host } = await setup();
+    flushPicker([listed(ids.run, 'completed', 2), listed(ids.otherRun, 'completed', 5)]);
+    await flushRun(view, ids.run);
+    await fixture.whenStable();
+    const select = host.querySelector<HTMLSelectElement>('.compare select')!;
+    select.value = ids.otherRun;
+    select.dispatchEvent(new Event('change'));
+    http.expectOne(`/api/runs/${ids.otherRun}`).flush(details(ids.otherRun));
+    http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
+    http.expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`).flush(comparisonFixture());
+    await until(() => !!view.otherReplay());
+    await fixture.whenStable();
+    expect(host.querySelector('[data-card="meanWait"]')?.textContent).toContain(
+      'Rularea de comparat: 38 s (acum cu 38 s mai mult)',
+    );
+    expect(host.querySelector('path.other')?.getAttribute('d')).toMatch(/^M/);
+    expect(host.textContent).toContain('Rularea de comparat');
+  });
+
+  it('opens linked runs, but refuses a comparison the server does not confirm', async () => {
+    const { fixture, view, host } = await setup({
+      baselineRunId: ids.run,
+      candidateRunId: ids.otherRun,
+    });
+    http.expectOne('/api/scenarios').flush([]);
+    await flushRun(view, ids.run);
+    http.expectOne(`/api/runs/${ids.otherRun}`).flush(details(ids.otherRun));
+    http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
+    const different = comparisonFixture();
+    different.comparability!.comparable = false;
+    different.comparability!.issues = [
+      { code: 'seed_mismatch', message: 'Seed-uri diferite.', severity: 'blocking' },
+    ];
+    http.expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`).flush(different);
+    await until(() => !view.comparing());
+    await fixture.whenStable();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'Rulările au fost simulate în condiții diferite, așa că nu le comparăm.',
+    );
+    expect(view.otherReplay()).toBeNull();
+    expect(host.querySelector('.versus')).toBeNull();
+    expect(host.querySelector('path.other')).toBeNull();
+    // The linked run stays selectable even though the picker did not list it.
+    expect(view.choices().map((choice) => choice.id)).toEqual([ids.otherRun]);
+  });
+
+  it('shows why a failed run has no report, without requesting a replay', async () => {
+    const { fixture, view, host } = await setup({ baselineRunId: ids.run });
+    http.expectOne('/api/scenarios').flush([]);
     http.expectOne(`/api/runs/${ids.run}`).flush({
-      id: ids.run,
+      ...details(ids.run),
       status: 'failed',
       resultsValid: false,
       failureReason: 'Engine timeout',
-      error: { code: 'timeout', message: 'Engine timeout' },
     });
+    await until(() => !view.loading());
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Engine timeout');
-    expect(view.summary().every((row) => row.before === null)).toBe(true);
-    expect(fixture.nativeElement.querySelector('svg')).toBeNull();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'Rularea a eșuat: Engine timeout',
+    );
+    expect(host.querySelector('[data-card]')).toBeNull();
+    expect(host.querySelector('svg')).toBeNull();
     http.expectNone(`/api/runs/${ids.run}/replay`);
   });
-  it('clears all derived data immediately on selection change and cancels older requests', async () => {
-    const fixture = await component(),
-      view = fixture.componentInstance;
-    view.baselineId = ids.run;
-    view.load();
-    const request = http.expectOne(`/api/runs/${ids.run}`);
-    view.baselineId = ids.otherRun;
-    view.selectionChanged();
-    expect(request.cancelled).toBe(true);
-    expect(view.pair()).toBeNull();
-    expect(view.rows()).toEqual([]);
-    expect(view.summary()).toEqual([]);
-    view.load();
-    http
-      .expectOne(`/api/runs/${ids.otherRun}`)
-      .flush({ ...completed(ids.otherRun), status: 'running', resultsValid: false });
-    await fixture.whenStable();
-    expect(view.pair()?.baseline.id).toBe(ids.otherRun);
-    expect(view.pair()?.baseline.replay).toBeNull();
-  });
-  it('keeps raw values visible when the comparison service fails and suppresses all differences', async () => {
-    const fixture = await component(),
-      view = fixture.componentInstance;
-    view.baselineId = ids.run;
-    view.candidateId = ids.otherRun;
-    view.load();
-    http.expectOne(`/api/runs/${ids.run}`).flush(completed());
-    http.expectOne(`/api/runs/${ids.otherRun}`).flush(completed(ids.otherRun));
-    http.expectOne(`/api/runs/${ids.run}/replay`).flush(await replayEnvelope());
-    http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
-    http
-      .expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`)
-      .error(new ProgressEvent('error'));
-    await until(() => !view.loading());
-    expect(view.summary()[0]).toMatchObject({ before: 4, after: 2, delta: null, percent: null });
-    expect(view.comparable()).toBe(false);
-  });
-  it('rejects a replay for a different run and a comparison response for a different pair', async () => {
-    const fixture = await component(),
-      view = fixture.componentInstance;
-    view.baselineId = ids.run;
-    view.candidateId = ids.otherRun;
-    view.load();
-    http.expectOne(`/api/runs/${ids.run}`).flush(completed());
-    http.expectOne(`/api/runs/${ids.otherRun}`).flush(completed(ids.otherRun));
+
+  it('rejects a replay that belongs to another run', async () => {
+    const { view } = await setup({ baselineRunId: ids.run });
+    http.expectOne('/api/scenarios').flush([]);
+    http.expectOne(`/api/runs/${ids.run}`).flush(details(ids.run));
     http.expectOne(`/api/runs/${ids.run}/replay`).flush(await replayEnvelope(candidateData()));
-    http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
-    const comparison = comparisonFixture();
-    comparison.baseline.id = ids.mark;
-    http.expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`).flush(comparison);
     await until(() => !view.loading());
-    expect(view.pair()?.baseline.replay).toBeNull();
-    expect(view.pair()?.comparison).toBeNull();
-    expect(view.summary()[0].before).toBeNull();
+    expect(view.replay()).toBeNull();
+    expect(view.run()?.problem).toContain('nu corespunde');
+  });
+
+  it('opens the newest run of a scenario the user picks by hand', async () => {
+    const { fixture, view, host } = await setup();
+    http
+      .expectOne('/api/scenarios')
+      .flush([scenario(ids.scenario, 'Demo'), scenario(otherScenario, 'Altul')]);
+    http
+      .expectOne(`/api/scenarios/${ids.scenario}/runs?limit=1`)
+      .flush([listed(ids.run, 'completed', 1)]);
+    http
+      .expectOne(`/api/scenarios/${otherScenario}/runs?limit=1`)
+      .flush([listed(thirdRun, 'completed', 9)]);
+    http
+      .expectOne(`/api/scenarios/${ids.scenario}/runs?limit=8`)
+      .flush([listed(ids.run, 'completed', 1)]);
+    await flushRun(view, ids.run);
+    await fixture.whenStable();
+    const select = host.querySelector<HTMLSelectElement>('app-run-picker select')!;
+    select.value = otherScenario;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(view.run()).toBeNull();
+    await fixture.whenStable();
+    http
+      .expectOne(`/api/scenarios/${otherScenario}/runs?limit=8`)
+      .flush([listed(ids.otherRun, 'failed', 1), listed(thirdRun, 'completed', 9)]);
+    http.expectOne(`/api/runs/${thirdRun}`);
+    expect(view.runId()).toBe(thirdRun);
   });
 });

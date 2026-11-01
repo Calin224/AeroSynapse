@@ -33,9 +33,13 @@ describe('Scenario navigation controls', () => {
   let http: HttpTestingController;
   beforeEach(() => { TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] }); http = TestBed.inject(HttpTestingController); });
   afterEach(() => http.verify());
-  function component(value = settings) {
-    const fixture = TestBed.createComponent(NavigationPanel); fixture.componentRef.setInput('scenario', structuredClone(scenario)); fixture.detectChanges();
-    http.expectOne('/api/scenarios/scenario-1/navigation/settings').flush(structuredClone(value)); fixture.detectChanges(); return fixture;
+  /** Loads settings; an active tab with passenger profiles calculates the impact on its own. */
+  function component(value = settings, active = true) {
+    const fixture = TestBed.createComponent(NavigationPanel); fixture.componentRef.setInput('scenario', structuredClone(scenario));
+    fixture.componentRef.setInput('active', active); fixture.detectChanges();
+    http.expectOne('/api/scenarios/scenario-1/navigation/settings').flush(structuredClone(value)); fixture.detectChanges();
+    if (active && value.passengerProfilesActive) { http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(structuredClone(result)); fixture.detectChanges(); }
+    return fixture;
   }
   it('persists corridor closures with revision control and keeps edits after a rejected save', () => {
     const view = component().componentInstance; const changed = vi.fn(); view.changed.subscribe(changed);
@@ -48,8 +52,12 @@ describe('Scenario navigation controls', () => {
   });
   it('requires passenger profiles and rejects malformed JSON before sending a request', () => {
     const fixture = component({ ...settings, passengerProfilesActive: false }); fixture.componentInstance.save();
-    expect(fixture.nativeElement.textContent).toContain('Profiluri de pasageri neconfigurate.');
-    http.expectNone(request => request.method === 'PUT'); fixture.destroy();
+    const goTo = vi.fn(); fixture.componentInstance.goTo.subscribe(goTo);
+    expect(fixture.nativeElement.textContent).toContain('nu are încă pasageri');
+    expect(fixture.nativeElement.querySelector('input[role="switch"]')).toBeNull();
+    (fixture.nativeElement.querySelector('.empty-step button') as HTMLButtonElement).click();
+    expect(goTo).toHaveBeenCalledWith('passengers');
+    http.expectNone(request => request.method === 'PUT' || request.url.endsWith('/preview')); fixture.destroy();
     const view = component().componentInstance; view.graphJson = '{'; view.save();
     expect(view.message()).toContain('obiect JSON'); http.expectNone(request => request.method === 'PUT');
     const saved = view.config; view.graphJson = JSON.stringify({ ...config, graph: { nodes: [null], edges: [] } }); view.applyJson();
@@ -83,7 +91,7 @@ describe('Scenario navigation controls', () => {
     http.expectOne('/api/runs/run-1/navigation?offset=0&limit=100').flush({ ...result, assessed: true,
       journeys: result.journeys.map((person,index) => ({ ...person,queueWaitMinutes:index,gateArrivalMinute:3+index,boardingRisk:index ? 'late' : 'safe' })),
       flights: [{ ...result.flights[0], pendingCount: 0, safeCount: 1, lateCount: 1 }] });
-    fixture.detectChanges(); expect(view.showingRun()).toBe('run-1'); expect(fixture.nativeElement.textContent).toContain('Rezultat capturat al rulării');
+    fixture.detectChanges(); expect(view.showingRun()).toBe('run-1'); expect(fixture.nativeElement.textContent).toContain('Traseele din simularea selectată');
     expect(view.result()!.flights[0].lateCount).toBe(1);
     fixture.componentRef.setInput('run', { ...run, id: 'run-2' }); fixture.detectChanges(); view.next(1);
     http.expectOne('/api/runs/run-1/navigation?offset=1&limit=100').flush({ ...result, assessed: true, offset: 1, returnedCount: 1, journeys: result.journeys.slice(1) });
@@ -98,8 +106,28 @@ describe('Scenario navigation controls', () => {
     request.flush({ ...result, routedCount: 0, errorCount: 2, routes: [] }); fixture.detectChanges();
     expect(view.dirty()).toBe(true);
     expect(view.result()!.errorCount).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('Impactul închiderilor');
+    expect(fixture.nativeElement.querySelector('.route-summary').textContent).toContain('nu au traseu până la poartă');
+    expect(fixture.nativeElement.querySelector('input[aria-label="Coridor principal deschisă"]').checked).toBe(false);
     http.expectNone(request => request.method === 'PUT');
+  });
+  it('shows the impact on open without locking the page, and waits while the tab is hidden', () => {
+    const working = vi.fn();
+    const shown = component(); shown.componentInstance.working.subscribe(working);
+    expect(shown.nativeElement.querySelector('.route-summary').textContent).toContain('2pasageri ajung la poartă');
+    shown.componentInstance.closeZone('hall-1', true);
+    const first = http.expectOne('/api/scenarios/scenario-1/navigation/preview'); shown.componentInstance.closeZone('cp-1', true);
+    expect(first.cancelled).toBe(true); http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(result);
+    expect(working).not.toHaveBeenCalled(); shown.destroy();
+    const hidden = component(settings, false);
+    http.expectNone('/api/scenarios/scenario-1/navigation/preview');
+    hidden.componentRef.setInput('active', true); hidden.detectChanges();
+    http.expectOne('/api/scenarios/scenario-1/navigation/preview').flush(result);
+  });
+  it('points to the flight schedule when there are no flights yet', () => {
+    const fixture = TestBed.createComponent(NavigationPanel); const goTo = vi.fn(); fixture.componentInstance.goTo.subscribe(goTo);
+    fixture.componentRef.setInput('scenario', { ...scenario, inputs: { ...scenario.inputs, flights: [] } }); fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.empty-step button') as HTMLButtonElement).click();
+    expect(goTo).toHaveBeenCalledWith('schedule'); http.expectNone(() => true);
   });
   it('cancels obsolete settings reads when the selected scenario changes', () => {
     const fixture = component();

@@ -109,7 +109,7 @@ describe('Decision flow presentation', () => {
     expect(summary.candidates).toEqual([
       expect.objectContaining({ runId: ids.otherRun, recommended: true, cost: 20 }),
     ]);
-    expect(summary.waitBefore).toBe('2 min');
+    expect(summary.waitBefore).toBe('2.00 min');
     const quick = workflowEvaluation();
     quick.variants[0].configuration = [
       { checkpointId: 'cp-1', name: 'CP-1', staffCount: 1 },
@@ -124,16 +124,25 @@ describe('Decision flow presentation', () => {
     const plain = evaluationSummary(quick)!;
     // Short waits read in seconds, and the headline names where people move.
     expect(plain.headline).toBe('Realocare: 2 operatori la CP-1');
-    expect([plain.waitBefore, plain.waitAfter]).toEqual(['30 s', '6 s']);
+    expect([plain.waitBefore, plain.waitAfter]).toEqual(['30.00 s', '6.00 s']);
     expect(plain.outcomes[0]).toMatchObject({ unit: 'secunde', before: 30, after: 6 });
     // The p95 card follows the headline's unit and rounding, even past a minute.
     quick.variants[0].metrics!.meanWaitMinutes = 0.178;
     quick.variants[0].metrics!.p95WaitMinutes = 1.04;
     quick.variants[1].metrics!.p95WaitMinutes = 0.14;
     const rounded = evaluationSummary(quick)!;
-    expect(rounded.waitBefore).toBe('11 s');
-    expect(rounded.outcomes[0]).toMatchObject({ before: 11, after: 6 });
-    expect(rounded.outcomes[1]).toMatchObject({ unit: 'secunde', before: 62, after: 8 });
+    expect(rounded.waitBefore).toBe('10.68 s');
+    expect(rounded.outcomes[0]).toMatchObject({ before: 10.68, after: 6 });
+    expect(rounded.outcomes[1].unit).toBe('secunde');
+    expect(rounded.outcomes[1].before).toBeCloseTo(62.4);
+    expect(rounded.outcomes[1].after).toBeCloseTo(8.4);
+    quick.variants[0].metrics!.meanWaitMinutes = 2 / 60;
+    quick.variants[1].metrics!.meanWaitMinutes = 1.8 / 60;
+    const precise = evaluationSummary(quick)!;
+    expect([precise.waitBefore, precise.waitAfter]).toEqual(['2.00 s', '1.80 s']);
+    expect(precise.outcomes[0].before).toBeCloseTo(2);
+    expect(precise.outcomes[0].after).toBeCloseTo(1.8);
+    expect(precise.outcomes[0].percent).toBeCloseTo(-10);
     expect(plain.moves[0]).toMatchObject({ before: 1, after: 3, afterPeople: [0, 1, 2] });
     expect(plain.candidates[0].configuration[1]).toMatchObject({ count: 0, delta: -2 });
     expect(plain.candidates[0].waitShare).toBeCloseTo(20);

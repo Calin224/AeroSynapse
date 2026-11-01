@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { SessionState } from '../../core/auth/session-state';
+import { SimulationContext } from '../../core/simulation-context';
 import { Scenario } from '../scenario/scenario';
 import { noWebGl, SimulationPanelStub, stubScenarioPanels } from '../scenario/scenario.testing';
 import { ids, towerFixture } from '../control-tower/tower.testing';
@@ -75,6 +76,28 @@ describe('Scenario and run controls inside Control Tower', () => {
       fixture.nativeElement.querySelector('.simulation-workspace app-digital-twin'),
     ).toBeTruthy();
     http.expectNone(`/api/scenarios/${ids.scenario}`);
+  });
+  it('lists scenarios saved in Studio on the next visit, since each visit loads its own catalog', () => {
+    component().destroy();
+    expect(component().componentInstance.store.scenarios()).toEqual(catalog);
+  });
+  it('lands on the gallery instead of an error when the remembered scenario was deleted', async () => {
+    const deleted = '30000000-0000-0000-0000-000000000009';
+    const simulation = TestBed.inject(SimulationContext);
+    simulation.remember(deleted);
+    // The workspace guard copies the remembered selection into the link.
+    params.next(convertToParamMap({ scenarioId: deleted }));
+    const fixture = component();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).not.toContain('catalogul activ');
+    expect(root.querySelectorAll('.gallery .card')).toHaveLength(2);
+    expect(TestBed.inject(Router).navigate).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { scenarioId: ids.scenario, runId: null } }),
+    );
+    expect(simulation.current()?.scenarioId).toBe(ids.scenario);
   });
   it('filters the scenario gallery by name or code without opening another data owner', () => {
     const fixture = component(),
@@ -165,6 +188,21 @@ describe('Scenario and run controls inside Control Tower', () => {
         queryParamsHandling: 'merge',
       }),
     );
+  });
+  it('numbers the preparation steps and offers the next one, ending at the last step', () => {
+    const fixture = component(),
+      view = fixture.componentInstance;
+    view.showPhase('prepare');
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('#tab-routes .tab-step')?.textContent).toBe('3');
+    (root.querySelector('.next-step button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(view.tab()).toBe('passengers');
+    expect(root.querySelector('#tab-passengers')?.getAttribute('aria-selected')).toBe('true');
+    view.tab.set('resources');
+    fixture.detectChanges();
+    expect(root.querySelector('.next-step')).toBeNull();
   });
   it('delegates launch and recovery to the existing idempotent simulation command owner', () => {
     const fixture = component(),

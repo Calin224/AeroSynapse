@@ -1,3 +1,72 @@
 :host {
   display: block;
 }
+.hint {
+  color: var(--text-muted);
+}
+.flight-rows {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.flight-rows > legend {
+  padding: 0 6px;
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.flight-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(9rem, 1fr) minmax(12rem, 2fr);
+  align-items: end;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.flight-row:last-child {
+  border-bottom: 0;
+}
+.flight-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+  min-height: 40px;
+}
+.count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.count > input {
+  width: 6.5rem;
+}
+.advanced fieldset {
+  display: grid;
+  gap: 12px;
+}
+.advanced :is(h4, h5) {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.advanced h5 {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.advanced button {
+  justify-self: start;
+}
+.meta-chip.alert {
+  color: var(--danger);
+  border-color: var(--danger-line);
+}
+@media (max-width: 560px) {
+  .flight-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

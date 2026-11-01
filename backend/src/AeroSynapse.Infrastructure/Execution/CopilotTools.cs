@@ -61,9 +61,8 @@ public sealed class CopilotTools(TwinDbContext db, ICopilotService copilot, IRep
                 {
                     var data = await Capture(runId, token);
                     // Never expose or interpret PayloadJson, scenario descriptions, or event free text as instructions.
-                    string[] types = ["passenger_surge", "checkpoint_unavailable", "staff_reduction", "flight_change", "corridor_closure", "resume"];
-                    events = data.Scenario.Inputs.Events.Where(e => types.Contains(e.Type) && (e.CheckpointId is null || e.CheckpointId == request.ZoneId))
-                        .Select(e => new CopilotEventFact(e.Id, e.Type, (e.OccurredAtUtc - data.Scenario.Inputs.StartsAtUtc).TotalMinutes, e.CheckpointId))
+                    events = data.Scenario.Inputs.Events.Where(e => CopilotRunAnswers.EventType(e.Type) is not null && (e.CheckpointId is null || e.CheckpointId == request.ZoneId))
+                        .Select(e => new CopilotEventFact(e.Id, CopilotRunAnswers.EventType(e.Type)!, (e.OccurredAtUtc - data.Scenario.Inputs.StartsAtUtc).TotalMinutes, e.CheckpointId))
                         .Where(e => e.Minute >= 0 && e.Minute <= request.Minute).OrderBy(e => e.Minute).ThenBy(e => e.Id).Take(100).ToArray();
                 }
                 return Done(output with { Investigation = new(observation, events) });

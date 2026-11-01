@@ -33,7 +33,7 @@
 @if (store.pending(); as pending) {
   <p class="notice" role="status">
     O comandă așteaptă confirmarea serverului:
-    {{ pending.kind === 'publish' ? 'generarea alertelor' : actionLabel(pending.body.action) }}.
+    {{ pending.kind === 'action' ? actionLabel(pending.body.action) : 'generarea alertelor' }}.
     Este posibil să fi fost deja salvată.
     <button type="button" (click)="store.retry()" [disabled]="store.working()">
       Reîncearcă aceeași comandă
@@ -80,23 +80,32 @@
   </details>
 </section>
 
-<!-- Generate alerts from a run's queue forecast. -->
-<details class="publisher" #publisher [open]="!store.alerts().total && !!store.selection().scenarioId">
+<!-- Generate alerts from the simulated queues of the selected scope. -->
+<details class="publisher" #publisher [open]="!store.alerts().total && !store.loading()">
   <summary>
-    <span class="publisher-title"><i class="pi pi-bolt" aria-hidden="true"></i> Generează alerte din prognoza cozilor</span>
-    <span class="publisher-hint">Alege pragurile; aplicația calculează alertele pentru fiecare zonă.</span>
+    <span class="publisher-title"><i class="pi pi-bolt" aria-hidden="true"></i> Generează alerte din cozile simulate</span>
+    <span class="publisher-hint">Alege pragurile; aplicația verifică fiecare zonă pe toată durata simulării.</span>
   </summary>
   <div class="publisher-body">
     @if (store.contextError()) {
       <p role="alert">{{ store.contextError() }}</p>
     }
-    @if (!store.selection().runId) {
-      <p class="hint"><i class="pi pi-info-circle" aria-hidden="true"></i> Alege mai sus un scenariu și o rulare.</p>
-    } @else if (store.contextLoading()) {
+    @if (store.selection().runId && store.contextLoading()) {
       <p role="status">Se citește rularea…</p>
-    } @else if (!store.capture()) {
-      <p class="hint">Rularea aleasă nu poate genera alerte. Alege o rulare finalizată a unui scenariu sintetic.</p>
+    } @else if (store.selection().runId && !canPublishRun()) {
+      <p class="hint">Rularea aleasă nu poate genera alerte. Alege o rulare finalizată sau „Toate rulările”.</p>
     } @else {
+      <p class="hint scope"><i class="pi pi-info-circle" aria-hidden="true"></i>
+        @if (live()) {
+          Rularea în curs: prognoza cozilor pentru următoarele minute.
+        } @else if (store.selection().runId) {
+          Rularea aleasă, pe toată durata simulării.
+        } @else if (store.selection().scenarioId) {
+          Toate rulările finalizate ale scenariului, pe toată durata simulării.
+        } @else {
+          Toate rulările finalizate din toate scenariile, pe toată durata simulării.
+        }
+      </p>
       <form (ngSubmit)="publish()" class="publish-form">
         <label class="field-warning">
           <span>Avertizare peste</span>
@@ -114,20 +123,14 @@
             <small>pasageri</small>
           </span>
         </label>
-        <label>
-          <span>Privește înainte</span>
-          <span class="with-unit">
-            <input name="horizon" type="number" min="15" max="30" step="1" [(ngModel)]="horizonMinutes"
-              required [disabled]="!!store.pending() || store.working()" />
-            <small>min (15–30)</small>
-          </span>
-        </label>
-        @if (store.run()?.status !== 'running') {
+        @if (live()) {
           <label>
-            <span>Începând cu minutul</span>
-            <input name="origin" type="number" inputmode="numeric" min="0" [max]="origins().at(-1) ?? 0"
-              [step]="store.capture()?.interval ?? 1" [(ngModel)]="fromMinute" required
-              [disabled]="!!store.pending() || store.working()" />
+            <span>Privește înainte</span>
+            <span class="with-unit">
+              <input name="horizon" type="number" min="15" max="30" step="1" [(ngModel)]="horizonMinutes"
+                required [disabled]="!!store.pending() || store.working()" />
+              <small>min (15–30)</small>
+            </span>
           </label>
         }
         <button type="submit" class="btn-primary" [disabled]="!canPublish()">
@@ -181,7 +184,7 @@
           (click)="selectAlert(alert.id)" (keydown)="moveAlert($event, i)">
           <span class="row-top">
             <span class="level" [attr.data-level]="alert.level">{{ levelLabel(alert.level) }}</span>
-            <span class="when">{{ fromNow(alert.lastObservedAtUtc) }}</span>
+            <span class="when">min {{ alert.evidence.fromMinute }}–{{ alert.evidence.toMinute }}</span>
           </span>
           <strong class="zone">{{ alert.zoneName }}</strong>
           <span class="peak"><b>{{ alert.evidence.peakQueuePassengers | number: '1.0-0' }}</b> pasageri la coadă</span>
@@ -195,14 +198,14 @@
               <span class="chip"><i class="pi pi-user" aria-hidden="true"></i> {{ alert.assignee }}</span>
             }
           </span>
-          <span class="scenario">{{ alert.scenarioName }}</span>
+          <span class="scenario">{{ alert.scenarioName }} · rulare {{ alert.runId.slice(0, 8) }}</span>
         </button>
       } @empty {
         <p class="empty" role="status">
           {{
             store.loading()
               ? 'Se citesc alertele…'
-              : 'Nicio alertă pentru filtrele selectate. Alege o rulare și apasă „Generează alerte”.'
+              : 'Nicio alertă pentru filtrele selectate. Apasă „Generează alerte”.'
           }}
         </p>
       }
@@ -235,7 +238,7 @@
       <div class="gauge-block">
         <p class="gauge-value">
           <strong>{{ alert.evidence.peakQueuePassengers | number: '1.0-0' }}</strong>
-          <span>pasageri la coadă, vârful prognozat</span>
+          <span>pasageri la coadă, {{ recorded(alert) ? 'vârful din simulare' : 'vârful prognozat' }}</span>
         </p>
         <div class="gauge" [attr.data-level]="alert.level" role="img"
           [attr.aria-label]="'Vârf ' + (alert.evidence.peakQueuePassengers | number: '1.0-0') + ' pasageri; avertizare peste ' + alert.warningThreshold + ', critic peste ' + alert.criticalThreshold">
@@ -315,7 +318,10 @@
         <dl>
           <div>
             <dt>Sursă</dt>
-            <dd>Prognoza cozilor · {{ alert.evidence.observationSource === 'live_simulation' ? 'simularea în curs' : 'captură istorică' }}</dd>
+            <dd>
+              {{ recorded(alert) ? 'Cozile înregistrate pe toată rularea finalizată'
+                : 'Prognoza cozilor · ' + (alert.evidence.observationSource === 'live_simulation' ? 'simularea în curs' : 'captură istorică') }}
+            </dd>
           </div>
           <div>
             <dt>Perioadă simulată · UTC</dt>
@@ -350,7 +356,7 @@
         <p>
           {{ store.alerts().total
             ? 'Selectează o alertă din listă (sau folosește săgețile ↑ ↓) ca s-o confirmi, s-o atribui sau s-o comentezi.'
-            : 'Generează alerte dintr-o rulare ca să vezi aici zonele aglomerate.' }}
+            : 'Apasă „Generează alerte” ca să vezi zonele aglomerate din simulări.' }}
         </p>
       </div>
     }

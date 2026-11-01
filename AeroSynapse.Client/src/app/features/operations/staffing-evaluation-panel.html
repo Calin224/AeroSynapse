@@ -33,12 +33,15 @@
   }
   <ng-template #body>
     <h3 id="staffing-evaluation-title">
-      {{ workflowStage() ? 'Variante simulate' : 'Validare în simulator' }}
+      {{ workflowStage() ? 'Variante simulate' : 'Verifică în simulare' }}
     </h3>
+    @if (!workflowStage()) {
+      <p>Rulează ziua în simulator cu variante de personal și compară-le cu situația actuală.</p>
+    }
 
     @if (!readOnly() && (!workflowStage() || workflowStage() === 'optimize')) {
       @if (!proposal()) {
-        <p>Activarea evaluării necesită configurarea restricțiilor și a limitelor fizice.</p>
+        <p>Corectează Setările avansate ale redistribuirii pentru a putea verifica în simulare.</p>
       }
       <form (ngSubmit)="start()">
         <ng-template #parameters>
@@ -50,7 +53,7 @@
                 [(ngModel)]="multiObjectiveEnabled"
                 [disabled]="busy()"
               />
-              Optimizare multi-obiectiv</span
+              Compară mai multe obiective (timp, cost, risc)</span
             ></label
           >
           @if (multiObjectiveEnabled) {
@@ -177,7 +180,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Candidați<input
+              >Variante de încercat (1–4)<input
                 type="number"
                 name="candidateCount"
                 [(ngModel)]="candidateCount"
@@ -188,7 +191,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Timeout simulări, cu așteptarea în coadă (s)<input
+              >Timp maxim pentru simulări (secunde)<input
                 type="number"
                 name="evaluationLimit"
                 [(ngModel)]="timeLimitSeconds"
@@ -199,7 +202,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Creștere maximă waiting (min)<input
+              >Creștere acceptată a așteptării medii (min)<input
                 type="number"
                 name="meanTolerance"
                 [(ngModel)]="policy.maxMeanWaitIncreaseMinutes"
@@ -210,7 +213,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Creștere maximă P95 (min)<input
+              >Creștere acceptată a așteptării P95 (min)<input
                 type="number"
                 name="p95Tolerance"
                 [(ngModel)]="policy.maxP95IncreaseMinutes"
@@ -221,7 +224,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Creștere maximă risc boarding (fracție 0–1)<input
+              >Creștere acceptată a riscului de boarding (0–1; 0,05 = 5%)<input
                 type="number"
                 name="riskTolerance"
                 [(ngModel)]="policy.maxBoardingRiskIncrease"
@@ -232,7 +235,7 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Creștere maximă neprocesați<input
+              >Pasageri neprocesați în plus acceptați<input
                 type="number"
                 name="unprocessedTolerance"
                 [(ngModel)]="policy.maxUnprocessedIncrease"
@@ -243,16 +246,30 @@
                 [disabled]="busy()"
             /></label>
             <label
-              >Cost maxim realocare (puncte)<input
-                type="number"
-                name="reallocationLimit"
-                [(ngModel)]="policy.maxReallocationCost"
-                min="0"
-                max="100000000000000"
-                step="1"
-                required
-                [disabled]="busy()"
-            /></label>
+              ><span
+                ><input
+                  type="checkbox"
+                  name="unlimitedReallocation"
+                  [ngModel]="policy.maxReallocationCost === unlimitedCost"
+                  (ngModelChange)="policy.maxReallocationCost = $event ? unlimitedCost : 100"
+                  [disabled]="busy()"
+                />
+                Fără limită de cost pentru mutări</span
+              ></label
+            >
+            @if (policy.maxReallocationCost !== unlimitedCost) {
+              <label
+                >Cost maxim al mutărilor (puncte)<input
+                  type="number"
+                  name="reallocationLimit"
+                  [(ngModel)]="policy.maxReallocationCost"
+                  min="0"
+                  [max]="unlimitedCost"
+                  step="1"
+                  required
+                  [disabled]="busy()"
+              /></label>
+            }
             <label
               ><span
                 ><input
@@ -377,13 +394,18 @@
             <ng-container *ngTemplateOutlet="parameters" />
           </details>
         } @else {
-          <ng-container *ngTemplateOutlet="parameters" />
+          <details class="advanced disclosure">
+            <summary>Setări avansate pentru simulare</summary>
+            <ng-container *ngTemplateOutlet="parameters" />
+          </details>
         }
         <div class="actions">
+          <!-- Outside the guided flow this is the panel's second step, so it is not the primary action. -->
           <button
-            class="btn-primary"
+            [class.btn-primary]="!!workflowStage()"
             [class.start]="!!workflowStage()"
-            type="submit"
+            [type]="workflowStage() ? 'submit' : 'button'"
+            (click)="workflowStage() || start()"
             [disabled]="
               !online() || disabled() || busy() || running() || pendingCommand() || !proposal()
             "
@@ -401,14 +423,14 @@
               busy()
                 ? 'Se pregătește…'
                 : multiObjectiveEnabled
-                  ? 'Recalculează CP-SAT + SimPy'
+                  ? 'Calculează și verifică variantele'
                   : workflowStage()
                     ? running()
                       ? 'Se simulează variantele…'
                       : evaluation()
                         ? 'Reluare optimizare'
                         : 'Lansare optimizare'
-                    : 'Generează și evaluează în SimPy'
+                    : 'Verifică în simulare'
             }}
           </button>
         </div>
@@ -437,7 +459,7 @@
             Simulăm aceeași zi cu fiecare variantă de personal: {{ progress().finished }} din
             {{ progress().total }} simulări gata.
           } @else {
-            Progres: {{ progress().finished }} / {{ progress().total }} rulări încheiate.
+            Simulări gata: {{ progress().finished }} din {{ progress().total }}.
           }
         </p>
         <progress
@@ -478,14 +500,10 @@
           </p>
         }
       </ng-template>
-      @if (workflowStage()) {
-        <details>
-          <summary>Detalii tehnice ale evaluării</summary>
-          <ng-container *ngTemplateOutlet="technical" />
-        </details>
-      } @else {
+      <details>
+        <summary>Detalii tehnice ale evaluării</summary>
         <ng-container *ngTemplateOutlet="technical" />
-      }
+      </details>
       @if (evaluation.planning.status === 'timeout') {
         <p role="alert">
           Generarea a atins timeout-ul. Sunt simulate doar configurațiile fezabile găsite efectiv.
@@ -540,7 +558,12 @@
           <div class="table-wrap">
             <table>
               <caption>
-                Metrici din snapshot-urile SimPy persistate. Valorile lipsă sunt indisponibile.
+                {{
+                  workflowStage()
+                    ? 'Metrici din snapshot-urile SimPy persistate.'
+                    : 'Rezultatele simulării.'
+                }}
+                Valorile lipsă sunt indisponibile.
               </caption>
               <thead>
                 <tr>

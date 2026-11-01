@@ -85,7 +85,8 @@ def series(simulation):
     for row in sorted(kpis['snapshots'], key=lambda item: item['minute']):
         target = rows.setdefault(row['zoneId'], {'queued': [], 'arrived': [], 'staff': []})
         target['queued'].append(row['queuedPassengers'])
-        target['arrived'].append(row['arrivedPassengers'])
+        # Cumulative arrivals: people moved on to another control's queue still arrived here.
+        target['arrived'].append(row['arrivedPassengers'] + row.get('transferredOutPassengers', 0))
         target['staff'].append(row.get('effectiveCapacity', row['capacity']))
     return minutes, rows
 

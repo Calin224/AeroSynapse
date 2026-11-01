@@ -13,20 +13,25 @@ public static class AgentImpactSummary
     /// <summary>
     /// Waits weighted by completed waits at the last minute, the worst control's P95, the longest queue at any control,
     /// and the first minute after the busiest one when nobody waits anywhere (null when the queue never clears).
+    /// Check-in desks, when given, are one more place: their waits add to the mean per passenger who finished security.
     /// </summary>
-    public static AgentImpactSide From(IReadOnlyList<KpiSnapshot> snapshots)
+    public static AgentImpactSide From(IReadOnlyList<KpiSnapshot> snapshots, IReadOnlyList<CheckInSnapshot>? checkIn = null)
     {
         if (snapshots.Count == 0) return new(null, null, 0, null);
         var horizon = snapshots.Max(s => s.Minute);
         var final = snapshots.Where(s => s.Minute == horizon && s.WaitSampleCount > 0).ToArray();
         var samples = final.Sum(s => s.WaitSampleCount);
+        var desk = checkIn?.MaxBy(s => s.Minute);
+        var deskWait = desk?.MeanWaitMinutes is { } deskMean ? desk.ProcessedPassengers * deskMean : 0;
         double? mean = samples > 0 && final.All(s => s.MeanWaitMinutes is not null)
-            ? final.Sum(s => s.WaitSampleCount * s.MeanWaitMinutes!.Value) / samples : null;
-        double? p95 = final.Length > 0 && final.All(s => s.P95WaitMinutes is not null) ? final.Max(s => s.P95WaitMinutes!.Value) : null;
-        var queue = snapshots.GroupBy(s => s.Minute).Select(g => (Minute: g.Key, Queued: g.Sum(s => s.QueuedPassengers))).OrderBy(x => x.Minute).ToArray();
+            ? (final.Sum(s => s.WaitSampleCount * s.MeanWaitMinutes!.Value) + deskWait) / samples : null;
+        double? p95 = final.Length > 0 && final.All(s => s.P95WaitMinutes is not null)
+            ? Math.Max(final.Max(s => s.P95WaitMinutes!.Value), desk?.P95WaitMinutes ?? 0) : null;
+        var rows = snapshots.Select(s => (s.Minute, s.QueuedPassengers)).Concat(checkIn?.Select(s => (s.Minute, s.QueuedPassengers)) ?? []).ToArray();
+        var queue = rows.GroupBy(s => s.Minute).Select(g => (Minute: g.Key, Queued: g.Sum(s => s.QueuedPassengers))).OrderBy(x => x.Minute).ToArray();
         var peak = queue.MaxBy(x => x.Queued);
         int? cleared = peak.Queued == 0 ? null : queue.Where(x => x.Minute > peak.Minute && x.Queued == 0).Select(x => (int?)x.Minute).FirstOrDefault();
-        return new(mean, p95, snapshots.Max(s => s.QueuedPassengers), cleared);
+        return new(mean, p95, rows.Max(s => s.QueuedPassengers), cleared);
     }
 
     /// <summary>The actions taken, added up per place: "4 operatori din rezervă la CP-1".</summary>

@@ -23,6 +23,8 @@ internal static class ScenarioEndpoints
             .Document<IReadOnlyList<ScenarioSummary>>("List active scenarios");
         scenarios.MapGet("/{id}", async (Guid id, ISender sender, CancellationToken token) => Results.Ok(await sender.Send(new GetScenarioQuery(id), token)))
             .Document<ScenarioDetails>("Get complete scenario configuration");
+        scenarios.MapGet("/{id}/revisions", async (Guid id, ISender sender, CancellationToken token) => Results.Ok(await sender.Send(new ListScenarioRevisionsQuery(id), token)))
+            .Document<IReadOnlyList<ScenarioRevision>>("List the latest 50 scenario revisions with who saved them, what changed and the runs made on each");
         scenarios.MapPost("/validate", async (ScenarioWriteRequest request, ISender sender, CancellationToken token) =>
             Results.Ok(await sender.Send(new ValidateScenarioQuery(request), token)))
             .Document<ScenarioValidationResult>("Validate a complete scenario without creating or changing stored data");

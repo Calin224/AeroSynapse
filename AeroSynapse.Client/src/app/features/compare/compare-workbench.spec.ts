@@ -3,12 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BatchDetails } from '../batches/batches.models';
-import { RunComparison } from '../operations/comparison.models';
+import { ComparedMetric, RunComparison } from '../operations/comparison.models';
 import { ScenarioDetails } from '../operations/operations.models';
 import { StudioLayout } from '../scenario-studio/studio.models';
 import { apiErrorInterceptor } from '../../core/http/api-error.interceptor';
 import { OPERATION_REQUEST_TIMEOUT_MS } from '../../core/http/operation-request';
-import { CompareWorkbench } from './compare-workbench';
+import { CompareWorkbench, explain } from './compare-workbench';
 
 const scenario: ScenarioDetails = {
   scenario: {
@@ -304,6 +304,12 @@ describe('Baseline/what-if workbench', () => {
     http.expectOne('/api/runs/baseline-run/compare/candidate-run').flush(report());
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.summary-table').textContent).toContain('-5');
+    const verdict = fixture.nativeElement.querySelector('.verdict').textContent;
+    expect(verdict).toContain('Mai bine');
+    expect(verdict).toContain('Varianta nouă reduce așteptarea medie la cp1 cu 5 min (−50%)');
+    expect(fixture.nativeElement.querySelector('.notes').textContent).toContain(
+      'Personal la cp1: 2 → 1 persoană.',
+    );
     expect(view.source()!.scenario.inputs).toEqual(scenario.inputs);
     http.expectNone((request) => request.method === 'PUT');
     await vi.advanceTimersByTimeAsync(5000);
@@ -396,6 +402,10 @@ describe('Baseline/what-if workbench', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Date insuficiente pentru calcularea diferențelor',
     );
+    expect(fixture.nativeElement.querySelector('.verdict').textContent).toContain(
+      'simularea pentru varianta nouă nu are rezultate valide',
+    );
+    expect(fixture.nativeElement.querySelector('.kpis')).toBeNull();
   });
   it('restores a timed-out command after reload and retries its original inputs despite a newer source revision', async () => {
     const fixture = component(),
@@ -463,5 +473,161 @@ describe('Baseline/what-if workbench', () => {
     expect(view.roles()).toEqual([]);
     http.expectNone('/api/runs/baseline-run/compare/candidate-run');
     fixture.destroy();
+  });
+});
+
+describe('Comparison verdict', () => {
+  const metric = (
+    name: string,
+    baseline: number | null,
+    candidate: number | null,
+    zoneId = 'cp1',
+  ): ComparedMetric => {
+    const missing = baseline === null || candidate === null;
+    return {
+      zoneId,
+      name,
+      unit: '',
+      baseline,
+      candidate,
+      delta: missing ? null : candidate - baseline,
+      percentChange: missing || !baseline ? null : ((candidate - baseline) / baseline) * 100,
+      unavailableReason: missing ? 'metric_unavailable' : baseline ? null : 'baseline_not_positive',
+    };
+  };
+  const staff = {
+    zoneId: 'cp1',
+    before: 3,
+    after: 4,
+    unit: ['persoană', 'persoane'] as [string, string],
+  };
+  const run = (...metrics: ComparedMetric[]) => ({ ...report(), metrics });
+
+  it('states a better result in one sentence and translates the numbers', () => {
+    const result = explain(
+      run(
+        metric('meanWaitMinutes', 18.2, 12),
+        metric('maximumQueue', 40, 22),
+        metric('processedPassengers', 438, 450),
+        metric('cumulativeUtilization', 0.82, 0.64),
+        metric('boardingAtRiskCount', 12, 4),
+        metric('boardingAtRiskCount', 3, 1, 'cp2'),
+      ),
+      'cp1',
+      'Control 1',
+      staff,
+    );
+    expect(result.tone).toBe('better');
+    expect(result.verdict).toBe(
+      'Varianta nouă reduce așteptarea medie la Control 1 cu 6,2 min (−34,1%) față de personalul actual.',
+    );
+    expect(result.cards).toEqual([
+      {
+        label: 'Așteptare medie',
+        before: '18,2 min',
+        after: '12 min',
+        change: '−6,2 min (−34,1%)',
+        tone: 'better',
+      },
+      {
+        label: 'Cea mai lungă coadă',
+        before: '40 de pasageri',
+        after: '22 de pasageri',
+        change: '−18 pasageri (−45%)',
+        tone: 'better',
+      },
+      {
+        label: 'Pasageri serviți',
+        before: '438 de pasageri',
+        after: '450 de pasageri',
+        change: '+12 pasageri (+2,7%)',
+        tone: 'better',
+      },
+    ]);
+    expect(result.notes).toEqual([
+      'Cea mai lungă coadă la Control 1 scade de la 40 la 22 de pasageri.',
+      'În tot aeroportul, pasagerii care riscă să întârzie la poartă scad de la 15 la 5.',
+      'Personal la Control 1: 3 → 4 persoane, ocupat 82% → 64% din timp.',
+      'Varianta nouă servește 12 pasageri în plus la Control 1. Așteptarea medie include doar pasagerii serviți.',
+    ]);
+    expect(result.controlled).toBe(true);
+  });
+  it('says plainly when the new variant is worse', () => {
+    const result = explain(run(metric('meanWaitMinutes', 5, 8)), 'cp1', 'Control 1', null);
+    expect(result.tone).toBe('worse');
+    expect(result.verdict).toBe(
+      'Varianta nouă crește așteptarea medie la Control 1 cu 3 min (+60%) față de personalul actual.',
+    );
+    expect(result.cards[0].tone).toBe('worse');
+  });
+  it('calls a change under half a percent a tie', () => {
+    const result = explain(run(metric('meanWaitMinutes', 10, 10.02)), 'cp1', 'Control 1', null);
+    expect(result.tone).toBe('same');
+    expect(result.verdict).toBe(
+      'Varianta nouă nu schimbă practic așteptarea medie la Control 1: 10,02 min, față de 10 min acum.',
+    );
+  });
+  it('ignores huge percentages on differences nobody would notice', () => {
+    // One person fewer at an idle post: seconds of wait and one queued passenger are not "worse".
+    const result = explain(
+      run(
+        metric('meanWaitMinutes', 0.002, 0.004),
+        metric('maximumQueue', 0, 1),
+        metric('processedPassengers', 360, 360),
+      ),
+      'cp1',
+      'Control 1',
+      { ...staff, before: 8, after: 7 },
+    );
+    expect(result.tone).toBe('same');
+    expect(result.verdict).toBe(
+      'Varianta nouă nu schimbă practic așteptarea medie la Control 1: 0 min, față de 0 min acum.',
+    );
+    expect(result.cards.map((card) => [card.tone, card.change])).toEqual([
+      ['same', 'fără diferență'],
+      ['same', '+1 pasageri'],
+      ['same', 'fără diferență'],
+    ]);
+    expect(result.cards[1].after).toBe('1 pasager');
+    expect(result.notes).toContain(
+      'Cu 7 persoane în loc de 8, rezultatul simulat la Control 1 nu se înrăutățește.',
+    );
+  });
+  it('draws no conclusion from missing or misaligned data', () => {
+    const missing = explain(run(metric('meanWaitMinutes', 10, null)), 'cp1', 'Control 1', null);
+    expect(missing.tone).toBe('unknown');
+    expect(missing.verdict).toContain('lipsește o valoare validă');
+    expect(missing.cards).toEqual([]);
+    const misaligned = metric('meanWaitMinutes', 10, 5);
+    misaligned.baselineRecordedAtUtc = '2026-10-16T11:00:00Z';
+    misaligned.candidateRecordedAtUtc = '2026-10-16T11:30:00Z';
+    const shifted = explain(run(misaligned), 'cp1', 'Control 1', null);
+    expect(shifted.tone).toBe('unknown');
+    expect(shifted.cards[0]).toMatchObject({ change: 'Diferență indisponibilă', tone: 'unknown' });
+    const idle = explain(
+      run(metric('meanWaitMinutes', 0, 0), metric('processedPassengers', 0, 0)),
+      'cp1',
+      'Control 1',
+      staff,
+    );
+    expect(idle.tone).toBe('unknown');
+    expect(idle.verdict).toContain('nu a trecut niciun pasager');
+  });
+  it('refuses a verdict for runs that cannot be compared', () => {
+    const failed = run(metric('meanWaitMinutes', 10, 5));
+    failed.candidate.resultsValid = false;
+    expect(explain(failed, 'cp1', 'Control 1', staff)).toEqual({
+      tone: 'unknown',
+      verdict:
+        'Nu putem trage o concluzie: simularea pentru varianta nouă nu are rezultate valide.',
+      cards: [],
+      notes: [],
+      controlled: false,
+    });
+    const otherBuild = run(metric('meanWaitMinutes', 10, 5));
+    otherBuild.versionsMatch = false;
+    expect(explain(otherBuild, 'cp1', 'Control 1', staff).verdict).toBe(
+      'Nu putem trage o concluzie: cele două simulări nu pot fi comparate corect.',
+    );
   });
 });

@@ -76,7 +76,7 @@ export async function decide(
   await page
     .getByText('Setări avansate · criterii de acceptare și număr de variante', { exact: true })
     .click();
-  await page.getByLabel('Candidați', { exact: true }).fill('1');
+  await page.getByLabel('Variante de încercat (1–4)', { exact: true }).fill('1');
   const evaluated = posted(page, `scenarios/${scenarioId}/staffing/evaluations`);
   await page.getByRole('button', { name: /^(Lansare|Reluare) optimizare$/ }).click();
   const { commandId } = (await evaluated).request().postDataJSON() as { commandId: string };

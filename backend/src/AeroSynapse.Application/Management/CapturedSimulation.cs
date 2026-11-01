@@ -15,9 +15,9 @@ public static class CapturedSimulation
             throw new ScenarioValidationException(new Dictionary<string, string[]> { ["inputs.populations"] = ["Legacy execution requires a positive passenger count."] });
         // Events act only on captures made by the KPI engine; older captures keep their original semantics.
         var events = captured.Engine == KpiConventions.Engine ? ScheduledEvents.Wire(inputs) : null;
-        if (events is not null && inputs.PassengerGeneration is null)
+        if (events is not null && !IncidentScenarios.ProfilesActive(inputs))
             throw new ScenarioValidationException(new Dictionary<string, string[]> { ["inputs.events"] = ["Scheduled events need passenger profiles. Save the passenger configuration first."] });
-        if (events is not null && inputs.PassengerGeneration!.Flow is not null)
+        if (events is not null && inputs.PassengerGeneration?.Flow is not null)
             throw new ScenarioValidationException(new Dictionary<string, string[]> { ["inputs.events"] = ["Scheduled events are not supported with alternative passenger flows."] });
         var checkpoints = captured.Layout.Layout.Checkpoints.Select(checkpoint => new CheckpointInput(checkpoint.Id,
             checkpoint.CapacityPerMinute, StaffShiftScenarios.StaffCount(inputs, checkpoint.Id))).ToArray();
@@ -28,7 +28,7 @@ public static class CapturedSimulation
             captured.Scenario.Scenario.Revision, captured.Layout.Version.Id, new DateTimeOffset(captured.CapturedAtUtc),
             new DateTimeOffset(inputs.StartsAtUtc), inputs.TimeZone, inputs.DurationMinutes, inputs.Seed,
             (int)demand, (double)demand / inputs.DurationMinutes, checkpoints,
-            inputs.PassengerGeneration is null && !IncidentScenarios.DerivesProfiles(inputs) ? null : PassengerScenarios.Request(inputs, captured.Layout.Layout),
+            !IncidentScenarios.ProfilesActive(inputs) ? null : PassengerScenarios.Request(inputs, captured.Layout.Layout),
             inputs.Navigation is null ? null : NavigationScenarios.Input(inputs,captured.Layout.Layout), captured.Engine, captured.SnapshotIntervalMinutes, events,
             CheckInScenarios.Input(inputs, captured.Layout.Layout, captured.Engine), schedules,
             Journey: JourneyScenarios.Input(inputs, captured.Layout.Layout));

@@ -14,8 +14,7 @@ namespace AeroSynapse.Infrastructure.Simulation;
 
 public sealed class SimulationProcessor(TwinDbContext database, IIntelligenceClient client,
     IOptions<SimulationOptions> options, ILogger<SimulationProcessor> logger, IRunProgressRecorder? progressRecorder = null,
-    IOptions<OperationsOptions>? operationsOptions = null, AeroSynapse.Infrastructure.Security.SecretRedactor? redactor = null,
-    AeroSynapse.Infrastructure.Execution.AgentLoop? agent = null)
+    IOptions<OperationsOptions>? operationsOptions = null, AeroSynapse.Infrastructure.Security.SecretRedactor? redactor = null)
 {
     private readonly IRunProgressRecorder progress = progressRecorder ?? new RunProgressRecorder(database);
     public async Task<bool> ProcessNextAsync(CancellationToken token)
@@ -50,14 +49,6 @@ public sealed class SimulationProcessor(TwinDbContext database, IIntelligenceCli
         var request = JsonSerializer.Deserialize<SimulationRequest>(command.RequestJson, ContractJson.Options)!;
         try
         {
-            if (agent is not null && await database.Runs.AsNoTracking().SingleAsync(x => x.Id == command.RunId, token) is { InputSnapshotJson: { } json } agentRun
-                && JsonSerializer.Deserialize<RunInputSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) is { Scenario.Inputs.Agent: not null } captured)
-            {
-                // The agent decides before the run is sent; recorded decisions are reused when reconciling.
-                request = await agent.PrepareAsync(agentRun, captured, request, token);
-                await database.SimulationCommands.Where(x => x.Id == command.Id && x.FinishedAtUtc == null).ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.NextAttemptAtUtc, DateTime.UtcNow.AddSeconds(options.Value.TimeoutSeconds * (options.Value.SafeRetryCount + 1) + options.Value.PollSeconds + 2)), token);
-            }
             var result = dispatch ? await EngineProgressSession.StartAsync(client, request, command.CorrelationId, progress,
                     operationsOptions?.Value.EnginePollMilliseconds ?? 1000, token)
                 : await client.GetAsync(command.RunId, command.CorrelationId, token);

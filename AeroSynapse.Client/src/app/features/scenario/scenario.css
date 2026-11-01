@@ -44,6 +44,12 @@
   text-align: center;
   color: var(--text-muted);
 }
+.applied {
+  margin: 0;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--success);
+}
 .simulation-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);

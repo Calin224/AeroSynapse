@@ -24,7 +24,7 @@ internal sealed class OperationalNotificationConfiguration : IEntityTypeConfigur
         entity.ToTable(t => {
             t.HasCheckConstraint("ck_notification_level", "\"Level\" IN ('warning', 'critical', 'resolved')");
             t.HasCheckConstraint("ck_notification_synthetic", "\"IsSynthetic\"");
-            t.HasCheckConstraint("ck_notification_rule", "\"WarningThreshold\" >= 0 AND \"CriticalThreshold\" > \"WarningThreshold\" AND \"CriticalThreshold\" <= 100000 AND \"HorizonMinutes\" BETWEEN 15 AND 30");
+            t.HasCheckConstraint("ck_notification_rule", "\"WarningThreshold\" >= 0 AND \"CriticalThreshold\" > \"WarningThreshold\" AND \"CriticalThreshold\" <= 100000 AND (\"HorizonMinutes\" BETWEEN 15 AND 30 OR (\"Source\" = 'recorded_queue' AND \"HorizonMinutes\" = 0))");
             t.HasCheckConstraint("ck_notification_counts", "\"Revision\" > 0 AND \"Observations\" > 0 AND \"LatestFromMinute\" >= 0");
         });
     }

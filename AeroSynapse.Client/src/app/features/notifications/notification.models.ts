@@ -61,6 +61,7 @@ export interface NotificationReceipt {
   duplicates: number;
   staleObservations: number;
   recordedAtUtc: string;
+  skippedRuns?: number;
 }
 export interface PublishQueueAlerts {
   commandId: string;
@@ -72,6 +73,14 @@ export interface PublishQueueAlerts {
   criticalThreshold: number;
   useLatest: boolean;
 }
+/** Null scenario/run means every completed run in that scope, scanned over the whole simulated period. */
+export interface PublishRunAlerts {
+  commandId: string;
+  scenarioId: string | null;
+  runId: string | null;
+  warningThreshold: number;
+  criticalThreshold: number;
+}
 export interface AlertAction {
   commandId: string;
   revision: number;
@@ -81,6 +90,7 @@ export interface AlertAction {
 }
 export type NotificationCommand =
   | { kind: 'publish'; body: PublishQueueAlerts }
+  | { kind: 'runs'; body: PublishRunAlerts }
   | { kind: 'action'; alertId: string; body: AlertAction };
 export const alertLevelLabel = (level: string) =>
   ({ warning: 'Avertizare', critical: 'Critică', resolved: 'Rezolvată' })[level] ??

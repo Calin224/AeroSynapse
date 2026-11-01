@@ -274,6 +274,8 @@ export class StaffingEvaluationPanel {
     maxReallocationCost: 100000000000000,
     checkpointTradeoffs: true,
   };
+  /** The server's default and ceiling for the reallocation cost: no cost limit. */
+  readonly unlimitedCost = 100000000000000;
   private readonly api = inject(ApiClient);
   private readonly numbers = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 4 });
   private request?: Subscription;
@@ -387,7 +389,7 @@ export class StaffingEvaluationPanel {
       !Number.isInteger(this.policy.maxUnprocessedIncrease) ||
       !finite(this.policy.maxUnprocessedIncrease, 100000) ||
       !Number.isInteger(this.policy.maxReallocationCost) ||
-      !finite(this.policy.maxReallocationCost, 100000000000000)
+      !finite(this.policy.maxReallocationCost, this.unlimitedCost)
     ) {
       this.message.set(
         'Introdu un nume, 1–4 candidați, timeout întreg 1–3600 s și toleranțe nenegative în limitele formularului.',

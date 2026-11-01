@@ -121,20 +121,14 @@ if (!string.IsNullOrWhiteSpace(postgresHost))
         client.Timeout = TimeSpan.FromSeconds(30);
     });
     builder.Services.AddScoped<SimulationProcessor>();
-    // Live AI agent: Gemini picks one of the options the algorithm offers; a missing key means the run continues unchanged.
+    // Gemini explains and ranks the post-run optimizer's already simulated options; a missing key reports "unconfigured".
     builder.Services.AddOptions<AgentOptions>().Bind(builder.Configuration.GetSection("Agent"));
     builder.Services.AddHttpClient<IAgentModel, GeminiAgentModel>(client => client.Timeout = Timeout.InfiniteTimeSpan)
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
         .RemoveAllLoggers(); // The API key travels in a header; requests are not application log fields.
-    builder.Services.AddHttpClient<IAgentEngine, AgentEngineClient>((provider, client) =>
-    {
-        var settings = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SimulationOptions>>().Value;
-        client.BaseAddress = new Uri((provider.GetRequiredService<TenantCatalog>().Current.IntelligenceBaseUrl ?? settings.BaseUrl).TrimEnd('/') + "/");
-        client.Timeout = TimeSpan.FromSeconds(60);
-    });
-    builder.Services.AddScoped<AgentLoop>();
-    builder.Services.AddScoped<AgentDecisionReader>();
     builder.Services.AddScoped<AgentImpactService>();
+    builder.Services.AddScoped<RunOptimizationService>();
+    builder.Services.AddMemoryCache();
     builder.Services.AddHttpClient<INavigationPlanner,NavigationPlannerClient>((provider,client) =>
     {
         var settings=provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SimulationOptions>>().Value;

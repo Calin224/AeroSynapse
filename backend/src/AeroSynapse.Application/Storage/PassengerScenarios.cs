@@ -27,8 +27,17 @@ public static class PassengerScenarios
         var resolved = FlightScheduling.Resolve(flight, inputs.StartsAtUtc);
         var end = Math.Max(0, (resolved.BoardingClosesAtUtc!.Value.AddMinutes(flight.DelayMinutes) - inputs.StartsAtUtc).TotalMinutes);
         var excluded = flight.Status == "cancelled" || end == 0;
+        // Passengers arrive in the window the flight's flows give, most of them mid-window; spreading them from the
+        // scenario start instead meant a flight 6 h in trickled in for 6 h and no scenario ever had a peak.
+        var flows = inputs.Flows.Where(flow => flow.FlightId == flight.Id).ToArray();
+        var from = flows.Length == 0 ? 0 : Math.Clamp(flows.Min(flow => (flow.StartsAtUtc - inputs.StartsAtUtc).TotalMinutes), 0, end);
+        var to = flows.Length == 0 ? end : Math.Clamp(flows.Max(flow => (flow.EndsAtUtc - inputs.StartsAtUtc).TotalMinutes), from, end);
+        var middle = (from + to) / 2;
+        PassengerDistribution arrival = to <= from ? new("constant", to, to, to, 0, to)
+            : flows.Length == 0 ? new("uniform", 0, end, end / 2, end / 6, end / 2)
+            : new("triangular", from, to, middle, (to - from) / Math.Sqrt(24), middle);
         return new(flight.Id, route.FromCheckpointId, excluded ? "subset" : "full", excluded ? 0 : flight.PassengerCapacity,
-            new(end == 0 ? "constant" : "uniform", 0, end, end / 2, end / 6, end / 2),
+            arrival,
             new("exponential", .05, 10, 1, 1, 1), new("uniform", .8, 1.3, 1, .1, 1),
             [new("solo", .65, 1, 1, 1, 1), new("family", .25, 2, 4, 1.2, 1.15), new("business", .1, 1, 1, .8, .9)], []);
     }
@@ -38,6 +47,14 @@ public static class PassengerScenarios
         var config = IncidentScenarios.BaseConfig(inputs, layout);
         ValidateShape(config);
         config = IncidentScenarios.Apply(inputs, layout, config);
+        // A flight whose own control is closed on the routes map spreads over the other controls toward its gate,
+        // instead of sending its passengers to a control they cannot pass.
+        if (inputs.Navigation is { } map)
+        {
+            var closed = map.CheckpointBindings.Where(binding => map.ClosedZoneIds.Contains(binding.ZoneId)).Select(binding => binding.ResourceId).ToHashSet();
+            config = config with { Batches = config.Batches.Select(batch =>
+                closed.Contains(batch.CheckpointId) ? batch with { CheckpointMode = PassengerBatchConfig.Spread } : batch).ToArray() };
+        }
         var flights = new List<PassengerFlightInput>();
         foreach (var flight in inputs.Flights)
         {

@@ -9,6 +9,7 @@
     <header class="panel-heading">
       <div>
         <h2 id="staffing-title">Redistribuire personal</h2>
+        <p>Vezi câți operatori are fiecare control și cere o împărțire mai bună pentru ziua simulată.</p>
       </div>
     </header>
   }
@@ -25,150 +26,7 @@
       </button>
     }
     @if (settings(); as settings) {
-      <ng-template #constraints>
-        <form (ngSubmit)="propose()">
-          <div class="fields">
-            <label
-              >Buget personal<input
-                type="number"
-                name="staffBudget"
-                [(ngModel)]="availableStaff"
-                (ngModelChange)="invalidate()"
-                min="0"
-                [max]="settings.availableStaff"
-                step="1"
-                required
-                [disabled]="blocked()"
-            /></label>
-            <label
-              >Timeout solver (secunde)<input
-                type="number"
-                name="solverBudget"
-                [(ngModel)]="timeLimitSeconds"
-                (ngModelChange)="invalidate()"
-                min="0"
-                max="30"
-                step="0.1"
-                required
-                [disabled]="blocked()"
-            /></label>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <caption>
-                Restricții pentru revizia
-                {{
-                  settings.revision
-                }}. Limita fizică și maximul operațional se aplică simultan.
-              </caption>
-              <thead>
-                <tr>
-                  <th>Control / actual</th>
-                  <th>Minim la deschidere</th>
-                  <th>Maxim operațional</th>
-                  <th>Limită fizică declarată</th>
-                  <th>Obligatoriu deschis</th>
-                  <th>Închis</th>
-                  <th>Cost schimbare</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of rows; track row.checkpointId) {
-                  <tr>
-                    <th scope="row">{{ row.name }} / {{ row.currentStaff }}</th>
-                    <td>
-                      <input
-                        type="number"
-                        [name]="'min-' + row.checkpointId"
-                        [attr.aria-label]="'Minim ' + row.name"
-                        [(ngModel)]="row.minimumStaff"
-                        (ngModelChange)="invalidate()"
-                        min="0"
-                        max="10000"
-                        step="1"
-                        required
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        [name]="'max-' + row.checkpointId"
-                        [attr.aria-label]="'Maxim ' + row.name"
-                        [(ngModel)]="row.maximumStaff"
-                        (ngModelChange)="invalidate()"
-                        min="0"
-                        max="10000"
-                        step="1"
-                        required
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        [name]="'physical-' + row.checkpointId"
-                        [attr.aria-label]="'Limită fizică ' + row.name"
-                        [(ngModel)]="row.physicalLimit"
-                        (ngModelChange)="invalidate()"
-                        min="0"
-                        max="10000"
-                        step="1"
-                        required
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        [name]="'required-' + row.checkpointId"
-                        [attr.aria-label]="'Obligatoriu deschis ' + row.name"
-                        [(ngModel)]="row.requiredOpen"
-                        (ngModelChange)="invalidate()"
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        [name]="'closed-' + row.checkpointId"
-                        [attr.aria-label]="'Închis ' + row.name"
-                        [(ngModel)]="row.closed"
-                        (ngModelChange)="invalidate()"
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        [name]="'cost-' + row.checkpointId"
-                        [attr.aria-label]="'Cost schimbare ' + row.name"
-                        [(ngModel)]="row.changeCost"
-                        (ngModelChange)="invalidate()"
-                        min="0"
-                        max="1000000"
-                        step="1"
-                        required
-                        [disabled]="blocked()"
-                      />
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          @if (!workflowStage()) {
-            <button
-              class="btn-primary"
-              type="submit"
-              [disabled]="blocked() || !settings.passengerProfilesActive"
-            >
-              {{ busy() ? 'Se calculează…' : 'Propune redistribuirea' }}
-            </button>
-          }
-        </form>
-      </ng-template>
-      @if (workflowStage() === 'optimize') {
+      @if (!workflowStage() || workflowStage() === 'optimize') {
         <div class="situation">
           <p>
             Personal disponibil: <strong>{{ settings.availableStaff }} operatori</strong>. Alocări
@@ -189,19 +47,235 @@
             sosirilor.
           </p>
         }
-        <details class="advanced">
-          <summary>Setări avansate · limite pe controale</summary>
-
-          <ng-container *ngTemplateOutlet="constraints" />
-        </details>
-      } @else if (!workflowStage()) {
-        @if (!settings.passengerProfilesActive) {
-          <p role="alert">
-            Estimarea cererii necesită profiluri de pasageri active sau un incident de concentrare a
-            sosirilor.
-          </p>
+        @if (!workflowStage()) {
+          <div class="toolbar">
+            <button
+              class="btn-primary"
+              type="button"
+              [disabled]="blocked() || !settings.passengerProfilesActive"
+              (click)="propose()"
+            >
+              {{ busy() ? 'Se calculează…' : 'Propune redistribuirea' }}
+            </button>
+          </div>
         }
-        <ng-container *ngTemplateOutlet="constraints" />
+        <details class="advanced disclosure">
+          <summary>
+            {{ workflowStage() ? 'Setări avansate · limite pe controale' : 'Setări avansate' }}
+          </summary>
+          <form (ngSubmit)="propose()">
+            <div class="fields">
+              <label
+                >Câți operatori poți folosi (din {{ settings.availableStaff }})<input
+                  type="number"
+                  name="staffBudget"
+                  [(ngModel)]="availableStaff"
+                  (ngModelChange)="invalidate()"
+                  min="0"
+                  [max]="settings.availableStaff"
+                  step="1"
+                  required
+                  [disabled]="blocked()"
+              /></label>
+              <label
+                >Timp maxim de calcul (secunde, 0–30)<input
+                  type="number"
+                  name="solverBudget"
+                  [(ngModel)]="timeLimitSeconds"
+                  (ngModelChange)="invalidate()"
+                  min="0"
+                  max="30"
+                  step="0.1"
+                  required
+                  [disabled]="blocked()"
+              /></label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <caption>
+                  Limite pe fiecare control. Valorile pornesc fără restricții în plus; schimbă-le doar
+                  dacă știi că un control are mai puține posturi.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Control (acum)</th>
+                    <th scope="col">Minim dacă e deschis</th>
+                    <th scope="col">Maxim</th>
+                    <th scope="col">Posturi fizice</th>
+                    <th scope="col">Rămâne deschis</th>
+                    <th scope="col">Închis</th>
+                    <th scope="col">Cost mutare</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of rows; track row.checkpointId) {
+                    <tr>
+                      <th scope="row">{{ row.name }} ({{ row.currentStaff }})</th>
+                      <td>
+                        <input
+                          type="number"
+                          [name]="'min-' + row.checkpointId"
+                          [attr.aria-label]="'Minim ' + row.name"
+                          [(ngModel)]="row.minimumStaff"
+                          (ngModelChange)="invalidate()"
+                          min="0"
+                          max="10000"
+                          step="1"
+                          required
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          [name]="'max-' + row.checkpointId"
+                          [attr.aria-label]="'Maxim ' + row.name"
+                          [(ngModel)]="row.maximumStaff"
+                          (ngModelChange)="invalidate()"
+                          min="0"
+                          max="10000"
+                          step="1"
+                          required
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          [name]="'physical-' + row.checkpointId"
+                          [attr.aria-label]="'Limită fizică ' + row.name"
+                          [(ngModel)]="row.physicalLimit"
+                          (ngModelChange)="invalidate()"
+                          min="0"
+                          max="10000"
+                          step="1"
+                          required
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          [name]="'required-' + row.checkpointId"
+                          [attr.aria-label]="'Obligatoriu deschis ' + row.name"
+                          [(ngModel)]="row.requiredOpen"
+                          (ngModelChange)="invalidate()"
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          [name]="'closed-' + row.checkpointId"
+                          [attr.aria-label]="'Închis ' + row.name"
+                          [(ngModel)]="row.closed"
+                          (ngModelChange)="invalidate()"
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          [name]="'cost-' + row.checkpointId"
+                          [attr.aria-label]="'Cost schimbare ' + row.name"
+                          [(ngModel)]="row.changeCost"
+                          (ngModelChange)="invalidate()"
+                          min="0"
+                          max="1000000"
+                          step="1"
+                          required
+                          [disabled]="blocked()"
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </details>
+      }
+      @if (busy()) {
+        <p role="status">Se estimează cererea și se caută o împărțire potrivită…</p>
+      }
+      @if (result(); as result) {
+        <div class="result">
+          <p [attr.role]="result.assignments.length ? 'status' : 'alert'">
+            <strong>{{ status(result) }}</strong>
+          </p>
+          @if (result.score !== null) {
+            <div class="table-wrap">
+              <table>
+                <caption>
+                  Împărțirea propusă. Capacitatea și deficitul sunt în pasageri pe minut.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Control</th>
+                    <th scope="col">Acum</th>
+                    <th scope="col">Personal propus</th>
+                    <th scope="col">Capacitate</th>
+                    <th scope="col">Neacoperit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of result.assignments; track item.checkpointId) {
+                    <tr>
+                      <th scope="row">{{ name(item.checkpointId) }}</th>
+                      <td>{{ current(item.checkpointId) }}</td>
+                      <td>
+                        <strong>{{ item.staffCount }}</strong>
+                      </td>
+                      <td>{{ item.estimatedCapacityMilli / 1000 | number: '1.0-1' }}</td>
+                      <td>{{ item.unmetDemandMilli / 1000 | number: '1.0-1' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <details class="disclosure">
+            <summary>Detalii calcul</summary>
+            <p>
+              Revizia {{ result.constraints.scenarioRevision }} · buget
+              {{ result.constraints.availableStaff }} · limită
+              {{ result.constraints.timeLimitSeconds }} s · durata calculului
+              {{ result.wallTimeSeconds | number: '1.0-3' }} s.
+            </p>
+            @if (result.score !== null) {
+              <p>
+                Scor de minimizat: <strong>{{ result.score }}</strong> · limită inferioară demonstrată
+                {{ result.bestBound }} · operatori alocați {{ result.usedStaff }} · nealocați
+                {{ result.unassignedStaff }}.
+              </p>
+              <p>
+                Cost schimbare:
+                @for (item of result.assignments; track item.checkpointId) {
+                  {{ name(item.checkpointId) }} {{ item.changePenalty }};
+                }
+              </p>
+            }
+            <p>Bugete maxime pe terminal:</p>
+            <ul>
+              @for (pool of result.constraints.staffPools; track pool.terminalId) {
+                <li>Terminal {{ pool.terminalId }}: {{ pool.availableStaff }} operatori.</li>
+              }
+            </ul>
+            <ul>
+              @for (item of result.constraints.checkpoints; track item.checkpointId) {
+                <li>
+                  {{ name(item.checkpointId) }}: actual {{ item.currentStaff }}, minim
+                  {{ item.minimumStaff }}, maxim {{ item.maximumStaff }}, limită fizică
+                  {{ item.physicalLimit }}, {{ item.closed ? 'închis' : 'disponibil' }},
+                  {{ item.requiredOpen ? 'obligatoriu deschis' : 'opțional' }}, cost
+                  {{ item.changeCost }}; cerere
+                  {{ item.demandMilli / 1000 | number: '1.0-3' }} pas/min, capacitate/operator
+                  {{ item.capacityMilli / 1000 | number: '1.0-3' }} pas/min.
+                </li>
+              }
+            </ul>
+          </details>
+        </div>
       }
       <app-staffing-evaluation-panel
         [scenario]="scenario()"
@@ -214,72 +288,6 @@
         (changed)="approved($event)"
         (working)="reviewing.set($event); working.emit($event)"
       />
-    }
-    @if (busy()) {
-      <p role="status">Se estimează cererea și se caută o configurație fezabilă…</p>
-    }
-    @if (result(); as result) {
-      <p [attr.role]="result.assignments.length ? 'status' : 'alert'">{{ status(result) }}</p>
-      <p>
-        Revizia {{ result.constraints.scenarioRevision }} · buget
-        {{ result.constraints.availableStaff }} · limită {{ result.constraints.timeLimitSeconds }} s
-        · timp solver {{ result.wallTimeSeconds | number: '1.0-3' }} s.
-      </p>
-      @if (result.score !== null) {
-        <p>
-          Scor de minimizat: <strong>{{ result.score }}</strong> · limită inferioară demonstrată
-          {{ result.bestBound }} · operatori alocați {{ result.usedStaff }} · nealocați
-          {{ result.unassignedStaff }}.
-        </p>
-        <div class="table-wrap">
-          <table>
-            <caption>
-              Configurația propusă și capacitatea estimată; rate în pasageri/minut.
-            </caption>
-            <thead>
-              <tr>
-                <th>Control</th>
-                <th>Personal propus</th>
-                <th>Capacitate estimată</th>
-                <th>Deficit estimat</th>
-                <th>Cost schimbare</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of result.assignments; track item.checkpointId) {
-                <tr>
-                  <th scope="row">{{ name(item.checkpointId) }}</th>
-                  <td>{{ item.staffCount }}</td>
-                  <td>{{ item.estimatedCapacityMilli / 1000 | number: '1.0-3' }}</td>
-                  <td>{{ item.unmetDemandMilli / 1000 | number: '1.0-3' }}</td>
-                  <td>{{ item.changePenalty }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-      <details>
-        <summary>Restricțiile și cererea folosite de solver</summary>
-        <p>Bugete maxime pe terminal:</p>
-        <ul>
-          @for (pool of result.constraints.staffPools; track pool.terminalId) {
-            <li>Terminal {{ pool.terminalId }}: {{ pool.availableStaff }} operatori.</li>
-          }
-        </ul>
-        <ul>
-          @for (item of result.constraints.checkpoints; track item.checkpointId) {
-            <li>
-              {{ name(item.checkpointId) }}: actual {{ item.currentStaff }}, minim
-              {{ item.minimumStaff }}, maxim {{ item.maximumStaff }}, limită fizică
-              {{ item.physicalLimit }}, {{ item.closed ? 'închis' : 'disponibil' }},
-              {{ item.requiredOpen ? 'obligatoriu deschis' : 'opțional' }}, cost
-              {{ item.changeCost }}; cerere {{ item.demandMilli / 1000 | number: '1.0-3' }} pas/min,
-              capacitate/operator {{ item.capacityMilli / 1000 | number: '1.0-3' }} pas/min.
-            </li>
-          }
-        </ul>
-      </details>
     }
   </div>
 </section>

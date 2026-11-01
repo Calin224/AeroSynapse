@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AeroSynapse.Application.Contracts;
 using AeroSynapse.Application.Management;
 using AeroSynapse.Domain.DigitalTwin;
@@ -13,13 +12,12 @@ public sealed class AgentQueueTests
     private static readonly Guid Donor = Guid.Parse("60000000-0000-0000-0000-000000000103");
     private static readonly Dictionary<Guid, string> Names = new() { [Busy] = "CP-1", [Spare] = "CP-2", [Donor] = "CP-3" };
     private static readonly ScenarioAgent Agent = new(true, false, false, 5, 3, ReserveOperators: 0);
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private static AgentCheckpointState Control(Guid id, int staff, int queued, bool available = true) =>
         new(id, staff, staff, available, 1, queued, 0, 0, 0, null, 0, 0, null);
 
     private static IReadOnlyList<AgentOption> Offered(AgentCheckpointState[] controls, int reserve = 0, params Guid[] frozen) =>
-        AgentCandidates.Periodic(new("1.0", 10, controls, null), Agent, frozen.ToHashSet(), Names, null, reserve);
+        AgentCandidates.QueueActions(controls, Agent.TransferMinutes, frozen.ToHashSet(), Names, reserve).ToArray();
 
     [Fact]
     public void An_overloaded_queue_can_open_an_available_unstaffed_control_from_the_reserve()
@@ -88,47 +86,4 @@ public sealed class AgentQueueTests
             reserve: 0, frozen ? [Spare] : []);
         Assert.DoesNotContain(offered, option => option.Kind == "queue_redistribution" && option.ToCheckpointId == Spare);
     }
-
-    [Fact]
-    public void Opening_and_redistribution_take_effect_after_the_decision_without_rewriting_staffing_history()
-    {
-        var request = Request();
-        var open = new AgentOption("open-spare", "checkpoint_open", "Deschide CP-2", Busy, Spare, Count: 1,
-            Staff: [new(Spare, 0, 1)], PassengerCount: 20);
-        var applied = AgentDecisionInputs.Apply(request, [(10, open)], transferMinutes: 3);
-        var schedule = Assert.Single(applied.StaffSchedules!);
-        Assert.Equal(Spare, schedule.CheckpointId);
-        Assert.Equal([new StaffStep(0, 0), new StaffStep(14, 1)], schedule.Steps);
-        Assert.Equal(1, applied.Checkpoints.Single(control => control.CheckpointId == Spare).StaffCount);
-        Assert.Equal(1, applied.Checkpoints.Single(control => control.CheckpointId == Busy).StaffCount);
-        var move = Assert.Single(applied.Events!, item => item.Type == "queue_redistribution");
-        Assert.Equal((Busy, Spare, 20), (move.CheckpointId, move.TargetCheckpointId, move.PassengerCount));
-        Assert.Equal(14, move.Minute);
-        Assert.True(move.WindowMinutes >= 1);
-        Assert.Equal(0, request.Checkpoints.Single(control => control.CheckpointId == Spare).StaffCount);
-        Assert.Null(request.StaffSchedules);
-        Assert.Null(request.Events);
-    }
-
-    [Fact]
-    public void A_queue_move_preserves_existing_events_and_replays_with_the_same_event_id()
-    {
-        var original = new ScheduledEvent(Guid.Parse("90000000-0000-0000-0000-000000000001"), "checkpoint_unavailable", 40,
-            CheckpointId: Busy);
-        var request = Request() with { Events = [original] };
-        var move = new AgentOption("redistribute", "queue_redistribution", "Distribuie coada", Busy, Spare, PassengerCount: 12);
-        var applied = AgentDecisionInputs.Apply(request, [(10, move)], transferMinutes: 3);
-        Assert.Contains(original, applied.Events!);
-        var generated = Assert.Single(applied.Events!, item => item.Type == "queue_redistribution");
-        Assert.NotEqual(Guid.Empty, generated.EventId);
-        Assert.Equal((Busy, Spare, 12), (generated.CheckpointId, generated.TargetCheckpointId, generated.PassengerCount));
-        Assert.Equal(14, generated.Minute);
-        Assert.True(generated.WindowMinutes >= 1);
-        var replay = AgentDecisionInputs.Apply(request, [(10, move)], transferMinutes: 3);
-        Assert.Equal(JsonSerializer.Serialize(applied, Json), JsonSerializer.Serialize(replay, Json));
-    }
-
-    private static SimulationRequest Request() => new("1.0", Guid.Parse("90000000-0000-0000-0000-000000000100"),
-        Guid.NewGuid(), 1, Guid.NewGuid(), DateTimeOffset.UnixEpoch, "UTC", 60, 42, 100, 2,
-        [new(Busy, 1, 1), new(Spare, 1, 0)], Engine: KpiConventions.Engine, SnapshotIntervalMinutes: 1);
 }

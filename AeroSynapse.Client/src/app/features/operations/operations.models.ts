@@ -23,19 +23,8 @@ export interface ScenarioSummary {
   updatedAtUtc?: string;
   deletedAtUtc?: string | null;
 }
-/** An AI agent that decides during each run of the scenario; the scenario itself never changes. */
-export interface ScenarioAgent {
-  staffMoves: boolean;
-  checkInDesks: boolean;
-  gateChoices: boolean;
-  decisionIntervalMinutes: number;
-  transferMinutes: number;
-  /** Extra operators the agent may call in during a run; absent means none. */
-  reserveOperators?: number | null;
-}
 export interface ScenarioInputs {
   journey?: import('./journey.models').JourneyConfig | null;
-  agent?: ScenarioAgent | null;
   startsAtUtc: string;
   durationMinutes: number;
   seed: number;

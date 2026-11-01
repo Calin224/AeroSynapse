@@ -7,10 +7,11 @@ public static class NavigationCorrelation
     public static bool Valid(PassengerGenerationRequest generation,NavigationInput navigation,NavigationResult result,bool assessed,int offset,int limit,
         SimulationRequest? run = null,ProcessResult? processes = null)
     {
-        // The route plan stays the captured one; with events, assessment follows the process report.
+        // The route plan stays the captured one; with events or check-in (time spent before security), assessment follows the process report.
         var timeline = run is null ? null : new EventTimeline(run);
-        var actual = timeline is { Events.Count: > 0 } ? processes?.Passengers.ToDictionary(item => item.Id) : null;
-        if (timeline is { Events.Count: > 0 } && actual is null) return false;
+        var followsProcesses = timeline is { Events.Count: > 0 } || run?.CheckIn is not null;
+        var actual = followsProcesses ? processes?.Passengers.ToDictionary(item => item.Id) : null;
+        if (followsProcesses && actual is null) return false;
         var count = generation.Batches.Sum(batch => batch.ModeledCount);
         var returned = Math.Min(limit,Math.Max(0,count-offset));
         if (result.Assessed != assessed || result.ModeledCount != count || result.Offset != offset || result.ReturnedCount != returned
@@ -33,7 +34,8 @@ public static class NavigationCorrelation
         var routes = result.Routes.ToDictionary(item => item.RouteKey);
         foreach (var route in result.Routes)
         {
-            if (!flights.TryGetValue(route.FlightId,out var flight) || route.GateId != destinations[route.FlightId] || !(flight.Allows(route.CheckpointId) || timeline?.Events.Any(e => e.Type == "queue_redistribution" && e.TargetCheckpointId == route.CheckpointId) == true)
+            if (!flights.TryGetValue(route.FlightId,out var flight) || route.GateId != destinations[route.FlightId] || !(flight.Allows(route.CheckpointId) || timeline?.Events.Any(e => e.Type == "queue_redistribution" && e.TargetCheckpointId == route.CheckpointId) == true
+                || actual?.Values.Any(p => p.RedistributedAtMinute is not null && p.FlightId == route.FlightId && p.CheckpointId == route.CheckpointId) == true)
                 || !profiles.TryGetValue(route.GroupKind,out var profile) || !batches[route.FlightId].Groups.Any(group => group.Kind == route.GroupKind)
                 || route.EdgeIds.Count+1 != route.ZoneIds.Count || route.Waypoints.Count != route.ZoneIds.Count
                 || !checkpoints.TryGetValue(route.CheckpointId,out var source) || !gates.TryGetValue(route.GateId,out var target)

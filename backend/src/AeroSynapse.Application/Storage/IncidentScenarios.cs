@@ -20,6 +20,7 @@ public static class IncidentScenarios
     public static bool HasIncidents(ScenarioInputs inputs) => inputs.Events.Any(e => e.Type?.StartsWith(Prefix, StringComparison.Ordinal) == true);
     // Incidents and check-in act on individual passengers, so an aggregate demo compiles default profiles for them.
     public static bool DerivesProfiles(ScenarioInputs inputs) => HasIncidents(inputs) || inputs.CheckIn is not null;
+    public static bool ProfilesActive(ScenarioInputs inputs) => inputs.PassengerGeneration is not null || DerivesProfiles(inputs);
 
     // An incident or check-in can enable profiles for an aggregate demo, preserving its modeled counts.
     // Existing explicit profiles keep every original distribution/group/flow parameter.

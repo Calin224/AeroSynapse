@@ -6,7 +6,7 @@ from app.contracts.models import NavigationConfig, NavigationInput, PassengerGen
 from app.contracts.routes import openapi_schema
 from app.contracts.validation import error, parse_json, response, validate
 from app.navigation.graph import NavigationGraph
-from app.navigation.planner import page, plan_population
+from app.navigation.planner import page, plan_population, without_closed_checkpoints
 from app.passengers.generator import generate_population
 
 router = APIRouter(tags=['Operational navigation v1'])
@@ -34,7 +34,7 @@ async def preview(request: Request, offset: int = Query(0, ge=0, le=100000), lim
     generation = PassengerGenerationRequest.model_validate(payload['passengerGeneration'])
     navigation = NavigationInput.model_validate(payload['navigation']).model_dump(mode='json', by_alias=True)
     def compute():
-        return page(plan_population(generate_population(generation), generation, navigation), offset, limit)
+        return page(plan_population(generate_population(without_closed_checkpoints(generation, navigation)), generation, navigation), offset, limit)
     return JSONResponse(content=await run_in_threadpool(compute))
 
 

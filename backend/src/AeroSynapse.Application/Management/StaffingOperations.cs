@@ -28,7 +28,7 @@ public sealed class StaffingOperations(IScenarioService scenarios, IPassengerGen
     {
         var terminals = layout.Layout.Checkpoints.Select(item => item.TerminalId).Concat(layout.Layout.Staff.Select(item => item.TerminalId)).Distinct().Order().ToArray();
         return new(scenario.Scenario.Id, scenario.Scenario.Revision,
-            scenario.Inputs.PassengerGeneration is not null || IncidentScenarios.DerivesProfiles(scenario.Inputs), layout.Layout.Staff.Count,
+            IncidentScenarios.ProfilesActive(scenario.Inputs), layout.Layout.Staff.Count,
             terminals.Select(id => new StaffingPool(id, layout.Layout.Staff.Count(member => member.TerminalId == id))).ToArray(),
             layout.Layout.Checkpoints.OrderBy(item => item.Code, StringComparer.Ordinal).Select(item => new StaffingCheckpointChoice(item.Id,
                 item.TerminalId, item.Name, StaffShiftScenarios.StaffCount(scenario.Inputs, item.Id))).ToArray());

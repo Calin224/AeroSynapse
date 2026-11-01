@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { apiErrorInterceptor } from '../../core/http/api-error.interceptor';
+import { SimulationContext } from '../../core/simulation-context';
 import { ScenarioDetails } from '../operations/operations.models';
 import { ScenarioStudio } from './scenario-studio';
 import { fromScenario, makeDraft, shiftStart, StudioLayout } from './studio.models';
@@ -300,7 +301,8 @@ describe('Scenario Studio', () => {
     view.setDeparture(flight, '2026-10-31T22:15:00.000Z');
     expect(flight.departureAtUtc).toBe('2026-10-31T22:15:00.000Z');
     expect(flight.boardingOpensAtUtc).toBe('2026-10-31T22:03:00.000Z');
-    expect(view.simpleGroup(flight)!.flow.endsAtUtc).toBe('2026-10-31T22:13:00.000Z');
+    // The arrival window keeps ending 30 minutes before the moved departure.
+    expect(view.simpleGroup(flight)!.flow.endsAtUtc).toBe('2026-10-31T21:45:00.000Z');
     view.addIncident();
     view.setTime(view.draft!.inputs.events[0], 'occurredAtUtc', '2026-10-31T21:45:00.000Z');
     view.save();
@@ -436,6 +438,7 @@ describe('Scenario Studio', () => {
       view = fixture.componentInstance,
       source = load(view),
       input = structuredClone(source.inputs);
+    const remember = vi.spyOn(TestBed.inject(SimulationContext), 'remember');
     view.draft!.name = 'Nume editat';
     view.save();
     const update = http.expectOne('/api/scenarios/original');
@@ -448,6 +451,7 @@ describe('Scenario Studio', () => {
     };
     update.flush(updated);
     expect(view.dirty()).toBe(false);
+    expect(remember).toHaveBeenCalledWith('original');
     view.reload();
     http.expectOne('/api/scenarios/original').flush(updated);
     http.expectOne('/api/scenes/scene/layout-versions/layout-7').flush(layout);

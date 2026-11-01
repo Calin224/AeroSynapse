@@ -76,17 +76,17 @@ def test_an_event_at_minute_t_leaves_every_earlier_interval_unchanged():
         {'eventId': value['events'][1]['eventId'], 'type': 'staff_reduction', 'minute': 30, 'sequence': 2}]
 
 
-def test_an_unavailable_control_starts_no_service_and_redirects_only_new_arrivals():
+def test_an_unavailable_control_starts_no_service_and_sends_its_queue_and_new_arrivals_elsewhere():
     value = base()
     value['events'] = [event('checkpoint_unavailable', 20, 1, checkpointId=A)]
     response = run(value)
     for person in people(response).values():
-        if person['checkpointId'] == A and person['processingStartedMinute'] is not None:
-            assert person['processingStartedMinute'] < 20
+        if person['checkpointId'] == A:
+            assert person['processingStartedMinute'] is not None and person['processingStartedMinute'] < 20
         if person.get('assignedCheckpointId') == A:
-            assert person['checkpointId'] == B and person['arrivalMinute'] >= 20
-        if person['checkpointId'] == A and person['arrivalMinute'] < 20 and person['processingStartedMinute'] is None:
-            assert person['stage'] == 'queued'  # Active requests keep their place in the closed queue.
+            assert person['checkpointId'] == B
+            # Waiting at the closure: moved then. Arriving later: redirected on arrival.
+            assert person.get('redistributedAtMinute') == (20 if person['arrivalMinute'] < 20 else None)
     assert any(person.get('assignedCheckpointId') == A for person in people(response).values())
 
 
@@ -234,7 +234,9 @@ def test_closure_at_a_completion_boundary_keeps_service_and_holds_the_next_grant
     value = base(navigation=False)
     value['passengerGeneration']['batches'][0]['arrival'] = {
         'kind': 'constant', 'minimum': 0, 'maximum': 0, 'mean': 0, 'stdDev': 0, 'mode': 0}
+    # B closes too, so A's queue has nowhere to go and waits for A to reopen.
     value['events'] = [event('checkpoint_unavailable', 2, 1, checkpointId=A),
+                       event('checkpoint_unavailable', 2, 3, checkpointId=B),
                        event('resume', 5, 2, checkpointId=A)]
     everyone = list(people(run(value)).values())
     assert everyone[0]['processingStartedMinute'] == 0

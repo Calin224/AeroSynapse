@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AeroSynapse.Application.Storage;
 using AeroSynapse.Domain.DigitalTwin;
 using Microsoft.EntityFrameworkCore;
@@ -167,6 +168,72 @@ public sealed class ScenarioService(TwinDbContext database) : IScenarioService
         if (limit is < 1 or > 100) throw Invalid("limit", "Must be between 1 and 100.");
         return await database.Runs.AsNoTracking().Where(x => x.ScenarioId == scenarioId)
             .OrderByDescending(x => x.StartedAtUtc).ThenByDescending(x => x.Id).Take(limit).ToArrayAsync(cancellationToken);
+    }
+
+    // Every revision is the audit row its save left behind (DB trigger), newest first, with the runs made on it.
+    public async Task<IReadOnlyList<ScenarioRevision>> RevisionsAsync(Guid scenarioId, int limit, CancellationToken cancellationToken = default)
+    {
+        var rows = await database.AuditEvents.AsNoTracking()
+            .Where(x => x.ScenarioId == scenarioId && x.ResourceType == "scenarios" && x.ScenarioVersionAfter != null
+                && (x.Action == "scenarios.insert" || x.Action == "scenarios.update"))
+            .OrderByDescending(x => x.Sequence).Take(limit)
+            .Select(x => new { Revision = x.ScenarioVersionAfter!.Value, x.RecordedAtUtc, x.Actor, x.Action, x.ChangesJson })
+            .ToArrayAsync(cancellationToken);
+        var revisions = rows.Select(x => x.Revision).ToArray();
+        // The same 100 newest runs the Control Tower lists, so its run numbers match.
+        var runs = (await database.Runs.AsNoTracking()
+            .Where(x => x.ScenarioId == scenarioId && x.ScenarioRevision != null && revisions.Contains(x.ScenarioRevision.Value))
+            .OrderByDescending(x => x.StartedAtUtc).ThenByDescending(x => x.Id).Take(100)
+            .Select(x => new { Revision = x.ScenarioRevision!.Value, x.Id, x.Status }).ToArrayAsync(cancellationToken))
+            .ToLookup(x => x.Revision, x => new ScenarioRevisionRun(x.Id, x.Status));
+        return rows.Select(x => new ScenarioRevision(x.Revision, x.RecordedAtUtc, x.Actor,
+            x.Action == "scenarios.insert" ? [new("created", "added", [])] : Changes(x.ChangesJson), runs[x.Revision].ToArray())).ToArray();
+    }
+
+    // Configuration sections grouped as the Control Tower tabs name them; any other key is a run setting.
+    private static readonly Dictionary<string, string> Sections = new()
+    {
+        ["staffAllocations"] = "staffing", ["staffShifts"] = "staffing", ["operators"] = "staffing", ["checkIn"] = "staffing",
+        ["populations"] = "passengers", ["flows"] = "passengers", ["passengerGeneration"] = "passengers",
+        ["navigation"] = "routes", ["integratedResources"] = "resources",
+    };
+
+    private static IReadOnlyList<ScenarioRevisionChange> Changes(string changesJson)
+    {
+        var changes = JsonNode.Parse(changesJson) as JsonObject ?? [];
+        var fields = (changes["fields"] as JsonArray ?? []).Select(x => x?.GetValue<string>()).ToHashSet();
+        var before = changes["before"]?["ConfigurationJson"] as JsonObject ?? [];
+        var after = changes["after"]?["ConfigurationJson"] as JsonObject ?? [];
+        var result = new List<ScenarioRevisionChange>();
+        foreach (var (key, kind) in new[] { ("flights", "flight"), ("events", "event") })
+        {
+            var old = Items(before[key]); var now = Items(after[key]);
+            Add(now.Keys.Where(id => !old.ContainsKey(id)), "added");
+            Add(now.Keys.Where(id => old.TryGetValue(id, out var item) && !JsonNode.DeepEquals(item, now[id])), "changed");
+            Add(old.Keys.Where(id => !now.ContainsKey(id)), "removed");
+            void Add(IEnumerable<Guid> ids, string action)
+            {
+                var list = ids.ToArray();
+                if (list.Length > 0) result.Add(new(kind, action, list));
+            }
+        }
+        var sections = before.Select(x => x.Key).Union(after.Select(x => x.Key))
+            .Where(key => key is not ("flights" or "events") && !JsonNode.DeepEquals(before[key], after[key]))
+            .Select(key => Sections.GetValueOrDefault(key, "settings")).ToList();
+        if (fields.Overlaps(["Code", "Name", "Description"])) sections.Add("details");
+        if (fields.Contains("LayoutVersionId")) sections.Add("layout");
+        result.AddRange(sections.Distinct().Select(kind => new ScenarioRevisionChange(kind, "changed", [])));
+        // The audit redacts free text (a flight code, an event note), so such an edit shows no difference here.
+        if (result.Count == 0 && fields.Contains("ConfigurationJson")) result.Add(new("other", "changed", []));
+        return result;
+    }
+
+    private static Dictionary<Guid, JsonNode> Items(JsonNode? list)
+    {
+        var items = new Dictionary<Guid, JsonNode>();
+        foreach (var item in list as JsonArray ?? [])
+            if (item?["id"]?.GetValueKind() == JsonValueKind.String && Guid.TryParse(item["id"]!.GetValue<string>(), out var id)) items.TryAdd(id, item);
+        return items;
     }
 
     private async Task<LayoutVersion> RequireLayoutAsync(ScenarioWriteRequest request, CancellationToken cancellationToken)

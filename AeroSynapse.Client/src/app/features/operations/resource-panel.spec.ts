@@ -40,18 +40,34 @@ describe('Integrated resource planning', () => {
     expect(view.draft?.gates[0].availability).toEqual([]);
     expect(view.draft?.workers.map(worker => worker.staffMemberId)).toEqual(['worker']);
     expect(view.draft?.workers[0].shifts).toEqual([]);
-    expect(fixture.nativeElement.textContent).toContain('Model integrat dezactivat');
+    expect(fixture.nativeElement.textContent).toContain('Neactivat');
+    expect(fixture.nativeElement.querySelector('.checklist li.done')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Calculul pornește după ce salvezi resursele.');
     view.propose(); http.expectNone('/api/scenarios/scenario/resources/proposals'); fixture.destroy();
   });
   it('can extend a saved subset with captured resources and keeps undeclared gates out of compatibility choices', () => {
     const fixture = component({ ...settings, gates: [...settings.gates, { id: 'gate-b', name: 'Poarta B', terminalId: 'terminal' }],
       staff: [...settings.staff, { id: 'worker-b', name: 'Operator B', terminalId: 'terminal', reservedForSecurity: false }] });
     const view = fixture.componentInstance;
-    expect(fixture.nativeElement.querySelectorAll('select')[1].textContent).not.toContain('Poarta B');
-    view.includeGate('gate-b'); view.includeWorker('worker-b'); view.includeWorker('security'); fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('select')[1].textContent).toContain('Poarta B');
+    expect(fixture.nativeElement.querySelectorAll('.choices')[1].textContent).not.toContain('Poarta B');
+    const gateB: HTMLInputElement = fixture.nativeElement.querySelectorAll('.picks')[0].querySelectorAll('input')[1];
+    expect(gateB.checked).toBe(false); gateB.click();
+    view.includeWorker('worker-b'); view.includeWorker('security'); fixture.detectChanges();
+    expect(gateB.checked).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.choices')[1].textContent).toContain('Poarta B');
     expect(view.draft?.workers.map(item => item.staffMemberId)).toEqual(['worker', 'worker-b']);
     expect(view.draft?.gates[1].availability).toEqual([]); fixture.destroy();
+  });
+  it('uses checkboxes to select and remove resources without duplicate members', () => {
+    const fixture = component(); const view = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelectorAll('select[multiple]').length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('.resource-step').length).toBe(4);
+    expect(fixture.nativeElement.querySelector('.resource-step').open).toBe(true);
+    view.draft!.teams[0].memberIds = view.selectResource(['worker'], 'worker', true);
+    expect(view.draft!.teams[0].memberIds).toEqual(['worker']);
+    view.draft!.teams[0].memberIds = view.selectResource(view.draft!.teams[0].memberIds, 'worker', false);
+    expect(view.draft!.teams[0].memberIds).toEqual([]);
+    expect(view.dirty()).toBe(true); fixture.destroy();
   });
   it('keeps references consistent when removing resources from an existing draft', () => {
     const fixture = component(); const view = fixture.componentInstance;
@@ -81,7 +97,8 @@ describe('Integrated resource planning', () => {
       assignments: [{ flightId: 'flight', gateId: 'gate', teamId: 'team' }], rules: [],
       constraints: { scenarioId: 'scenario', scenarioRevision: 3, resources, flights: [{ flightId: 'flight', startMinute: 10, endMinute: 40 }] } });
     fixture.detectChanges(); const row: HTMLTableRowElement = fixture.nativeElement.querySelector('tbody tr');
-    expect(row.textContent).toContain('10–40 min'); expect(row.textContent).toContain('Operator A');
+    expect(row.textContent).toContain('10–40 min'); expect(row.textContent).toContain('08:10–08:40'); expect(row.textContent).toContain('Operator A');
+    expect(fixture.nativeElement.querySelectorAll('.checklist li.done').length).toBe(4);
     expect(changed).not.toHaveBeenCalled(); fixture.destroy();
   });
   it('saves explicit configuration and current revision and emits the updated scenario', () => {
@@ -100,7 +117,7 @@ describe('Integrated resource planning', () => {
     call.flush({ status: 'infeasible', advisoryOnly: true, score: null, assignments: [],
       rules: [{ code: 'team_shift', flightId: 'flight', resourceId: 'team', message: 'Members outside their shifts.' }],
       constraints: { scenarioId: 'scenario', scenarioRevision: 3 } }); fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Infezabil');
+    expect(fixture.nativeElement.textContent).toContain('Nu se poate');
     expect(fixture.nativeElement.textContent).toContain('team_shift · DEMO 1 Handling');
     expect(fixture.nativeElement.textContent).toContain('Members outside their shifts.');
     view.addWindow(view.draft!.gates[0].availability); expect(view.result()).toBeNull(); fixture.destroy();

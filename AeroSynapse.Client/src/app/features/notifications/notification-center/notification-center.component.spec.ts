@@ -98,23 +98,65 @@ describe('Supervisor notification UI', () => {
     expect(component.criticalThreshold).toBeNull();
     expect(component.canPublish()).toBe(false);
     component.publish();
-    http.expectNone('/api/operational-notifications/queue-forecast');
+    http.expectNone('/api/operational-notifications/run-queues');
     component.warningThreshold = 10;
     component.criticalThreshold = 10;
     expect(component.canPublish()).toBe(false);
     component.criticalThreshold = 20;
     expect(component.canPublish()).toBe(true);
     component.publish();
-    const command = http.expectOne('/api/operational-notifications/queue-forecast');
+    const command = http.expectOne('/api/operational-notifications/run-queues');
     expect(command.request.body).toMatchObject({
       scenarioId: ids.scenario,
       runId: ids.run,
       warningThreshold: 10,
       criticalThreshold: 20,
-      horizonMinutes: 15,
-      useLatest: false,
     });
     command.error(new ProgressEvent('error'));
+    fixture.destroy();
+  });
+  it('generates alerts over every completed run when no scenario or run is chosen', async () => {
+    const fixture = TestBed.createComponent(NotificationCenterComponent),
+      component = fixture.componentInstance,
+      host: HTMLElement = fixture.nativeElement;
+    fixture.detectChanges();
+    http.expectOne('/api/scenarios').flush([towerFixture().scenario.scenario]);
+    const empty = () => {
+      http
+        .expectOne((r) => r.url.startsWith('/api/operational-notifications?'))
+        .flush({ items: [], total: 0, offset: 0, limit: 25 });
+      http
+        .expectOne((r) => r.url.startsWith('/api/operational-notifications/activity?'))
+        .flush({ items: [], total: 0, offset: 0, limit: 25 });
+    };
+    await vi.advanceTimersByTimeAsync(0);
+    empty();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Toate rulările finalizate din toate scenariile');
+    component.warningThreshold = 5;
+    component.criticalThreshold = 10;
+    expect(component.canPublish()).toBe(true);
+    component.publish();
+    const command = http.expectOne('/api/operational-notifications/run-queues');
+    expect(command.request.body).toMatchObject({
+      scenarioId: null,
+      runId: null,
+      warningThreshold: 5,
+      criticalThreshold: 10,
+    });
+    command.flush({
+      commandId: command.request.body.commandId,
+      alertIds: [notificationIds.alert],
+      duplicates: 0,
+      staleObservations: 0,
+      recordedAtUtc: '2026-10-20T10:00:01Z',
+      skippedRuns: 2,
+    });
+    expect(component.store.message()).toBe(
+      'Gata: 1 alertă nouă. 2 rulări nu au date despre cozi și au fost sărite.',
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    empty();
     fixture.destroy();
   });
   it('renders comments as text and preserves a draft through an automatic refresh of the same alert', async () => {

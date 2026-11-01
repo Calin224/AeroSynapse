@@ -155,6 +155,12 @@
         }
       </div>
     </section>
+    <app-revision-timeline
+      [scenario]="scenario"
+      [runs]="store.runs()"
+      [selectedRunId]="store.run()?.id ?? null"
+      (openRun)="openRun($event)"
+    />
 
     <nav class="phases" aria-label="Pași">
       <button
@@ -201,7 +207,11 @@
           (click)="tab.set(item.id)"
           (keydown)="moveTab($event)"
         >
-          <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
+          @if (phase() === 'prepare') {
+            <span class="tab-step" aria-hidden="true">{{ $index + 1 }}</span>
+          } @else {
+            <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
+          }
           <span>{{ item.label }}</span>
         </button>
       }
@@ -243,9 +253,11 @@
         <app-navigation-panel
           [scenario]="scenario"
           [run]="store.run()"
+          [active]="tab() === 'routes'"
           [disabled]="lockedExcept(navigationBusy)"
           (changed)="scheduleChanged($event)"
           (working)="navigationBusy.set($event)"
+          (goTo)="openTab($event)"
         />
       </div>
       <div
@@ -290,6 +302,13 @@
           (working)="resourcesBusy.set($event)"
         />
       </div>
+      @if (nextTab(); as next) {
+        <div class="next-step">
+          <button type="button" (click)="openTab(next.id)">
+            Următorul pas: {{ next.label }} <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
 
       <div
         role="tabpanel"
@@ -337,21 +356,25 @@
                     (playFromStart)="playFromStart(view)"
                     (showBusiest)="twin()?.playFrom($event.elapsedMinutes, $event.zoneId)"
                   />
+                  @if (appliedRunId() === view.runId) {
+                    <p class="applied" role="status">
+                      Varianta a fost aplicată. Pornește simularea ca să o verifici.
+                    </p>
+                  } @else {
+                    <!-- Options were measured on the captured revision; once the scenario moved on they can only be read. -->
+                    <app-ai-optimization
+                      [runId]="view.runId"
+                      [stale]="context.scenario.scenario.revision !== store.selected()?.scenario?.revision"
+                      (applied)="optionApplied(view.runId)"
+                    />
+                  }
                 } @else if (!store.run()) {
                   <p class="no-run">Pregătit pentru prima simulare</p>
                 }
                 <app-digital-twin [scene]="scene()" openAt="busiest" />
               }
             </section>
-            <aside class="rail" aria-label="Agent AI, incidente, resurse și evoluția terminalului">
-              <app-agent-panel
-                [scenario]="store.selected()"
-                [controls]="context.layout.layout.checkpoints.length"
-                [runId]="store.run()?.id ?? null"
-                [tracked]="!!context.scenario.inputs.agent"
-                [running]="locked()"
-                (changed)="reload()"
-              />
+            <aside class="rail" aria-label="Incidente, resurse și evoluția terminalului">
               <section class="panel incidents" aria-labelledby="incidents-title">
                 <header class="panel-title">
                   <h2 id="incidents-title">Incidente / evenimente</h2>

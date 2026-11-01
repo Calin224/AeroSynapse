@@ -14,9 +14,12 @@ public sealed record OperationalAlert(Guid Id, Guid ScenarioId, string ScenarioN
 public sealed record AlertActivity(Guid Id, Guid AlertId, Guid ScenarioId, Guid RunId, Guid ZoneId, string Kind, string Actor,
     string Text, DateTime RecordedAtUtc, int AlertRevision, NotificationEvidence? Evidence = null);
 public sealed record AlertDetails(OperationalAlert Alert, IReadOnlyList<AlertActivity> Activity);
-public sealed record NotificationReceipt(Guid CommandId, IReadOnlyList<Guid> AlertIds, int Duplicates, int StaleObservations, DateTime RecordedAtUtc);
+public sealed record NotificationReceipt(Guid CommandId, IReadOnlyList<Guid> AlertIds, int Duplicates, int StaleObservations, DateTime RecordedAtUtc,
+    int SkippedRuns = 0);
 public sealed record PublishQueueAlertsRequest(Guid CommandId, Guid ScenarioId, Guid RunId, int FromMinute, int HorizonMinutes,
     int WarningThreshold, int CriticalThreshold, bool UseLatest = false);
+// No run means every completed run of the scenario; no scenario means every synthetic scenario.
+public sealed record PublishRunAlertsRequest(Guid CommandId, Guid? ScenarioId, Guid? RunId, int WarningThreshold, int CriticalThreshold);
 public sealed record AlertActionRequest(Guid CommandId, int Revision, string Action, string Actor, string Text = "");
 
 public interface IOperationalNotifications
@@ -25,5 +28,6 @@ public interface IOperationalNotifications
     Task<NotificationPage<AlertActivity>> ActivityAsync(NotificationFilter filter, CancellationToken token);
     Task<AlertDetails> GetAsync(Guid id, CancellationToken token);
     Task<NotificationReceipt> PublishAsync(PublishQueueAlertsRequest request, CancellationToken token);
+    Task<NotificationReceipt> PublishRunsAsync(PublishRunAlertsRequest request, CancellationToken token);
     Task<NotificationReceipt> ActAsync(Guid id, AlertActionRequest request, CancellationToken token);
 }

@@ -359,7 +359,7 @@ describe('Monte Carlo batch page', () => {
     const verdict = element.querySelector('.verdict')!;
     expect(verdict.getAttribute('data-tone')).toBe('better');
     expect(verdict.querySelector('h3')!.textContent).toBe(
-      '„Candidate demo” reduce așteptarea medie de la 30 min la 15 min.',
+      '„Candidate demo” reduce așteptarea medie de la 30.00 min la 15.00 min.',
     );
     expect(verdict.textContent).toContain('Mai bună în 2 din 2 zile');
     expect(verdict.querySelector('.figure strong')!.textContent!.trim()).toBe('−50%');
@@ -418,10 +418,10 @@ describe('Monte Carlo batch page', () => {
       'Rezultat stabil: zilele simulate seamănă mult între ele.',
     );
     expect(verdict.textContent).toContain(
-      'Interval realist: între 28 min și 32 min în 9 zile din 10',
+      'Interval realist: între 28.00 min și 32.00 min în 9 zile din 10',
     );
     expect(verdict.textContent).toContain('Sunt doar 2 zile simulate');
-    expect(verdict.querySelector('.figure strong')!.textContent!.trim()).toBe('30min');
+    expect(verdict.querySelector('.figure strong')!.textContent!.trim()).toBe('30.00min');
     expect(element.querySelector('.duels')).toBeNull();
     expect(element.textContent).toContain('O zi reușită nu are valori individuale disponibile');
     view.detail.set({ ...alone });

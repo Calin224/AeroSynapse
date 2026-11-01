@@ -44,11 +44,11 @@
                 >
                 <small>{{ row.beforeSource }} → {{ row.afterSource }}</small>
               </th>
-              <td>{{ row.before === null ? 'Lipsă' : (row.before | number: '1.0-10') }}</td>
-              <td>{{ row.after === null ? 'Lipsă' : (row.after | number: '1.0-10') }}</td>
-              <td>{{ row.delta === null ? 'Indisponibil' : (row.delta | number: '1.0-10') }}</td>
+              <td>{{ row.before === null ? 'Lipsă' : (row.before | number: '1.2-2') }}</td>
+              <td>{{ row.after === null ? 'Lipsă' : (row.after | number: '1.2-2') }}</td>
+              <td>{{ row.delta === null ? 'Indisponibil' : (row.delta | number: '1.2-2') }}</td>
               <td>
-                {{ row.percent === null ? 'Indisponibil' : (row.percent | number: '1.0-10') + '%' }}
+                {{ row.percent === null ? 'Indisponibil' : (row.percent | number: '1.2-2') + '%' }}
                 @if (row.percent === null) {
                   <small>{{
                     row.percentUnavailableReason === 'nonpositive_baseline'
@@ -98,7 +98,7 @@
             <tr>
               <th>{{ fact.label }}</th>
               <td>
-                {{ fact.value === null ? 'Lipsă' : (fact.value | number: '1.0-10') }}
+                {{ fact.value === null ? 'Lipsă' : (fact.value | number: '1.2-2') }}
                 {{ fact.unit }}
               </td>
               <td>

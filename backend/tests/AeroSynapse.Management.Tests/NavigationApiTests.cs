@@ -264,6 +264,58 @@ public sealed class NavigationApiTests
         Assert.Equal(HttpStatusCode.BadRequest,noProfiles.StatusCode);
     }
     [Fact]
+    public async Task Incident_derived_profiles_enable_navigation_until_the_last_incident_is_removed()
+    {
+        await using var host=await ManagementHost.CreateAsync();
+        var (draft,layout)=await host.DraftAsync();
+        var surge=new ScenarioInputEvent(Guid.NewGuid(),IncidentScenarios.PassengerSurge,draft.Inputs.StartsAtUtc.AddMinutes(5),
+            layout.Layout.Routes.Single(r => r.Id == draft.Inputs.Flows[0].RouteId).FromCheckpointId,draft.Inputs.Flights[0].GateId,draft.Inputs.Flights[0].Id,
+            JsonSerializer.Serialize(new PassengerSurgePayload("1.0",1,1,true),Json));
+        var scenario=await host.PostScenarioAsync(draft with { Inputs=draft.Inputs with { Events=[..draft.Inputs.Events,surge] } });
+        Assert.Null(scenario.Inputs.PassengerGeneration);
+        var settings=(await host.Client.GetFromJsonAsync<NavigationSettings>($"/scenarios/{scenario.Scenario.Id}/navigation/settings",Json,Token))!;
+        Assert.True(settings.PassengerProfilesActive);
+        scenario=await Save(host,scenario,Config());
+        Assert.NotNull(scenario.Inputs.Navigation);
+        using var removed=await host.Client.DeleteAsync($"/scenarios/{scenario.Scenario.Id}/events/{surge.Id}?revision={scenario.Scenario.Revision}",Token);
+        Assert.Equal(HttpStatusCode.OK,removed.StatusCode);
+        Assert.Null((await removed.Content.ReadFromJsonAsync<ScenarioDetails>(Json,Token))!.Inputs.Navigation);
+    }
+    [Fact]
+    public async Task Check_in_derived_profiles_run_with_saved_routes()
+    {
+        await using var host=await ManagementHost.CreateAsync(realEngine:true);
+        var (draft,_)=await host.DraftAsync();
+        var scenario=await host.PostScenarioAsync(draft with { Inputs=draft.Inputs with { CheckIn=new(SyntheticScenarioSeeder.CheckInAreaId,4,.5m) } });
+        var settings=(await host.Client.GetFromJsonAsync<NavigationSettings>($"/scenarios/{scenario.Scenario.Id}/navigation/settings",Json,Token))!;
+        Assert.True(settings.PassengerProfilesActive);
+        scenario=await Save(host,scenario,settings.Defaults);
+        // Check-in time sits between terminal arrival and security, so gate arrival must follow the process report.
+        var (_,result)=await Run(host,scenario.Scenario.Id);
+        Assert.True(result.RoutedCount > 0);
+    }
+    [Fact]
+    public async Task Incident_derived_profiles_run_scheduled_corridor_closures_on_saved_routes()
+    {
+        await using var host=await ManagementHost.CreateAsync(realEngine:true);
+        var (draft,layout)=await host.DraftAsync();
+        var surge=new ScenarioInputEvent(Guid.NewGuid(),IncidentScenarios.PassengerSurge,draft.Inputs.StartsAtUtc.AddMinutes(5),
+            layout.Layout.Routes.Single(r => r.Id == draft.Inputs.Flows[0].RouteId).FromCheckpointId,draft.Inputs.Flights[0].GateId,draft.Inputs.Flights[0].Id,
+            JsonSerializer.Serialize(new PassengerSurgePayload("1.0",1,1,true),Json));
+        var scenario=await Save(host,await host.PostScenarioAsync(draft with { Inputs=draft.Inputs with { Events=[..draft.Inputs.Events,surge] } }),Config());
+        var corridor=scenario.Inputs.Navigation!.Graph.Nodes.Single(node => node.Name == "Coridor principal").Id;
+        foreach (var (type,minute) in new[] { ("corridor_closure",3), ("resume",8) })
+        {
+            using var saved=await host.Client.PostAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/events",new EventWriteRequest(scenario.Scenario.Revision,
+                new(Guid.NewGuid(),type,scenario.Inputs.StartsAtUtc.AddMinutes(minute),null,null,null,JsonSerializer.Serialize(new { zoneId=corridor }))),Json,Token);
+            Assert.True(saved.StatusCode == HttpStatusCode.Created,await saved.Content.ReadAsStringAsync(Token));
+            scenario=(await saved.Content.ReadFromJsonAsync<ScenarioDetails>(Json,Token))!;
+        }
+        Assert.Null(scenario.Inputs.PassengerGeneration);
+        var (_,result)=await Run(host,scenario.Scenario.Id);
+        Assert.True(result.RoutedCount > 0);
+    }
+    [Fact]
     public async Task Invalid_graph_edits_leave_the_saved_snapshot_and_revision_unchanged()
     {
         await using var host=await ManagementHost.CreateAsync(); var scenario=await Create(host); scenario=await Save(host,scenario,Config());

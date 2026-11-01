@@ -25,6 +25,7 @@ import {
   CopilotAnswer,
   CopilotContext,
   CopilotScope,
+  figure,
   modelLabel,
   uuid,
   validAnswer,
@@ -43,6 +44,13 @@ interface Turn {
 }
 
 const FORECAST_MINUTES = 15;
+/** Whole-run questions a first-time operator can ask with one click; the backend suggests the same ones. */
+const STARTERS = [
+  'Rezumă simularea',
+  'Unde a fost cea mai mare coadă și de ce?',
+  'Câți pasageri au pierdut zborul?',
+  'Ce ar trebui să schimb?',
+];
 
 @Component({
   selector: 'app-copilot',
@@ -68,8 +76,10 @@ export class Copilot {
   readonly choosing = signal(false);
   readonly busy = computed(() => this.turns().some((turn) => turn.state === 'pending'));
   readonly modelLabel = modelLabel;
+  readonly figure = figure;
   readonly eventLabel = eventLabel;
   readonly forecastMinutes = FORECAST_MINUTES;
+  readonly starters = STARTERS;
   scenarioId = '';
   runId = '';
   zoneId = '';
@@ -131,18 +141,29 @@ export class Copilot {
           return;
         }
         const end = context.durationMinutes ?? 0,
-          minute = Number(requestedMinute);
+          minute = Number(requestedMinute),
+          known = (id?: string) => context.zones.some((zone) => zone.id === id),
+          peak = context.busiest,
+          busiest =
+            peak && known(peak.zoneId) && Number.isInteger(peak.minute) && peak.minute >= 0 && peak.minute <= end
+              ? peak
+              : null;
         this.context.set(context);
         this.simulation.remember(scenarioId, runId);
-        this.zoneId = context.zones.some((zone) => zone.id === requestedZone)
+        // Without a link, open where the queue was longest: the end of a run usually has none.
+        this.zoneId = known(requestedZone)
           ? requestedZone
-          : (context.zones[0]?.id ?? '');
+          : (busiest?.zoneId ?? context.zones[0]?.id ?? '');
         this.minute =
           requestedMinute !== null && Number.isInteger(minute) && minute >= 0 && minute <= end
             ? minute
-            : end;
+            : busiest && this.zoneId === busiest.zoneId
+              ? busiest.minute
+              : end;
         if (requestedZone && requestedZone !== this.zoneId)
-          this.message.set('Zona din link nu aparține rulării, așa că am ales prima zonă.');
+          this.message.set(
+            `Zona din link nu aparține rulării, așa că am ales ${busiest ? 'zona cu cea mai mare coadă' : 'prima zonă'}.`,
+          );
       },
       error: () => {
         if (generation !== this.generation) return;
@@ -206,6 +227,16 @@ export class Copilot {
     if (turn) this.tool(turn, 'inspect_zone', { question: 'Rezumă situația zonei.' });
   }
 
+  zoneLabel() {
+    return this.context()?.zones.find((zone) => zone.id === this.zoneId)?.code ?? '—';
+  }
+
+  /** True while the zone and minute are the run's busiest moment. */
+  atBusiest() {
+    const busiest = this.context()?.busiest;
+    return !!busiest && busiest.zoneId === this.zoneId && busiest.minute === this.minute;
+  }
+
   /** Last minute from which the whole forecast horizon still fits inside the run. */
   forecastLimit() {
     return (this.context()?.durationMinutes ?? -1) - FORECAST_MINUTES;
@@ -225,6 +256,21 @@ export class Copilot {
   /** Citation markers such as [queuedPassengers] are shown as figures, not inline. */
   plain(text: string) {
     return text.replace(/\s*\[[A-Za-z][\w.]*\]/g, '');
+  }
+
+  /** The answer as an operator reads it: each cited "value unit [id]" rounded the way people count. */
+  say(answer: CopilotAnswer) {
+    const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.plain(
+      answer.citations.reduce(
+        (text, c) =>
+          text.replace(
+            new RegExp(`\\S+ ${escape(c.unit)} \\[${escape(c.id)}\\]`),
+            figure(c.value, c.unit),
+          ),
+        answer.answer,
+      ),
+    );
   }
 
   /** Where the forecast queue starts, ends and peaks; the peak is worth naming only above both. */

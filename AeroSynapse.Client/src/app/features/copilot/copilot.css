@@ -55,10 +55,23 @@
 .chat {
   overflow: visible;
 }
+/* Zone and minute matter only for the per-moment tools, so they stay folded under one line. */
+.moment > summary {
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.moment {
+  min-width: 0;
+}
+.moment[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
 .focus {
   align-items: end;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  padding-top: 10px;
 }
 .focus strong {
   color: var(--text);
@@ -67,6 +80,10 @@
 }
 .chat > .notice {
   margin: 12px 20px 0;
+}
+.focus-hint {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .thread {
@@ -194,10 +211,31 @@
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
+.advice {
+  display: grid;
+  gap: 6px;
+}
+.advice h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.advice ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.note {
+  color: var(--text-muted);
+  font-size: 12px;
+}
 .sources p {
   color: var(--text-muted);
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+.sources > :not(summary) + :not(summary) {
+  margin-top: 12px;
 }
 code {
   font-size: 12px;
@@ -215,6 +253,13 @@ code {
 .empty strong {
   color: var(--text);
   font-size: 16px;
+}
+.starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .composer {
@@ -256,7 +301,6 @@ code {
 
 
 @media (max-width: 640px) {
-  .focus,
   .thread,
   .composer {
     padding-inline: 16px;
@@ -275,4 +319,8 @@ code {
   .chip {
     white-space: nowrap;
   }
+}
+.reply .starters {
+  justify-content: start;
+  margin-top: 0;
 }

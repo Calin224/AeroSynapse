@@ -92,7 +92,12 @@ export const PRESETS = [
     detail: '6 ore · 5 zboruri · 600 pasageri',
     count: 120,
   },
-  { id: 'calm', name: 'Trafic redus', detail: '6 ore · 5 zboruri · 250 pasageri', count: 50 },
+  {
+    id: 'calm',
+    name: 'Trafic redus',
+    detail: '6 ore · 5 zboruri · 250 pasageri',
+    count: 50,
+  },
   {
     id: 'bottleneck',
     name: 'Bottleneck · DEMO',
@@ -102,8 +107,12 @@ export const PRESETS = [
   {
     id: 'peak',
     name: 'Vârf de trafic',
-    detail: '6 ore · 5 zboruri · 900 pasageri',
+    detail: '4 ore · 5 zboruri în 40 de minute · 900 pasageri',
     count: 180,
+    durationMinutes: 240,
+    // A departure bank: flights an hour apart never queue anyone, five within 40 minutes do.
+    departureSpacingMinutes: 10,
+    firstDepartureMinutes: 150,
   },
   {
     id: 'workday',
@@ -184,9 +193,17 @@ export function makeDraft(
   const checkpointCode = (id: string) =>
     layout.layout.checkpoints.find((checkpoint) => checkpoint.id === id)?.code ?? id;
   const flightCount = 'flightCount' in preset ? preset.flightCount : 5;
-  let departureAtUtc = inputs.startsAtUtc;
+  const spacing =
+    'departureSpacingMinutes' in preset
+      ? preset.departureSpacingMinutes
+      : MINIMUM_DEPARTURE_SPACING_MINUTES;
+  inputs.minimumDepartureSpacingMinutes = spacing;
+  let departureAtUtc = addMinutes(
+    inputs.startsAtUtc,
+    ('firstDepartureMinutes' in preset ? preset.firstDepartureMinutes : spacing) - spacing,
+  );
   for (let index = 0; index < flightCount; index++) {
-    departureAtUtc = addMinutes(departureAtUtc, MINIMUM_DEPARTURE_SPACING_MINUTES);
+    departureAtUtc = addMinutes(departureAtUtc, spacing);
     const gateId = gates[index % gates.length];
     // Flights take the checkpoints toward their gate in turn, so no single control carries the whole day.
     const toGate = routes
@@ -220,11 +237,14 @@ export function makeDraft(
       populationId,
       routeId: route.id,
       passengerCount: preset.count,
-      // A long day's passengers arrive in the 90 minutes before their flight, not all at the start.
+      // Travellers reach security 2 h to 30 min before departure; the engine draws arrivals from this window.
       startsAtUtc: new Date(
-        Math.max(+start, Date.parse(addMinutes(departureAtUtc, -90))),
+        Math.max(
+          +start,
+          Date.parse(addMinutes(departureAtUtc, preset.id === 'bottleneck' ? -90 : -120)),
+        ),
       ).toISOString(),
-      endsAtUtc: addMinutes(departureAtUtc, -2),
+      endsAtUtc: addMinutes(departureAtUtc, preset.id === 'bottleneck' ? -2 : -30),
     });
   }
   inputs.staffAllocations = layout.layout.staff

@@ -122,6 +122,89 @@ public sealed class OperationalNotifications(TwinDbContext db, ISender sender, T
         }, token);
     }
 
+    // Completed runs alert on their recorded queues over the whole simulated period, so one command can cover every run.
+    // shortcut: runs are scanned in one request (~0.1 s each); move to a background job if hundreds of runs hit the client timeout.
+    public async Task<NotificationReceipt> PublishRunsAsync(PublishRunAlertsRequest request, CancellationToken token)
+    {
+        if (request.WarningThreshold is < 0 or > 99999 || request.CriticalThreshold <= request.WarningThreshold
+            || request.CriticalThreshold > 100000 || (request.RunId.HasValue && !request.ScenarioId.HasValue))
+            throw Invalid("rule", "Choose 0 ≤ warning < critical ≤ 100000 passengers, and the scenario of a selected run.");
+        if (request.CommandId == Guid.Empty) throw Invalid("commandId", "A nonempty command ID is required.");
+        var runs = await db.Runs.AsNoTracking().Where(r => r.IsSynthetic && r.Status == "completed"
+                && (request.ScenarioId == null || r.ScenarioId == request.ScenarioId) && (request.RunId == null || r.Id == request.RunId)
+                && db.Scenarios.Any(s => s.Id == r.ScenarioId && s.IsSynthetic && s.DeletedAtUtc == null))
+            .OrderBy(r => r.Id).ToArrayAsync(token);
+        if (request.RunId.HasValue && runs.Length == 0)
+            throw new ScenarioConflictException("Choose a completed run of the selected synthetic scenario.");
+        var affected = new List<Guid>(); int duplicates = 0, skipped = 0;
+        foreach (var run in runs)
+        {
+            try
+            {
+                var receipt = await PublishRunAsync(request, run, token);
+                affected.AddRange(receipt.AlertIds); duplicates += receipt.Duplicates;
+            }
+            // Runs without a captured KPI series (older or alternative-flow runs) cannot alert; a selected run reports why.
+            catch (ScenarioNotFoundException) when (request.RunId is null) { skipped++; }
+        }
+        return new(request.CommandId, affected, duplicates, 0, Now, skipped);
+    }
+
+    private async Task<NotificationReceipt> PublishRunAsync(PublishRunAlertsRequest request, SimulationRun run, CancellationToken token)
+    {
+        // One derived command per run keeps the per-scenario lock and replay, so a retried batch resumes where it stopped.
+        var commandId = Guid.ParseExact(RunFingerprint.Hash(JsonSerializer.SerializeToElement(new { request.CommandId, run.Id }, Json),
+            "notification-run-command")[..32], "N");
+        var identity = new { action = "publish_run", run.Id, request.WarningThreshold, request.CriticalThreshold };
+        var previous = await db.NotificationCommands.AsNoTracking().SingleOrDefaultAsync(c => c.Id == commandId, token);
+        if (previous is not null) return Replay(previous, run.ScenarioId!.Value, identity);
+        var captured = JsonSerializer.Deserialize<RunInputSnapshot>(run.InputSnapshotJson ?? "null", Json)
+            ?? throw new ScenarioNotFoundException("The run has no captured inputs.");
+        if (captured.Scenario.Scenario.Id != run.ScenarioId || !captured.Scenario.Scenario.IsSynthetic
+            || captured.Scenario.Scenario.Revision != run.ScenarioRevision)
+            throw new ScenarioConflictException("Captured inputs do not match the notification context.");
+        var rows = new List<KpiSnapshot>();
+        for (var more = true; more;)
+        {
+            var page = await sender.Send(new GetRunKpisQuery(run.Id, Offset: rows.Count, Limit: KpiConventions.MaxSnapshots), token);
+            rows.AddRange(page.Snapshots); more = page.HasMore;
+        }
+        var layout = captured.Layout.Layout;
+        var names = layout.Checkpoints.Select(c => (c.Id, c.Name)).Concat((layout.CheckInAreas ?? []).Select(c => (c.Id, c.Name)))
+            .ToDictionary(z => z.Id, z => z.Name);
+        var start = DateTime.SpecifyKind(captured.Scenario.Inputs.StartsAtUtc, DateTimeKind.Utc);
+        var rule = RunFingerprint.Hash(JsonSerializer.SerializeToElement(new { source = "recorded_queue", request.WarningThreshold,
+            request.CriticalThreshold }, Json), "notification-rule");
+        return await Execute(commandId, run.ScenarioId!.Value, identity, async () =>
+        {
+            var affected = new List<Guid>(); var duplicates = 0; var now = Now;
+            foreach (var zone in rows.GroupBy(r => r.ZoneId))
+            {
+                var over = zone.Where(r => r.QueuedPassengers > request.WarningThreshold).OrderBy(r => r.Minute).ToArray();
+                if (over.Length == 0) continue;
+                // A completed run's recording never changes, so an alert under the same rule already holds this evidence.
+                var existing = await db.Notifications.AsNoTracking().Where(a => a.RunId == run.Id && a.ZoneId == zone.Key && a.RuleKey == rule)
+                    .Select(a => (Guid?)a.Id).SingleOrDefaultAsync(token);
+                if (existing is { } id) { duplicates++; affected.Add(id); continue; }
+                var peak = over.Max(r => r.QueuedPassengers);
+                var level = peak > request.CriticalThreshold ? "critical" : "warning";
+                var trigger = over.First(r => r.QueuedPassengers > (level == "critical" ? request.CriticalThreshold : request.WarningThreshold)).Minute;
+                var evidence = new NotificationEvidence(over[0].Minute, over[^1].Minute, peak, trigger, start.AddMinutes(over[0].Minute),
+                    start.AddMinutes(over[^1].Minute), "recorded_run", "max(queued_passengers) over every captured KPI snapshot of the run");
+                var alert = new OperationalNotification { Id = Guid.NewGuid(), IsSynthetic = true, ScenarioId = run.ScenarioId!.Value,
+                    ScenarioName = captured.Scenario.Scenario.Name, RunId = run.Id, ZoneId = zone.Key,
+                    ZoneName = names.GetValueOrDefault(zone.Key, $"Zona {zone.Key.ToString()[..8]}"), Source = "recorded_queue", RuleKey = rule,
+                    WarningThreshold = request.WarningThreshold, CriticalThreshold = request.CriticalThreshold, Level = level, Revision = 1,
+                    Observations = 1, FirstObservedAtUtc = now, LastObservedAtUtc = now, SimulationAtUtc = start.AddMinutes(trigger),
+                    EvidenceJson = JsonSerializer.Serialize(evidence, Json) };
+                db.Notifications.Add(alert);
+                Append(alert, "created", "Simulare finalizată", "", now, rule);
+                affected.Add(alert.Id);
+            }
+            return new(commandId, affected, duplicates, 0, now);
+        }, token);
+    }
+
     public async Task<NotificationReceipt> ActAsync(Guid id, AlertActionRequest value, CancellationToken token)
     {
         if (value.Revision < 1 || value.Action is not ("acknowledge" or "comment" or "assign")) throw Invalid("action", "Choose acknowledge, comment or assign and the current revision.");

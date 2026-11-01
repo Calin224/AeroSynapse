@@ -125,7 +125,36 @@ describe('Scheduled operational events', () => {
     expect(rows[1]).toContain('Reluare');
     expect(rows[2]).toContain('Val de pasageri');
     expect(rows[2]).toContain('30 pasageri în 5 min');
-    expect(fixture.nativeElement.textContent).toContain('1 note descriptive');
+    expect(rows[0]).toContain('10:20');
+    expect(rows[0]).toContain('Control A');
+    expect(rows[0]).toContain('închis până la reluare');
+    expect(fixture.nativeElement.textContent).toContain('1 notă descriptivă');
+    expect(fixture.nativeElement.textContent).not.toContain('infrastructură');
+  });
+
+  it('shows a friendly empty state whose action opens the form', () => {
+    const fixture = TestBed.createComponent(EventsPanel);
+    fixture.componentRef.setInput('scenario', {
+      ...structuredClone(scenario),
+      inputs: { ...scenario.inputs, events: [] },
+    });
+    fixture.componentRef.setInput('active', true);
+    fixture.detectChanges();
+    http
+      .expectOne('/api/scenarios/scenario-1/navigation/settings')
+      .flush(structuredClone(settings));
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('table')).toBeNull();
+    expect(element.textContent).toContain('Niciun eveniment încă');
+    const buttons = [...element.querySelectorAll('button')];
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual([
+      'Adaugă primul eveniment',
+    ]);
+    buttons[0].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.draft?.type).toBe('checkpoint_unavailable');
+    expect(element.querySelector('form')).not.toBeNull();
   });
 
   it('schedules an event at the chosen absolute time with only the fields its type uses', () => {

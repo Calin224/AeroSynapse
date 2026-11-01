@@ -47,7 +47,7 @@ public static class NavigationScenarios
     public static void Validate(ScenarioInputs inputs, SceneDetails layout)
     {
         if (inputs.Navigation is null) return;
-        if (inputs.PassengerGeneration is null) throw Invalid("", "Activate passenger profiles before configuring navigation.");
+        if (!IncidentScenarios.ProfilesActive(inputs)) throw Invalid("", "Activate passenger profiles before configuring navigation.");
         Shape(inputs.Navigation);
         foreach (var binding in inputs.Navigation.CheckpointBindings)
             if (!layout.Checkpoints.Any(item => item.Id == binding.ResourceId)) throw Invalid("checkpointBindings","Bind only checkpoints in the captured operational layout.");

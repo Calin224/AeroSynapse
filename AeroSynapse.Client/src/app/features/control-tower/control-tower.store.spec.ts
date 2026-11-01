@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { apiErrorInterceptor } from '../../core/http/api-error.interceptor';
 import { OperationsState, OperationsStream } from '../../core/http/operations-stream';
+import { SimulationContext } from '../../core/simulation-context';
 import { ControlTowerStore } from './control-tower.store';
 import { ids, towerFixture } from './tower.testing';
 import { bottleneckLayout } from '../operational-report/report.testing';
@@ -82,6 +83,23 @@ describe('Control Tower selection, live recovery and simulation commands', () =>
     expect(store.metrics().processed).toBeNull();
     http.expectOne('/api/scenarios').flush([]);
     expect(store.message()).toContain('catalogul activ');
+  });
+  it('replaces a deleted remembered scenario with the catalog and asks for the gallery', () => {
+    const { scenario, layout } = towerFixture();
+    vi.spyOn(TestBed.inject(SimulationContext), 'current').mockReturnValue({
+      scenarioId: ids.otherRun,
+      runId: ids.run,
+    });
+    const accepted: unknown[] = [];
+    store.accepted.subscribe((value) => accepted.push(value));
+    store.open(ids.otherRun, ids.run);
+    http.expectOne('/api/scenarios').flush([scenario.scenario]);
+    http.expectOne(`/api/scenarios/${ids.scenario}`).flush(scenario);
+    http.expectOne(`/api/scenes/${ids.scene}/layout-versions/${ids.layout}`).flush(layout);
+    http.expectOne(`/api/scenarios/${ids.scenario}/runs?limit=100`).flush([]);
+    expect(store.message()).toBe('');
+    expect(store.selected()?.scenario.id).toBe(ids.scenario);
+    expect(accepted).toEqual([{ scenarioId: ids.scenario, runId: null, browse: true }]);
   });
   it('rejects a response from another scenario without exposing its metrics', () => {
     load({ ...towerFixture().run, scenarioId: ids.otherRun });

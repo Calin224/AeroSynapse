@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import {
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
@@ -26,12 +27,13 @@ import { QueueForecastPanel } from '../operations/queue-forecast-panel';
 import { OperationsStream } from '../../core/http/operations-stream';
 import { DigitalTwin } from '../digital-twin/digital-twin';
 import { heatmapMinutes } from '../digital-twin/heatmap-model';
-import { AgentPanel } from '../control-tower/agent-panel';
 import { ControlTowerStore } from '../control-tower/control-tower.store';
 import { RunOverview, runOverview } from '../control-tower/run-overview';
 import { TowerTrends } from '../control-tower/tower-trends';
 import { activeRun, runStatus } from '../control-tower/tower.models';
 import { RunSummary } from './run-summary';
+import { RevisionTimeline } from './revision-timeline';
+import { AiOptimization } from './ai-optimization';
 import { SimulationExecution, SimulationPanel } from './simulation-panel';
 
 const TABS = [
@@ -55,7 +57,8 @@ type Phase = (typeof TABS)[number]['phase'];
     DigitalTwin,
     SimulationPanel,
     RunSummary,
-    AgentPanel,
+    RevisionTimeline,
+    AiOptimization,
     TowerTrends,
     WriteAccess,
     FlightSchedulePanel,
@@ -78,14 +81,25 @@ export class Scenario {
   private readonly router = inject(Router);
   readonly simulationActive = signal(false);
   readonly focusedZoneId = signal<string | null>(null);
+  /** The run whose AI option went into the scenario; its options are stale from then on. */
+  readonly appliedRunId = signal<string | null>(null);
   private readonly focusedMinute = signal<number | null>(null);
   private readonly launcher = viewChild(SimulationPanel);
   protected readonly twin = viewChild(DigitalTwin);
   readonly statusLabel = (status: string) => statusLabels[status] ?? runStatus(status);
-  readonly fromNow = fromNow;
+  /** Ticks every 30 s so relative times change between change-detection passes, never during one (NG0100). */
+  private readonly now = signal(Date.now());
+  readonly fromNow = (iso?: string | null) => fromNow(iso, this.now());
   readonly tab = signal<TabId>('runs');
   readonly phase = computed(() => TABS.find((item) => item.id === this.tab())!.phase);
   readonly tabs = computed(() => TABS.filter((item) => item.phase === this.phase()));
+  /** Preparation is a sequence; offer the next step at the end of each one. */
+  readonly nextTab = computed(() => {
+    const tabs = this.tabs();
+    return this.phase() === 'prepare'
+      ? (tabs[tabs.findIndex((item) => item.id === this.tab()) + 1] ?? null)
+      : null;
+  });
   readonly galleryOpen = signal(false);
   readonly query = signal('');
   readonly visibleScenarios = computed(() => {
@@ -183,7 +197,10 @@ export class Scenario {
   private shown = '';
 
   constructor() {
-    this.store.accepted.pipe(takeUntilDestroyed()).subscribe((value) => {
+    const clock = setInterval(() => this.now.set(Date.now()), 30_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(clock));
+    this.store.accepted.pipe(takeUntilDestroyed()).subscribe(({ browse, ...value }) => {
+      if (browse) this.galleryOpen.set(true);
       const current = this.route.snapshot.queryParamMap;
       if (current.get('scenarioId') === value.scenarioId && current.get('runId') === value.runId)
         return;
@@ -255,6 +272,10 @@ export class Scenario {
   reload() {
     this.store.reload();
   }
+  optionApplied(runId: string) {
+    this.appliedRunId.set(runId);
+    this.reload();
+  }
   refreshPreview(runId: string) {
     if (this.store.selectedRunId() === runId) this.store.reload();
     else this.selectRun(runId);
@@ -290,6 +311,14 @@ export class Scenario {
       activeRun(this.store.status()) ||
       this.panelActivity.some((flag) => flag !== own && flag())
     );
+  }
+  openTab(id: TabId) {
+    this.tab.set(id);
+    const tab = document.getElementById(`tab-${id}`);
+    tab?.focus({ preventScroll: true });
+    tab?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
+    // The panel is still [hidden] until the next render, and hidden elements cannot scroll into view.
+    requestAnimationFrame(() => document.getElementById(`tabpanel-${id}`)?.scrollIntoView?.({ block: 'start' }));
   }
   moveTab(event: KeyboardEvent) {
     const tabs = this.tabs(),

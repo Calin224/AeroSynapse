@@ -51,6 +51,45 @@ public sealed class AuditTests
     }
 
     [Fact]
+    public async Task Revisions_say_who_changed_what_newest_first_with_the_runs_made_on_each()
+    {
+        await using var host = await ManagementHost.CreateAsync();
+        var scenario = await host.CreateScenarioAsync();
+        var id = scenario.Scenario.Id;
+        var first = await host.StartRunAsync(id);
+        var flight = scenario.Inputs.Flights[0] with { Id = Guid.NewGuid(), Code = "RO301", GateId = SyntheticScenarioSeeder.Id(202) };
+        using (var added = await host.Client.PostAsJsonAsync($"/scenarios/{id}/flights", new FlightWriteRequest(1, flight), Json, Token))
+            Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        var incident = new ScenarioInputEvent(Guid.NewGuid(), "note", scenario.Inputs.StartsAtUtc.AddMinutes(9), null, null, null, "{\"note\":\"private-free-text\"}");
+        using (var added = await host.Client.PostAsJsonAsync($"/scenarios/{id}/events", new EventWriteRequest(2, incident), Json, Token))
+            Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        var current = (await host.Client.GetFromJsonAsync<ScenarioDetails>($"/scenarios/{id}", Json, Token))!;
+        using (var renamed = await host.Client.PutAsJsonAsync($"/scenarios/{id}", new ScenarioWriteRequest(current.Scenario.Code, "Renamed",
+            current.Scenario.Description, current.Scenario.SceneId, current.Scenario.LayoutVersionId, current.Inputs with { Seed = current.Inputs.Seed + 1 }, 3), Json, Token))
+            Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
+        using (var removed = await host.Client.DeleteAsync($"/scenarios/{id}/flights/{flight.Id}?revision=4", Token))
+            Assert.Equal(HttpStatusCode.OK, removed.StatusCode);
+        var second = await host.StartRunAsync(id);
+
+        var revisions = (await host.Client.GetFromJsonAsync<ScenarioRevision[]>($"/scenarios/{id}/revisions", Json, Token))!;
+        Assert.Equal([5, 4, 3, 2, 1], revisions.Select(row => row.Revision));
+        Assert.All(revisions, row => Assert.Equal("test-admin", row.Actor));
+        Assert.Equal(revisions.Select(row => row.RecordedAtUtc).OrderDescending(), revisions.Select(row => row.RecordedAtUtc));
+        Assert.Equal(new ScenarioRevisionChange("flight", "removed", [flight.Id]), Assert.Single(revisions[0].Changes), Equivalent);
+        Assert.Equal(second.Id, Assert.Single(revisions[0].Runs).Id);
+        Assert.Equal(["settings", "details"], revisions[1].Changes.Select(change => change.Kind));
+        Assert.Equal(new ScenarioRevisionChange("event", "added", [incident.Id]), Assert.Single(revisions[2].Changes), Equivalent);
+        Assert.Equal(new ScenarioRevisionChange("flight", "added", [flight.Id]), Assert.Single(revisions[3].Changes), Equivalent);
+        Assert.Equal("created", Assert.Single(revisions[4].Changes).Kind);
+        var run = Assert.Single(revisions[4].Runs);
+        Assert.Equal((first.Id, "completed"), (run.Id, run.Status));
+        Assert.Empty(revisions[1].Runs);
+    }
+
+    private static readonly IEqualityComparer<ScenarioRevisionChange> Equivalent = EqualityComparer<ScenarioRevisionChange>.Create(
+        (a, b) => a!.Kind == b!.Kind && a.Action == b.Action && a.Ids.SequenceEqual(b.Ids), change => change.Kind.GetHashCode());
+
+    [Fact]
     public async Task Rolled_back_mutations_leave_no_false_evidence_and_database_updates_deletes_and_truncate_are_refused()
     {
         await using var host = await ManagementHost.CreateAsync();

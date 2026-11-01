@@ -16,26 +16,31 @@ namespace AeroSynapse.Infrastructure.Execution;
 public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICopilotModel model, ILogger<CopilotService> logger, AiGovernance governance) : ICopilotService
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    public async Task<CopilotContext> ContextAsync(Guid scenarioId, Guid runId, CancellationToken token)
+    public async Task<CopilotContext> ContextAsync(Guid scenarioId, Guid runId, CancellationToken token, bool busiest = false)
     {
         var run = await Require(scenarioId, runId, token);
         var captured = Capture(run);
+        // Without valid evidence the page keeps its own default; questions then explain what is missing.
+        var focus = busiest && captured is not null && run.ResultsValid && await Replay(runId, token) is { } loaded
+            ? CopilotRunAnswers.Busiest(loaded.Data.Samples.Select(s => s.Kpi).OfType<KpiSnapshot>()) : null;
         return new("1.0", scenarioId, runId, run.Status, run.ResultsValid, run.IsSynthetic, run.ScenarioRevision,
             captured?.Layout.Version.Id, captured?.Scenario.Inputs.DurationMinutes, captured?.SnapshotIntervalMinutes,
             captured?.Layout.Layout.Checkpoints.Select(z => new CopilotZone(z.Id, z.Code, z.Name)).ToArray() ?? [],
-            captured is null ? "capture_unavailable" : !run.ResultsValid ? "run_not_completed" : null);
+            captured is null ? "capture_unavailable" : !run.ResultsValid ? "run_not_completed" : null, focus);
     }
 
     public async Task<CopilotAnswer> AskAsync(Guid scenarioId, Guid runId, CopilotQuestion request, CancellationToken token)
     {
-        var answer = await AskCore(scenarioId, runId, request, token);
-        var grounded = CopilotEvidencePolicy.Accepts(answer);
+        var places = new List<string>();
+        var answer = await AskCore(scenarioId, runId, request, places, token);
+        var grounded = CopilotEvidencePolicy.Accepts(answer, places);
         if (!grounded) answer = Missing(answer.Scope, "numeric_evidence_rejected", "Explicația nu are surse numerice suficiente. Consultă datele rulării.");
         await governance.RecordAsync(new() { Kind = "answer_evaluation", Status = grounded ? answer.Status == "answered" ? "grounded" : "explicit_limitation" : "rejected",
             ScenarioId = scenarioId, RunId = runId, PolicyVersion = (await governance.PolicyAsync(token)).Version }, token);
         return answer;
     }
-    private async Task<CopilotAnswer> AskCore(Guid scenarioId, Guid runId, CopilotQuestion request, CancellationToken token)
+    /// <param name="places">Filled with the checkpoint names a whole-run answer may mention.</param>
+    private async Task<CopilotAnswer> AskCore(Guid scenarioId, Guid runId, CopilotQuestion request, List<string> places, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(request.Question) || request.Question.Length > 1000
             || request.Question.Any(c => char.IsControl(c) && c is not ('\n' or '\r' or '\t')))
@@ -43,7 +48,7 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         var run = await Require(scenarioId, runId, token);
         var captured = Capture(run);
         var scope = new CopilotScope(scenarioId, runId, request.ZoneId, request.Minute ?? captured?.Scenario.Inputs.DurationMinutes ?? 0);
-        if (captured is null) return Missing(scope, "capture_unavailable", "Snapshot-ul intrărilor lipsește sau nu este valid.");
+        if (captured is null) return Missing(scope, "capture_unavailable", "datele de intrare ale acestei simulări lipsesc sau nu sunt valide.");
         if (!captured.Layout.Layout.Checkpoints.Any(z => z.Id == request.ZoneId))
             throw Invalid("zoneId", "Zona nu aparține layout-ului capturat pentru această rulare.");
         if (scope.Minute < 0 || scope.Minute > captured.Scenario.Inputs.DurationMinutes)
@@ -51,22 +56,29 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         // IDs in the question cannot widen scope. No history, retrieval tools or mutable scenario input.
         var allowed = new HashSet<Guid> { scenarioId, runId, request.ZoneId };
         if (Regex.Matches(request.Question, @"\b[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\b").Any(m => !allowed.Contains(Guid.Parse(m.Value))))
-            return Missing(scope, "question_context_mismatch", "Întrebarea referă un identificator din afara contextului selectat. Selectează explicit rularea și zona dorite.");
-        if (!run.ResultsValid) return Missing(scope, "run_not_completed", $"Rularea are status {run.Status}; nu are rezultate valide finalizate.");
-        ReplayEnvelope envelope; ReplayData data;
-        try
-        {
-            envelope = await replay.GetAsync(runId, token);
-            data = JsonSerializer.Deserialize<ReplayData>(envelope.PayloadJson, Json) ?? throw new JsonException();
-        }
-        catch (Exception error) when (error is ScenarioConflictException or JsonException or ContractValidationException or InvalidOperationException)
-        { return Missing(scope, "evidence_unavailable", "Datele persistate nu pot fi validate pentru această rulare."); }
-        var sample = data.Samples.SingleOrDefault(s => s.ZoneId == scope.ZoneId && s.Minute == scope.Minute);
-        if (sample?.Kpi is not { } kpi) return Missing(scope, "sample_missing", "Nu există un snapshot KPI la minutul și zona selectate. Nu interpolez datele lipsă.");
-        var facts = Facts(kpi);
+            return Missing(scope, "question_context_mismatch", "întrebarea se referă la un identificator din afara simulării alese. Alege explicit simularea și zona dorite.");
+        if (!run.ResultsValid) return Missing(scope, "run_not_completed", $"simularea are statusul {run.Status} și nu are rezultate finalizate.");
+        if (await Replay(runId, token) is not ({ } envelope, { } data))
+            return Missing(scope, "evidence_unavailable", "datele salvate ale acestei simulări nu pot fi verificate.");
         var normalized = Normalize(request.Question);
-        if (new[] { "distribu", "deschid", "recomand" }.Any(normalized.Contains)
-            && new[] { "coad", "cozi", "checkpoint", "punct", "control" }.Any(normalized.Contains))
+        var queueAdvice = new[] { "distribu", "deschid", "recomand" }.Any(normalized.Contains)
+            && new[] { "coad", "cozi", "checkpoint", "punct", "control" }.Any(normalized.Contains);
+        var zones = captured.Layout.Layout.Checkpoints.Select(c => new CopilotZone(c.Id, c.Code, c.Name)).ToArray();
+        if (!queueAdvice && CopilotRunAnswers.Route(normalized, zones) is { } runQuery)
+        {
+            var names = captured.Layout.Layout.Checkpoints.ToDictionary(c => c.Id, c => string.IsNullOrWhiteSpace(c.Code) ? c.Name : c.Code);
+            places.AddRange(names.Values);
+            var events = captured.Scenario.Inputs.Events.Where(e => CopilotRunAnswers.EventType(e.Type) is not null)
+                .Select(e => new CopilotEventFact(e.Id, CopilotRunAnswers.EventType(e.Type)!, (e.OccurredAtUtc - captured.Scenario.Inputs.StartsAtUtc).TotalMinutes, e.CheckpointId)).ToArray();
+            var reply = CopilotRunAnswers.Answer(runQuery.Topic, runId, data.Samples.Select(s => s.Kpi).OfType<KpiSnapshot>().ToArray(), names,
+                captured.Layout.Layout.Checkpoints.ToDictionary(c => c.Id, c => c.TerminalId), events, runQuery.ZoneId, runQuery.Value);
+            logger.LogInformation("Copilot scenarioId={ScenarioId} runId={RunId} topic={Topic} reason={Reason}", scenarioId, runId, runQuery.Topic, reply.ReasonCode);
+            return new("1.0", scope, reply.Status, reply.ReasonCode, reply.Text, "not_requested", envelope.ContentHash, [], RunFacts: reply.Facts);
+        }
+        var sample = data.Samples.SingleOrDefault(s => s.ZoneId == scope.ZoneId && s.Minute == scope.Minute);
+        if (sample?.Kpi is not { } kpi) return Missing(scope, "sample_missing", "simularea nu a salvat date pentru această zonă la acest minut. Alege alt minut.");
+        var facts = Facts(kpi);
+        if (queueAdvice)
         {
             var advice = QueueAdvice(captured, data, scope);
             var fact = facts.Single(f => f.Id == "queuedPassengers");
@@ -81,13 +93,14 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         var localTopic = Topic(normalized);
         // One observation cannot establish a cause, forecast, intervention benefit or before/after change.
         if (localTopic == "causality")
-            return Missing(scope, "causality_not_supported", "Un singur snapshot nu stabilește cauze, predicții sau efectul unei modificări. Folosește rulări comparabile în raportul înainte/după.");
+            return Missing(scope, "causality_not_supported", "din această simulare pot spune ce s-a întâmplat, nu ce s-ar întâmpla dacă schimbi ceva. Ca să compari variante, pornește o simulare comparativă în Control Tower. Poți întreba și „Ce ar trebui să schimb?”.");
         var selection = await model.SelectTopicAsync(new(scope, request.Question, facts), token);
         // A model cannot evade a known question's evidence requirements by selecting a different topic.
         var topic = localTopic != "unsupported" ? localTopic : selection.Status == "available" ? selection.Topic ?? localTopic : localTopic;
         if (!CopilotTopics.All.Contains(topic)) topic = localTopic;
         if (topic is "unsupported" or "causality")
-            return Missing(scope, "question_not_supported", "Pot descrie coada, așteptarea, debitul, utilizarea și riscul de îmbarcare observate în această zonă.", selection.Status);
+            return Missing(scope, "question_not_supported", "întrebarea nu pare să fie despre această simulare. Pot răspunde despre cozi, așteptare, pasageri întârziați la îmbarcare, operatori, evenimente, "
+                + $"un anumit punct de control sau un anumit minut. Încearcă: {CopilotRunAnswers.Examples}.", selection.Status);
         string[] ids = topic switch
         {
             "queue" => ["queuedPassengers", "maximumQueue", "processingPassengers", "capacity"],
@@ -109,8 +122,8 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         var citations = chosen.Select(f => new CopilotCitation(f.Id, f.Label, f.Value, f.Unit,
             scenarioId, runId, scope.ZoneId, scope.Minute, sample.RecordedAtUtc)).ToArray();
         var text = string.Join(" ", chosen.Select(f => $"{f.Label}: {f.Value.ToString("0.##########", CultureInfo.InvariantCulture)} {f.Unit} [{f.Id}]."));
-        var answer = (enough ? "Observații din simulare. " : "Nu pot concluziona: eșantionul sau numitorul necesar lipsește. ") + text
-            + " Valorile descriu exclusiv acest snapshot; nu demonstrează cauze sau efecte ale unor intervenții.";
+        var answer = (enough ? "" : "Nu pot concluziona: la acest minut nu există încă destule date pentru această întrebare. ") + text
+            + " Valorile descriu doar zona și minutul alese.";
         logger.LogInformation("Copilot scenarioId={ScenarioId} runId={RunId} zoneId={ZoneId} minute={Minute} modelStatus={ModelStatus} reason={Reason}",
             scenarioId, runId, scope.ZoneId, scope.Minute, selection.Status, enough ? "observed_metrics" : "insufficient_cohort");
         return new("1.0", scope, enough ? "answered" : "insufficient_data", enough ? "observed_metrics" : "insufficient_cohort", answer,
@@ -119,7 +132,7 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
 
     private static CopilotQueueAdvice QueueAdvice(RunInputSnapshot captured, ReplayData data, CopilotScope scope)
     {
-        const string limitation = "Variante calculate din snapshot, fără aplicare automată. Numărul de pasageri este o limită propusă, nu un beneficiu garantat. Verifică accesul și evaluează varianta în simulator.";
+        const string limitation = "Variante calculate din simulare; nimic nu se aplică automat. Numărul de pasageri este o limită propusă, nu un rezultat garantat. Verifică varianta într-o simulare comparativă.";
         var layout = captured.Layout.Layout;
         var selected = layout.Checkpoints.Single(c => c.Id == scope.ZoneId);
         var controls = layout.Checkpoints.Where(c => c.TerminalId == selected.TerminalId).ToArray();
@@ -144,8 +157,8 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
                 k.QueuedPassengers, k.ProcessingPassengers, k.ProcessedPassengers, 0, k.MeanWaitMinutes, 0, k.BoardingAtRiskCount, k.NotArrivedPassengers);
         }).ToArray();
         var names = controls.ToDictionary(c => c.Id, c => string.IsNullOrWhiteSpace(c.Code) ? c.Name : c.Code);
-        var options = AgentCandidates.Periodic(new("1.0", scope.Minute, states, null), agent with { StaffMoves = true }, frozen, names, null, reserve)
-            .Where(o => o.Kind is "checkpoint_open" or "queue_redistribution" && o.FromCheckpointId == scope.ZoneId
+        var options = AgentCandidates.QueueActions(states, agent.TransferMinutes, frozen, names, reserve)
+            .Where(o => o.FromCheckpointId == scope.ZoneId
                 && scope.Minute + 1 + agent.TransferMinutes + Math.Max(1, agent.TransferMinutes) < request.DurationMinutes).ToArray();
         var evidence = controls.Where(c => rows.ContainsKey(c.Id)).SelectMany(c => new[]
         {
@@ -155,6 +168,16 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         return new(options, evidence, limitation);
     }
 
+    private async Task<(ReplayEnvelope Envelope, ReplayData Data)?> Replay(Guid runId, CancellationToken token)
+    {
+        try
+        {
+            var envelope = await replay.GetAsync(runId, token);
+            return (envelope, JsonSerializer.Deserialize<ReplayData>(envelope.PayloadJson, Json) ?? throw new JsonException());
+        }
+        catch (Exception error) when (error is ScenarioConflictException or JsonException or ContractValidationException or InvalidOperationException)
+        { return null; }
+    }
     private async Task<SimulationRun> Require(Guid scenarioId, Guid runId, CancellationToken token)
     {
         var run = await db.Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, token)
@@ -188,7 +211,7 @@ public sealed class CopilotService(TwinDbContext db, IReplayService replay, ICop
         if (new[] { "astept", "wait", "p95" }.Any(q.Contains)) return "wait";
         if (new[] { "coad", "cozi", "queue" }.Any(q.Contains)) return "queue";
         if (new[] { "debit", "throughput", "procesat" }.Any(q.Contains)) return "throughput";
-        if (new[] { "utiliz", "ocup", "capacity", "capacitat" }.Any(q.Contains)) return "utilization";
+        if (new[] { "utiliz", "ocup", "capacity", "capacitat", "operator" }.Any(q.Contains)) return "utilization";
         if (new[] { "imbarc", "boarding", "risc" }.Any(q.Contains)) return "boarding";
         if (new[] { "rezum", "sumar", "summary", "metric", "zona", "zone", "situat", "status" }.Any(q.Contains)) return "summary";
         return "unsupported";

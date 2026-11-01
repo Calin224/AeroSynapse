@@ -2,6 +2,13 @@
 from app.navigation.graph import NavigationGraph, fingerprint
 
 
+def without_closed_checkpoints(generation, navigation):
+    """Spread flights skip a control whose zone is closed on the map all run, as they skip an unstaffed one."""
+    closed = {item['resourceId'] for item in navigation['checkpointBindings'] if item['zoneId'] in navigation['closedZoneIds']}
+    return generation.model_copy(update={'checkpoints': [checkpoint.model_copy(update={'staff_count': 0})
+        if str(checkpoint.checkpoint_id) in closed else checkpoint for checkpoint in generation.checkpoints]})
+
+
 def plan_population(population, generation, navigation):
     graph = NavigationGraph(navigation)
     checkpoints = {binding['resourceId']: binding['zoneId'] for binding in navigation['checkpointBindings']}

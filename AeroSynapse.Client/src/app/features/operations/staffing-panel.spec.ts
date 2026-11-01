@@ -108,10 +108,19 @@ describe('Staff redistribution proposals', () => {
       element.querySelector('details.advanced [aria-label="Limită fizică Control A"]'),
     ).not.toBeNull();
   });
-  it('requires an explicit physical limit and sends the current revision with all constraints', () => {
-    const view = component().componentInstance;
+  it('leads with current staff, folds the limits away and sends the current revision with all constraints', () => {
+    const fixture = component();
+    const view = fixture.componentInstance,
+      element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Control A · 2 operatori');
+    expect(element.textContent).not.toContain('Timeout solver');
+    expect(
+      element.querySelector('details.disclosure:not([open]) [aria-label="Limită fizică Control A"]'),
+    ).not.toBeNull();
+    expect(view.rows[0].physicalLimit).toBe(4);
+    view.rows[0].physicalLimit = null;
     view.propose();
-    expect(view.message()).toContain('limita fizică');
+    expect(view.message()).toContain('Setări avansate');
     http.expectNone('/api/scenarios/scenario-1/staffing/proposals');
     view.rows[0].physicalLimit = 2;
     view.propose();
@@ -135,6 +144,7 @@ describe('Staff redistribution proposals', () => {
     request.flush(unsolved());
     expect(view.result()?.score).toBeNull();
     expect(view.status(view.result()!)).toContain('fără o soluție');
+    expect(fixture.nativeElement.textContent).not.toContain('SimPy');
   });
   it('cancels an obsolete request and clears the proposal when the scenario revision changes', () => {
     const fixture = component();
@@ -153,7 +163,7 @@ describe('Staff redistribution proposals', () => {
       .expectOne('/api/scenarios/scenario-1/staffing/settings')
       .flush({ ...settings, revision: 4 });
     fixture.detectChanges();
-    expect(view.rows[0].physicalLimit).toBeNull();
+    expect(view.rows[0].physicalLimit).toBe(4);
     expect(view.busy()).toBe(false);
   });
   it('keeps pending proposals and operator limits when the same scenario revision is refreshed', () => {
@@ -278,7 +288,7 @@ describe('Staff redistribution proposals', () => {
       .expectOne('/api/scenarios/scenario-1/staffing/proposals')
       .flush(unsolved('infeasible', 'INFEASIBLE'));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Infeasible');
+    expect(fixture.nativeElement.textContent).toContain('Nu există o împărțire');
     expect(fixture.nativeElement.textContent).not.toContain('Personal propus');
   });
   it.each(['optimal', 'feasible'])(
@@ -331,7 +341,7 @@ describe('Staff redistribution proposals', () => {
       fixture.detectChanges();
       const text = fixture.nativeElement.textContent;
       expect(text).toContain(
-        status === 'optimal' ? 'Propunere optimă demonstrată' : 'fără dovada optimalității',
+        status === 'optimal' ? 'cea mai bună împărțire' : 'înainte să confirmăm',
       );
       expect(text).toContain('Scor de minimizat: 0');
       expect(text).toContain('Personal propus');

@@ -163,28 +163,20 @@
   <p class="notice" role="alert">{{ pollingError() }}</p>
 }
 @if (detail(); as value) {
-  <section class="panel panel-body" aria-label="Perechea de rulări capturate">
+  <section class="panel panel-body" aria-label="Rezultatul comparației">
     <h2>{{ value.batch.name }} · {{ status(value.batch.status) }}</h2>
-    <details>
-      <summary>Detalii de reproducere</summary>
-      <p>
-        ID experiment: <code>{{ value.batch.id }}</code> · seed-uri: {{ value.seeds.join(', ') }} ·
-        limită {{ value.batch.timeLimitSeconds }} secunde
-      </p>
-      <!-- A paired run shares the single seed above, so rows list only what differs. -->
-      @for (row of roles(); track row.replica.runId) {
-        <p>
-          {{ row.role }}: {{ row.variant.name }} · runId <code>{{ row.replica.runId }}</code> ·
-          scenariu <code>{{ row.variant.scenarioId }}</code> · revizia
-          {{ row.variant.scenarioRevision }} ·
-          {{ row.replica.resultsValid ? 'Rezultate valide' : 'Fără rezultate validate' }}
-        </p>
-      }
-    </details>
     @if (value.batch.failureReason) {
       <p role="alert">{{ value.batch.failureReason }}</p>
     }
-    @if (paired(value)) {
+    @if (value.batch.status === 'pending' || value.batch.status === 'running') {
+      <p role="status">Comparație în curs…</p>
+      <button type="button" [disabled]="busy() || pendingCommand()" (click)="cancel()">
+        Oprește comparația
+      </button>
+    }
+    @let outcome = result();
+    <!-- Run states matter only until both runs give a comparable result. -->
+    @if (paired(value) && !outcome?.controlled) {
       <div class="roles">
         @for (row of roles(); track row.replica.runId) {
           <article>
@@ -202,16 +194,83 @@
         {{ comparing() ? 'Se compară…' : 'Reîncarcă rezultatele' }}
       </button>
     }
-    @if (value.batch.status === 'pending' || value.batch.status === 'running') {
-      <p role="status">Comparație în curs…</p>
-      <button type="button" [disabled]="busy() || pendingCommand()" (click)="cancel()">
-        Oprește comparația
-      </button>
+    @if (outcome) {
+      <div class="verdict" [attr.data-tone]="outcome.tone" role="status">
+        <p class="tone-word">
+          <i
+            class="pi"
+            [class.pi-check-circle]="outcome.tone === 'better'"
+            [class.pi-exclamation-triangle]="outcome.tone === 'worse'"
+            [class.pi-minus-circle]="outcome.tone === 'same'"
+            [class.pi-question-circle]="outcome.tone === 'unknown'"
+            aria-hidden="true"
+          ></i>
+          {{ toneWord[outcome.tone] }}
+        </p>
+        <p class="verdict-text">{{ outcome.verdict }}</p>
+      </div>
+      @if (outcome.cards.length) {
+        <div class="kpis">
+          @for (card of outcome.cards; track card.label) {
+            <article class="kpi" [attr.data-tone]="card.tone">
+              <h3>{{ card.label }}</h3>
+              <dl>
+                <div>
+                  <dt>Personalul actual</dt>
+                  <dd>{{ card.before }}</dd>
+                </div>
+                <div>
+                  <dt>Varianta nouă</dt>
+                  <dd>{{ card.after }}</dd>
+                </div>
+              </dl>
+              <p class="change">
+                <strong>{{ toneWord[card.tone] }}</strong> · {{ card.change }}
+              </p>
+            </article>
+          }
+        </div>
+      }
+      @if (outcome.notes.length) {
+        <h3>Ce înseamnă</h3>
+        <ul class="notes">
+          @for (note of outcome.notes; track $index) {
+            <li>{{ note }}</li>
+          }
+        </ul>
+      }
+      @if (outcome.controlled) {
+        <p class="caveat">
+          Ambele variante au aceleași sosiri de pasageri (același seed), deci diferența vine din
+          personal. O singură zi simulată: încă nu știm cât variază rezultatul.
+        </p>
+      }
     }
-  </section>
-}
-@if (report(); as comparison) {
-  <section class="panel panel-body">
-    <app-run-comparison-report [report]="comparison" [simple]="true" [zoneNames]="zoneNames()" />
+    @if (report(); as comparison) {
+      <details>
+        <summary>Toate cifrele, pe zone</summary>
+        <app-run-comparison-report
+          [report]="comparison"
+          [simple]="true"
+          [zoneNames]="zoneNames()"
+        />
+      </details>
+    }
+    <details>
+      <summary>Detalii de reproducere</summary>
+      <p>
+        ID experiment: <code>{{ value.batch.id }}</code> · seed-uri: {{ value.seeds.join(', ') }} ·
+        limită {{ value.batch.timeLimitSeconds }} secunde
+      </p>
+      <!-- A paired run shares the single seed above, so rows list only what differs. -->
+      @for (row of roles(); track row.replica.runId) {
+        <p>
+          {{ row.role }}: {{ row.variant.name }} · runId <code>{{ row.replica.runId }}</code> ·
+          scenariu <code>{{ row.variant.scenarioId }}</code> · revizia
+          {{ row.variant.scenarioRevision }} ·
+          {{ row.replica.resultsValid ? 'Rezultate valide' : 'Fără rezultate validate' }}
+        </p>
+      }
+    </details>
   </section>
 }

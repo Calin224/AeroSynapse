@@ -88,7 +88,9 @@ describe('One-hour spacing between scenario departures', () => {
     };
     for (const preset of PRESETS) {
       const draft = makeDraft(layout, preset.id, start);
-      expect(draft.inputs.minimumDepartureSpacingMinutes).toBe(60);
+      expect(draft.inputs.minimumDepartureSpacingMinutes).toBe(
+        'departureSpacingMinutes' in preset ? preset.departureSpacingMinutes : 60,
+      );
       expect(basicErrors(draft)).toEqual({});
       expect(departureSpacingErrors(draft.inputs)).toEqual({});
       expect(

@@ -13,8 +13,7 @@ using Npgsql;
 namespace AeroSynapse.Infrastructure.Execution;
 
 public sealed class RunExecutionService(TwinDbContext db, IScenarioService scenarios, IRunStorageService storage,
-    ISimulationEngine engine, ILogger<RunExecutionService>? log = null, AeroSynapse.Infrastructure.Security.SecretRedactor? redactor = null,
-    AgentLoop? agent = null) : IRunExecutionService
+    ISimulationEngine engine, ILogger<RunExecutionService>? log = null, AeroSynapse.Infrastructure.Security.SecretRedactor? redactor = null) : IRunExecutionService
 {
     private readonly ILogger<RunExecutionService> logger = log ?? NullLogger<RunExecutionService>.Instance;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -122,7 +121,6 @@ public sealed class RunExecutionService(TwinDbContext db, IScenarioService scena
         try
         {
             var request = CapturedSimulation.Request(id, Input(run));
-            if (agent is not null) request = await agent.PrepareAsync(run, Input(run), request, token);
             var response = control is null ? await engine.ExecuteAsync(request, token) : await engine.ExecuteControlledAsync(request, control, token);
             var resultHash = response.Status == "completed" ? RunFingerprint.Result(response) : null;
             var responseContract = response.JourneyResult is not null ? "JourneySimulationResponse" : response.KpiResult is not null ? "KpiSimulationResponse" : response.ProcessResult is not null ? "SimPySimulationResponse"

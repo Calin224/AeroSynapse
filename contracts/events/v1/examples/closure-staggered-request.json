@@ -1,0 +1,331 @@
+{
+  "contractVersion": "1.0",
+  "runId": "70000000-0000-0000-0000-000000000001",
+  "scenarioId": "70000000-0000-0000-0000-000000000002",
+  "scenarioRevision": 1,
+  "layoutVersionId": "70000000-0000-0000-0000-000000000003",
+  "startsAtUtc": "2026-10-11T06:00:00Z",
+  "timeZone": "Europe/Bucharest",
+  "durationMinutes": 120,
+  "seed": 42,
+  "passengerCount": 40,
+  "arrivalRatePerMinute": 0.3333333333333333,
+  "checkpoints": [
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "serviceRatePerMinute": 1,
+      "staffCount": 1
+    },
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000102",
+      "serviceRatePerMinute": 1,
+      "staffCount": 1
+    },
+    {
+      "checkpointId": "60000000-0000-0000-0000-000000000103",
+      "serviceRatePerMinute": 1,
+      "staffCount": 1
+    }
+  ],
+  "passengerGeneration": {
+    "generatorVersion": "1.0",
+    "seed": 42,
+    "durationMinutes": 120,
+    "checkpoints": [
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "serviceRatePerMinute": 1,
+        "staffCount": 1
+      },
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000102",
+        "serviceRatePerMinute": 1,
+        "staffCount": 1
+      },
+      {
+        "checkpointId": "60000000-0000-0000-0000-000000000103",
+        "serviceRatePerMinute": 1,
+        "staffCount": 1
+      }
+    ],
+    "flights": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "passengerCapacity": 40,
+        "boardingCloseMinute": 100,
+        "isCancelled": false,
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "routeId": "60000000-0000-0000-0000-000000000400",
+        "routeTravelMinutes": 1
+      }
+    ],
+    "batches": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "checkpointId": "60000000-0000-0000-0000-000000000101",
+        "countMode": "full",
+        "modeledCount": 40,
+        "arrival": {
+          "kind": "constant",
+          "minimum": 0,
+          "maximum": 0,
+          "mean": 0,
+          "stdDev": 0,
+          "mode": 0
+        },
+        "service": {
+          "kind": "constant",
+          "minimum": 2,
+          "maximum": 2,
+          "mean": 2,
+          "stdDev": 0,
+          "mode": 2
+        },
+        "travel": {
+          "kind": "constant",
+          "minimum": 1,
+          "maximum": 1,
+          "mean": 1,
+          "stdDev": 1,
+          "mode": 1
+        },
+        "groups": [
+          {
+            "kind": "solo",
+            "weight": 1,
+            "minSize": 1,
+            "maxSize": 1,
+            "serviceMultiplier": 1,
+            "travelMultiplier": 1
+          }
+        ],
+        "surges": []
+      }
+    ],
+    "isSynthetic": true
+  },
+  "navigation": {
+    "navigationVersion": "1.0",
+    "graph": {
+      "nodes": [
+        {
+          "id": "60000000-0000-0000-0000-000000000101",
+          "name": "Control",
+          "kind": "Security",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000701",
+          "name": "Coridor principal",
+          "kind": "Walkway",
+          "x": 50,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000702",
+          "name": "Alternativ\u0103",
+          "kind": "Stairs",
+          "x": 50,
+          "y": 0,
+          "z": 50,
+          "isActive": true,
+          "isStepFree": false,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000201",
+          "name": "Poarta",
+          "kind": "Gate",
+          "x": 100,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000102",
+          "name": "Control B",
+          "kind": "Security",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000103",
+          "name": "Control C",
+          "kind": "Security",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        }
+      ],
+      "edges": [
+        {
+          "id": "60000000-0000-0000-0000-000000000801",
+          "fromZoneId": "60000000-0000-0000-0000-000000000101",
+          "toZoneId": "60000000-0000-0000-0000-000000000701",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000802",
+          "fromZoneId": "60000000-0000-0000-0000-000000000701",
+          "toZoneId": "60000000-0000-0000-0000-000000000201",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000803",
+          "fromZoneId": "60000000-0000-0000-0000-000000000101",
+          "toZoneId": "60000000-0000-0000-0000-000000000702",
+          "distanceMeters": 70,
+          "travelSeconds": 90,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000804",
+          "fromZoneId": "60000000-0000-0000-0000-000000000702",
+          "toZoneId": "60000000-0000-0000-0000-000000000201",
+          "distanceMeters": 70,
+          "travelSeconds": 90,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000805",
+          "fromZoneId": "60000000-0000-0000-0000-000000000102",
+          "toZoneId": "60000000-0000-0000-0000-000000000701",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        },
+        {
+          "id": "60000000-0000-0000-0000-000000000806",
+          "fromZoneId": "60000000-0000-0000-0000-000000000103",
+          "toZoneId": "60000000-0000-0000-0000-000000000701",
+          "distanceMeters": 50,
+          "travelSeconds": 60,
+          "isBidirectional": false,
+          "isActive": true,
+          "isStepFree": true,
+          "requiredTags": []
+        }
+      ]
+    },
+    "checkpointBindings": [
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000101",
+        "zoneId": "60000000-0000-0000-0000-000000000101"
+      },
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000102",
+        "zoneId": "60000000-0000-0000-0000-000000000102"
+      },
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000103",
+        "zoneId": "60000000-0000-0000-0000-000000000103"
+      }
+    ],
+    "gateBindings": [
+      {
+        "resourceId": "60000000-0000-0000-0000-000000000201",
+        "zoneId": "60000000-0000-0000-0000-000000000201"
+      }
+    ],
+    "accessProfiles": [
+      {
+        "groupKind": "solo",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "family",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "business",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      },
+      {
+        "groupKind": "tour",
+        "requireStepFree": false,
+        "accessTags": [],
+        "forbiddenZoneIds": [],
+        "walkingMultiplier": 1
+      }
+    ],
+    "closedZoneIds": [],
+    "closedEdgeIds": [],
+    "flightGates": [
+      {
+        "flightId": "70000000-0000-0000-0000-000000000001",
+        "gateId": "60000000-0000-0000-0000-000000000201"
+      }
+    ]
+  },
+  "engine": "simpy-kpi-1.0",
+  "snapshotIntervalMinutes": 5,
+  "events": [
+    {
+      "eventId": "90000000-0000-0000-0000-000000000300",
+      "type": "checkpoint_unavailable",
+      "minute": 5,
+      "checkpointId": "60000000-0000-0000-0000-000000000101"
+    },
+    {
+      "eventId": "90000000-0000-0000-0000-000000000301",
+      "type": "checkpoint_unavailable",
+      "minute": 20,
+      "checkpointId": "60000000-0000-0000-0000-000000000102"
+    },
+    {
+      "eventId": "90000000-0000-0000-0000-000000000302",
+      "type": "passenger_surge",
+      "minute": 6,
+      "checkpointId": "60000000-0000-0000-0000-000000000101",
+      "flightId": "70000000-0000-0000-0000-000000000001",
+      "passengerCount": 10,
+      "windowMinutes": 10
+    }
+  ]
+}

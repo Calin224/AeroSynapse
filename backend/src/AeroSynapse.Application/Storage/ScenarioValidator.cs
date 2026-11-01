@@ -189,7 +189,7 @@ public static class ScenarioValidator
             }
         }
         Throw();
-        if (inputs.PassengerGeneration is not null || IncidentScenarios.DerivesProfiles(inputs)) PassengerScenarios.Validate(inputs, layout);
+        if (IncidentScenarios.ProfilesActive(inputs)) PassengerScenarios.Validate(inputs, layout);
         CheckInScenarios.Validate(inputs, layout);
         OperatorScenarios.Validate(inputs, layout);
         StaffShiftScenarios.Validate(inputs, layout);

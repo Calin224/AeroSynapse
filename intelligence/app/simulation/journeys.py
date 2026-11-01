@@ -9,6 +9,7 @@ from simpy.events import URGENT
 
 from app.contracts.models import SimulationRequest, SimulationResponse
 from app.navigation.graph import NavigationGraph
+from app.navigation.planner import without_closed_checkpoints
 from app.optimization.gates import GatePlanningError, initial, solve
 from app.passengers.generator import generate_population
 from app.simulation.events import ordered
@@ -136,7 +137,7 @@ def run(request, on_progress):
     metadata = {}
     # Preserve the access profile and sampled walking multiplier of each originating
     # passenger when navigating to a reassigned gate. Transfers use their explicit time.
-    samples = {p['id']:p for p in generate_population(upstream_input.passenger_generation)['passengers']} if nav else {}
+    samples = {p['id']:p for p in generate_population(without_closed_checkpoints(upstream_input.passenger_generation, nav))['passengers']} if nav else {}
     profiles = {str(f.flight_id): f for f in upstream_input.passenger_generation.flights}
     if nav:
         for event in upstream_input.events or []:

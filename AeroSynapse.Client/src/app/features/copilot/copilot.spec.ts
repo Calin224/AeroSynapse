@@ -7,7 +7,7 @@ import { BehaviorSubject } from 'rxjs';
 import { PickedRun, RunPicker } from '../../shared/ui/run-picker';
 import { Copilot } from './copilot';
 import { ToolName, ToolResult, validToolResult } from './copilot-tools.models';
-import { CopilotAnswer, CopilotContext, CopilotScope, validAnswer } from './copilot.models';
+import { CopilotAnswer, CopilotContext, CopilotScope, figure, validAnswer } from './copilot.models';
 
 const scenarioId = '10000000-0000-0000-0000-000000000001';
 const runId = '20000000-0000-0000-0000-000000000001';
@@ -148,6 +148,143 @@ describe('Copilot conversation', () => {
     );
   });
 
+  it('opens on the busiest moment unless the link names one, and says so', async () => {
+    const fixture = TestBed.createComponent(Copilot),
+      view = fixture.componentInstance,
+      busy = { ...context(), busiest: { zoneId: otherZone, minute: 42, queuedPassengers: 31 } };
+    query.next(convertToParamMap({ scenarioId, runId }));
+    http.expectOne(path() + '/context').flush(busy);
+    await fixture.whenStable();
+    expect([view.zoneId, view.minute]).toEqual([otherZone, 42]);
+    expect(fixture.nativeElement.textContent).toContain('cea mai mare coadă din simulare');
+    view.minute = 43;
+    expect(view.atBusiest()).toBe(false);
+    query.next(convertToParamMap({ scenarioId, runId, zoneId, minute: '20' }));
+    http.expectOne(path() + '/context').flush(busy);
+    expect([view.zoneId, view.minute]).toEqual([zoneId, 20]);
+    // Another zone from the link does not borrow the busiest zone's minute.
+    query.next(convertToParamMap({ scenarioId, runId, zoneId }));
+    http.expectOne(path() + '/context').flush(busy);
+    expect([view.zoneId, view.minute]).toEqual([zoneId, 60]);
+    query.next(convertToParamMap({ scenarioId, runId, zoneId: otherZone }));
+    http.expectOne(path() + '/context').flush(busy);
+    expect([view.zoneId, view.minute]).toEqual([otherZone, 42]);
+    query.next(convertToParamMap({ scenarioId, runId }));
+    http.expectOne(path() + '/context').flush({ ...busy, busiest: { ...busy.busiest, minute: 61 } });
+    expect([view.zoneId, view.minute]).toEqual([zoneId, 60]);
+  });
+
+  it('starts with plain whole-run questions and answers them from every checkpoint', async () => {
+    const fixture = await open(),
+      host: HTMLElement = fixture.nativeElement,
+      starters = [...host.querySelectorAll<HTMLButtonElement>('.starters button')];
+    expect(starters.map((b) => b.textContent!.trim())).toEqual([
+      'Rezumă simularea',
+      'Unde a fost cea mai mare coadă și de ce?',
+      'Câți pasageri au pierdut zborul?',
+      'Ce ar trebui să schimb?',
+    ]);
+    // Zone and minute stay folded: a first question needs no choice.
+    expect(host.querySelector<HTMLDetailsElement>('details.moment')!.open).toBe(false);
+    starters[1].click();
+    const request = http.expectOne(path());
+    expect(request.request.body.question).toBe('Unde a fost cea mai mare coadă și de ce?');
+    request.flush({
+      ...answer(),
+      reasonCode: 'run_peak',
+      answer: 'Cea mai mare coadă a fost la CP2: 31 de pasageri la minutul 42.',
+      modelStatus: 'not_requested',
+      citations: [],
+      runFacts: [
+        { id: 'peak.queue', label: 'CP2 · pasageri la coadă', value: 31, unit: 'pasageri', runId, zoneId: otherZone, sourcePath: '/runs/x/kpis' },
+        { id: 'peak.minute', label: 'CP2 · minutul celei mai mari cozi', value: 42, unit: 'minut', runId, zoneId: otherZone, sourcePath: '/runs/x/kpis' },
+      ],
+    });
+    await fixture.whenStable();
+    expect(host.querySelector('[data-answer]')!.textContent!.trim()).toBe(
+      'Cea mai mare coadă a fost la CP2: 31 de pasageri la minutul 42.',
+    );
+    expect(host.querySelector('.you small')!.textContent).toBe('Toată simularea');
+    expect(host.querySelector('[data-fact="peak.minute"]')!.textContent).toContain('minutul 42');
+    expect(host.querySelector('.sources summary')!.textContent).toBe('Pe ce se bazează răspunsul');
+    expect(host.textContent).not.toMatch(/LLM|snapshot/);
+  });
+
+  it('labels a zone-and-minute reply with its moment', async () => {
+    const fixture = await open();
+    fixture.componentInstance.ask('Câți pasageri sunt în coadă?');
+    http.expectOne(path()).flush(answer());
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.you small')!.textContent).toBe('CP1 · Control · minutul 60');
+  });
+
+  it('answers a greeting with what it can do and offers the starter questions again', async () => {
+    const fixture = await open(),
+      host: HTMLElement = fixture.nativeElement;
+    fixture.componentInstance.ask('Bună!');
+    http.expectOne(path()).flush({
+      ...answer(),
+      reasonCode: 'help',
+      answer: 'Răspund din datele salvate ale acestei simulări și nu inventez cifre.',
+      modelStatus: 'not_requested',
+      sourceHash: null,
+      citations: [],
+    });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.turns()[0].state).toBe('done');
+    expect(host.querySelector('.verdict')).toBeNull();
+    expect(host.querySelector('.you small')!.textContent).toBe('Toată simularea');
+    const offered = [...host.querySelectorAll<HTMLButtonElement>('.reply .starters button')];
+    expect(offered.length).toBe(4);
+    offered[2].click();
+    expect(http.expectOne(path()).request.body.question).toBe('Câți pasageri au pierdut zborul?');
+  });
+
+  it('turns an unrelated question into suggestions instead of a dead end', async () => {
+    const fixture = await open(),
+      host: HTMLElement = fixture.nativeElement;
+    fixture.componentInstance.ask('Care e capitala Franței?');
+    http.expectOne(path()).flush({
+      ...answer(),
+      status: 'insufficient_data',
+      reasonCode: 'question_not_supported',
+      answer: 'Nu pot concluziona: întrebarea nu pare să fie despre această simulare.',
+      sourceHash: null,
+      citations: [],
+    });
+    await fixture.whenStable();
+    expect(host.textContent).toContain('Nu pot răspunde exact');
+    expect(host.querySelectorAll('.reply .starters button').length).toBe(4);
+  });
+
+  it('rounds cited figures the way people count and hides a forecast that cannot fit', async () => {
+    const fixture = await open(),
+      view = fixture.componentInstance,
+      cite = (id: string, value: number, unit: string) => ({ ...answer().citations[0], id, value, unit });
+    expect(view.canForecast()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Prognoză');
+    view.ask('Rezumă zona.');
+    http.expectOne(path()).flush({
+      ...answer(),
+      answer:
+        'Pasageri în coadă: 17 pasageri [queuedPassengers]. Așteptare medie: 3.4567891235 minute [meanWaitMinutes]. Utilizare: 0.7345 fracție [0,1] [utilization].',
+      citations: [
+        cite('queuedPassengers', 17, 'pasageri'),
+        cite('meanWaitMinutes', 3.45678912345, 'minute'),
+        cite('utilization', 0.7345, 'fracție [0,1]'),
+      ],
+    });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[data-answer]')!.textContent!.trim()).toBe(
+      'Pasageri în coadă: 17 pasageri. Așteptare medie: 3.5 minute. Utilizare: 73%.',
+    );
+    expect([figure(16.6, 'pasageri'), figure(2.04, 'pasageri/minut'), figure(7, 'minut')]).toEqual([
+      '17 pasageri',
+      '2 pasageri/minut',
+      'minutul 7',
+    ]);
+  });
+
   it('shows calculated checkpoint and queue options with their source figures', async () => {
     const fixture = await open(); fixture.componentInstance.ask('Cum distribui coada?');
     http.expectOne(path()).flush({ ...answer(), queueAdvice: {
@@ -246,7 +383,7 @@ describe('Copilot conversation', () => {
       modelStatus: 'not_requested',
     });
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Date insuficiente');
+    expect(fixture.nativeElement.textContent).toContain('Nu pot răspunde exact');
     expect(fixture.nativeElement.textContent).toContain('Nu pot concluziona');
     expect(fixture.nativeElement.querySelector('img')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-citation]')).toBeNull();
@@ -263,7 +400,7 @@ describe('Copilot conversation', () => {
     view.ask('Rezumă zona.');
     http.expectOne(path()).flush({ ...answer(), modelStatus: 'timeout' });
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('timpul alocat');
+    expect(fixture.nativeElement.textContent).toContain('nu a răspuns la timp');
   });
 
   it('forecasts from the selected minute only when the horizon fits in the run', async () => {
@@ -401,6 +538,16 @@ describe('Copilot evidence envelope', () => {
       text: 'Distribuie coada', fromCheckpointId: otherZone, toCheckpointId: scope.zoneId, passengerCount: 10 }],
       facts: [], limitation: 'Variantă de evaluat.' } } as unknown as CopilotAnswer;
     expect(validAnswer(value, scope)).toBe(false);
+  });
+  it('accepts whole-run figures only from the same run', () => {
+    const fact = { id: 'peak.queue', label: 'Coadă', value: 31, unit: 'pasageri', runId, zoneId: otherZone, sourcePath: '/runs/x/kpis' },
+      whole = { ...answer(), citations: [], runFacts: [fact] };
+    expect(validAnswer(whole, scope)).toBe(true);
+    expect(validAnswer({ ...whole, runFacts: [{ ...fact, runId: otherRun }] }, scope)).toBe(false);
+    expect(validAnswer({ ...whole, runFacts: [{ ...fact, value: NaN }] }, scope)).toBe(false);
+    expect(validAnswer({ ...whole, runFacts: [] }, scope)).toBe(false);
+    // Only the help reply may answer without figures.
+    expect(validAnswer({ ...whole, runFacts: [], reasonCode: 'help', sourceHash: null }, scope)).toBe(true);
   });
   it('rejects nonfinite values, wrong time, unknown versions and answers without evidence', () => {
     expect(validAnswer(answer(), scope)).toBe(true);

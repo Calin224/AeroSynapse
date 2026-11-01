@@ -7,39 +7,35 @@ textarea {
   font-size: 12px;
   line-height: 1.5;
 }
-.zone-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 0.6rem;
-  margin: 1rem 0;
-}
-.zone-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
-  padding: 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-.zone-option input { margin-top: 0.25rem; }
-.zone-option small { display: block; color: var(--text-muted); margin-top: 0.3rem; }
-.route-status, .advanced {
-  padding: 1rem;
-  margin: 1rem 0;
-  background: var(--surface-sunken);
-  border-radius: var(--radius);
-}
-summary { cursor: pointer; }
 .hint { color: var(--text-muted); font-size: 0.85rem; }
-
-.zone-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 0 1.5rem; border-top: 1px solid var(--border); }
-.zone-option { align-items: center; padding: 0.6rem; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
-.zone-option > span:first-of-type { flex: 1; min-width: 0; }
-.zone-option small { margin-top: 0.1rem; }
-.zone-state { color: var(--text-muted); font-size: 0.85rem; white-space: nowrap; }
-.route-impact { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 1rem 0; }
+.empty-step { display: grid; justify-items: start; gap: 12px; padding: 8px 0; }
+.empty-step p { margin: 0; color: var(--text); font-size: 14px; }
+.route-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.route-summary { display: grid; justify-items: start; gap: 10px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); }
+.route-summary > * { margin: 0; }
+.route-impact { display: flex; flex-wrap: wrap; gap: 12px 32px; }
 .route-impact p { margin: 0; }
 .route-impact strong, .route-impact span { display: block; }
-.route-impact strong { font-size: 1.5rem; }
+.route-impact strong { font-size: 1.75rem; color: var(--text); font-variant-numeric: tabular-nums; }
 .route-impact span { color: var(--text-muted); font-size: 0.85rem; }
+.route-impact .bad strong { color: var(--danger); }
+.zone-group legend { padding: 0; margin-bottom: 4px; color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.zone-group { margin: 16px 0 0; padding: 0; border: 0; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); column-gap: 24px; }
+.zone-option { margin: 0; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.zone-name { flex: 1; min-width: 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.zone-state { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.zone-option.closed .zone-state { color: var(--danger); font-weight: 600; }
+/* A plain checkbox drawn as an on/off switch: on = zone open. */
+.zone-option input {
+  appearance: none; position: relative; flex: 0 0 auto; width: 36px; height: 20px; margin: 0;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-sunken); cursor: pointer;
+}
+.zone-option input::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text-muted); transition: transform var(--ease, 150ms);
+}
+.zone-option input:checked { background: var(--success, var(--accent)); border-color: var(--success, var(--accent)); }
+.zone-option input:checked::after { transform: translateX(16px); background: var(--panel); }
+.zone-option input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.zone-option input:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .zone-option input::after { transition: none; } }

@@ -1,10 +1,12 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.contracts.models import SimulationRequest
 from app.contracts.routes import openapi_schema
-from app.contracts.validation import mathematical_integer, error, parse_json, response, validate
+from app.contracts.validation import error, parse_json, response, validate
 from app.forecast.model import predict
 from app.simulation.engine import simulate
 from app.simulation.observation import observe
@@ -77,21 +79,24 @@ async def observe_simulation(request: Request):
     if not errors and (not isinstance(payload, dict) or set(payload) - {'request', 'minute', 'gateEventId', 'limits'} or 'request' not in payload):
         errors = [error('', 'invalid_value')]
     limits = payload.get('limits') if not errors else None
+    # parse_json reads every JSON number as a Decimal. Bound it before any int(): int(Decimal('1e999999')) takes seconds.
+    whole = lambda value: (isinstance(value, (int, Decimal)) and not isinstance(value, bool) and 0 <= value < 1_000_000
+                           and value == Decimal(value).to_integral_value())
+    numbers = ('deskLimit', 'reserve', 'transferMinutes')
     if limits is not None and (not isinstance(limits, dict) or set(limits) - {'deskLimit', 'reserve', 'transferMinutes', 'frozen'}
-            or any(not mathematical_integer(None, limits.get(name, 0)) or limits.get(name, 0) < 0
-                   for name in ('deskLimit', 'reserve', 'transferMinutes'))
+            or any(not whole(limits.get(name, 0)) for name in numbers)
             or not isinstance(limits.get('frozen', []), list) or any(not isinstance(item, str) for item in limits.get('frozen', []))):
         errors = [error('/limits', 'invalid_value')]
+    elif limits is not None:
+        limits = {**limits, **{name: int(limits[name]) for name in numbers if name in limits}}
     if errors:
         return JSONResponse(status_code=422, content=response(errors))
-    if limits is not None:
-        limits = limits | {name: int(limits[name]) for name in ('deskLimit', 'reserve', 'transferMinutes') if name in limits}
     minute, gate = payload.get('minute'), payload.get('gateEventId')
     try:
         wire = SimulationRequest.model_validate(payload['request'])
     except ValueError:
         return JSONResponse(status_code=422, content=response([error('/request', 'invalid_value')]))
-    if (wire.engine != 'simpy-kpi-1.0' or minute is None or minute != int(minute) or not 0 < int(minute) < wire.duration_minutes
+    if (wire.engine != 'simpy-kpi-1.0' or not whole(minute) or not 0 < int(minute) < wire.duration_minutes
             or gate is not None and (wire.journey is None or not any(e.type == 'flight_change' and str(e.event_id) == gate for e in wire.events or []))):
         return JSONResponse(status_code=422, content=response([error('/minute', 'out_of_range')]))
     return JSONResponse(content=await run_in_threadpool(observe, wire, int(minute), gate, limits))

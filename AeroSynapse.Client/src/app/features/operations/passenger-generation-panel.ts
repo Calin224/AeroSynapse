@@ -58,8 +58,10 @@ export class PassengerGenerationPanel {
     else { batch.checkpointMode = 'fixed'; batch.checkpointId = value; }
     this.modified();
   }
-  countChanged(batch: PassengerBatchConfig) {
-    if (batch.countMode === 'full') batch.modeledCount = this.flight(batch.flightId)?.capacity ?? 0;
+  // One number field: the full aircraft keeps 'full' so later capacity edits follow it; anything less is an explicit subset.
+  countChanged(batch: PassengerBatchConfig, count: number) {
+    batch.modeledCount = count;
+    batch.countMode = count === this.flight(batch.flightId)?.capacity ? 'full' : 'subset';
     this.modified();
   }
   groupsChanged(batch: PassengerBatchConfig, preset: string) {
@@ -113,11 +115,11 @@ export class PassengerGenerationPanel {
   save(config = this.config) {
     const settings = this.settings();
     if (!settings || this.blocked()) return;
-    if (!Number.isInteger(this.seed) || this.seed < 0 || this.seed > 2147483647) { this.message.set('Seed-ul trebuie să fie un întreg între 0 și 2147483647.'); return; }
+    if (!Number.isInteger(this.seed) || this.seed < 0 || this.seed > 2147483647) { this.message.set('Numărul de repetare (seed) trebuie să fie un întreg între 0 și 2147483647.'); return; }
     this.busy.set(true); this.working.emit(true); this.message.set('');
     this.api.put<ScenarioDetails>(`scenarios/${settings.scenarioId}/passengers/settings`, { revision: settings.revision, seed: this.seed, config })
       .pipe(finalize(() => { this.busy.set(false); this.working.emit(false); }), takeUntilDestroyed(this.destroy))
-      .subscribe({ next: value => { this.dirty.set(false); this.changed.emit(value); this.message.set('Populațiile demo și profilurile au fost salvate în scenariu.'); },
+      .subscribe({ next: value => { this.dirty.set(false); this.changed.emit(value); this.message.set('Pasagerii au fost salvați. Următoarea simulare îi va folosi.'); },
         error: error => this.report(error) });
   }
   generate(offset = 0) {

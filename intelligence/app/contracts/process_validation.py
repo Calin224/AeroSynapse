@@ -35,11 +35,19 @@ def validate_result(value, path, errors, error):
             if stage!='walking' or person['walkingMinutes']!=0 or abs(clear+hold-horizon)>1e-8: invalid(prefix)
         elif stage=='walking' and clear+hold+person['walkingMinutes']<=horizon: invalid(prefix)
         if 'routeHoldMinutes' in person and clear is None: invalid(prefix)
-        if person.get('assignedCheckpointId')==person['checkpointId']: invalid(prefix)
-        if ('redistributedAtMinute' in person) != ('transferMinutes' in person): invalid(prefix)
-        if 'redistributedAtMinute' in person and ('assignedCheckpointId' not in person
+        # Only a chain of moves can bring a passenger back to the control they were assigned.
+        hops=person.get('transfers')
+        if person.get('assignedCheckpointId')==person['checkpointId'] and hops is None: invalid(prefix)
+        if not ('redistributedAtMinute' in person) == ('transferMinutes' in person) == (hops is not None): invalid(prefix)
+        if hops is not None and ('assignedCheckpointId' not in person
             or person['redistributedAtMinute'] < person['arrivalMinute'] or person['redistributedAtMinute'] > horizon
-            or start is not None and start < person['redistributedAtMinute'] + person['transferMinutes']): invalid(prefix)
+            or start is not None and start < person['redistributedAtMinute'] + person['transferMinutes']
+            # Moves chain from control to control; each starts once the previous walk has ended.
+            or hops[0]['minute'] < person['arrivalMinute'] or hops[-1]['toCheckpointId'] != person['checkpointId']
+            or (hops[-1]['minute'], hops[-1]['walkingMinutes']) != (person['redistributedAtMinute'], person['transferMinutes'])
+            or any(hop['fromCheckpointId'] == hop['toCheckpointId'] for hop in hops)
+            or any(b['fromCheckpointId'] != a['toCheckpointId'] or b['minute'] < a['minute'] + a['walkingMinutes']
+                   for a, b in zip(hops, hops[1:]))): invalid(prefix)
         close=person['boardingCloseMinute']
         missed=close is not None and (gate>close if gate is not None else horizon>=close)
         risk=('unreachable' if stage=='unreachable' else 'not_applicable' if close is None else

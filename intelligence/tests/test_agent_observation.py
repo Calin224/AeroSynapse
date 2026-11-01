@@ -90,6 +90,23 @@ def test_http_observe_validates_the_minute():
     for minute in (0, 120, 12.5):
         assert client.post('/simulation/v1/observe', json={'request': value, 'minute': minute}).status_code == 422
     assert client.post('/simulation/v1/observe', json={'request': value, 'minute': 30, 'extra': 1}).status_code == 422
+    for minute in ('abc', [1], {'a': 1}, True, None):
+        assert client.post('/simulation/v1/observe', json={'request': value, 'minute': minute}).status_code == 422
+
+
+def test_http_observe_accepts_the_limits_the_api_sends():
+    client, value = TestClient(app), scheduled([(0, 1)])
+    limits = {'deskLimit': 10, 'reserve': 10, 'transferMinutes': 5, 'frozen': []}
+    assert client.post('/simulation/v1/observe', json={'request': value, 'minute': 30, 'limits': limits}).status_code == 200
+    for bad in ({**limits, 'reserve': -1}, {**limits, 'reserve': 2.5}, {**limits, 'reserve': True}, {**limits, 'extra': 1}):
+        assert client.post('/simulation/v1/observe', json={'request': value, 'minute': 30, 'limits': bad}).status_code == 422
+    # A huge exponent is refused at once instead of stalling the event loop in int().
+    huge = '{"request": %s, "minute": 30, "limits": {"reserve": 1e999999}}' % json.dumps(value)
+    response = client.post('/simulation/v1/observe', content=huge, headers={'content-type': 'application/json'})
+    assert response.status_code == 422
+    response = client.post('/simulation/v1/observe', content=huge.replace('"minute": 30', '"minute": 1e999999').replace('1e999999}}', '1}}'),
+                           headers={'content-type': 'application/json'})
+    assert response.status_code == 422
 
 
 @pytest.mark.parametrize('name', ['kpis/v1/examples/check-in-desks', 'journeys/v1/examples/gate-choice'])

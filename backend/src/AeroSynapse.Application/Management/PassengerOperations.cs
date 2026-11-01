@@ -44,7 +44,7 @@ public sealed class PassengerOperations(IScenarioService scenarios, IPassengerGe
         if (scenario.Scenario.DeletedAtUtc is not null) throw new ScenarioConflictException("Archived scenarios cannot be edited.");
         var layout = await Layout(scenario, token);
         var inputs = scenario.Inputs with { Seed = command.Value.Seed, PassengerGeneration = command.Value.Config };
-        if (command.Value.Config is null) inputs = inputs with { Navigation = null };
+        if (!IncidentScenarios.ProfilesActive(inputs)) inputs = inputs with { Navigation = null };
         if (inputs.PassengerGeneration is not null) inputs = PassengerScenarios.Synchronize(inputs, layout.Layout);
         return await scenarios.UpdateAsync(command.ScenarioId, new(scenario.Scenario.Code, scenario.Scenario.Name, scenario.Scenario.Description,
             scenario.Scenario.SceneId, scenario.Scenario.LayoutVersionId, inputs, command.Value.Revision), token);

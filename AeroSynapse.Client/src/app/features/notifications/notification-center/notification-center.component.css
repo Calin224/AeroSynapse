@@ -164,6 +164,9 @@ details > summary::-webkit-details-marker {
   color: var(--text-muted);
   font-size: 13px;
 }
+.hint.scope {
+  margin-bottom: 14px;
+}
 
 /* Quick filters. */
 .toolbar {

@@ -46,11 +46,11 @@ public static class ProcessCorrelation
             }
             if (cp.Capacity == 0 && members.Any(person => person.ProcessingStartedMinute is not null)) return false;
         }
-        foreach (var group in report.Passengers.Where(p => p.RedistributedAtMinute is not null)
-                     .GroupBy(p => (p.RedistributedAtMinute, p.AssignedCheckpointId, p.CheckpointId)))
-            if (group.Count() > timeline.Events.Where(e => e.Type == "queue_redistribution"
-                    && e.Minute == group.Key.RedistributedAtMinute && e.CheckpointId == group.Key.AssignedCheckpointId
-                    && e.TargetCheckpointId == group.Key.CheckpointId).Sum(e => e.PassengerCount ?? 0)) return false;
+        // Moves off an open control need queue_redistribution decisions covering them; an unavailable control's queue may all leave.
+        foreach (var group in report.Passengers.SelectMany(p => p.Transfers ?? []).GroupBy(hop => (hop.Minute, hop.FromCheckpointId, hop.ToCheckpointId)))
+            if (timeline.Available(group.Key.FromCheckpointId, group.Key.Minute) && group.Count() > timeline.Events.Where(e => e.Type == "queue_redistribution"
+                    && e.Minute == group.Key.Minute && e.CheckpointId == group.Key.FromCheckpointId
+                    && e.TargetCheckpointId == group.Key.ToCheckpointId).Sum(e => e.PassengerCount ?? 0)) return false;
         var flights = request.PassengerGeneration?.Flights.ToDictionary(flight => flight.FlightId);
         var gates = request.Navigation?.FlightGates.ToDictionary(flight => flight.FlightId, flight => flight.GateId);
         var batches = request.PassengerGeneration?.Batches.ToDictionary(batch => batch.FlightId);
@@ -71,17 +71,23 @@ public static class ProcessCorrelation
             var assigned = person.AssignedCheckpointId ?? person.CheckpointId;
             if (person.AssignedCheckpointId is { } original)
             {
-                // Only arrivals meeting an unavailable control are redirected, to a control that can serve.
-                if (person.RedistributedAtMinute is { } moved)
+                // Only arrivals meeting an unavailable control are redirected, to a control that can serve. Each later move
+                // leaves an unavailable control (it closed, or closed while they walked to it) or follows a queue_redistribution,
+                // for a control with staff, once the previous walk has ended.
+                var hops = person.Transfers ?? [];
+                var seat = hops.Count > 0 ? hops[0].FromCheckpointId : person.CheckpointId;
+                var free = person.ArrivalMinute;
+                if (!checkpoints.ContainsKey(original) || (hops.Count > 0) != person.RedistributedAtMinute.HasValue
+                    || seat != original && (timeline.Available(original, person.ArrivalMinute) || timeline.Capacity(seat, person.ArrivalMinute) == 0)) return false;
+                foreach (var hop in hops)
                 {
-                    if (!checkpoints.ContainsKey(original) || person.TransferMinutes is not { } walking
-                        || person.ArrivalMinute > moved || person.ProcessingStartedMinute < moved + walking
-                        || !timeline.Events.Any(e => e.Type == "queue_redistribution" && e.Minute == moved
-                            && e.CheckpointId == original && e.TargetCheckpointId == person.CheckpointId && e.WindowMinutes == walking)
-                        || timeline.Capacity(person.CheckpointId, moved) == 0) return false;
+                    if (hop.FromCheckpointId != seat || !checkpoints.ContainsKey(hop.ToCheckpointId) || hop.Minute < free
+                        || timeline.Available(seat, hop.Minute) && !timeline.Events.Any(e => e.Type == "queue_redistribution" && e.Minute == hop.Minute
+                            && e.CheckpointId == seat && e.TargetCheckpointId == hop.ToCheckpointId && e.WindowMinutes == hop.WalkingMinutes)
+                        || timeline.Capacity(hop.ToCheckpointId, hop.Minute) == 0) return false;
+                    seat = hop.ToCheckpointId; free = hop.Minute + hop.WalkingMinutes;
                 }
-                else if (!checkpoints.ContainsKey(original) || timeline.Available(original, person.ArrivalMinute)
-                    || timeline.Capacity(person.CheckpointId, person.ArrivalMinute) == 0) return false;
+                if (seat != person.CheckpointId || person.ProcessingStartedMinute < free) return false;
             }
             if (timeline.Surge(person.Id) is { } surge)
             {

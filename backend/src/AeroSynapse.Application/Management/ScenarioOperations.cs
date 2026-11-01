@@ -12,6 +12,7 @@ public sealed record EventWriteRequest(int Revision, ScenarioInputEvent Event);
 public sealed record ScenarioItems<T>(Guid ScenarioId, int Revision, IReadOnlyList<T> Items);
 public sealed record ListScenariosQuery(Guid? SceneId) : IRequest<IReadOnlyList<ScenarioSummary>>;
 public sealed record GetScenarioQuery(Guid Id) : IRequest<ScenarioDetails>;
+public sealed record ListScenarioRevisionsQuery(Guid ScenarioId) : IRequest<IReadOnlyList<ScenarioRevision>>;
 public sealed record CreateScenarioCommand(ScenarioWriteRequest Value) : IRequest<ScenarioDetails>;
 public sealed record ValidateScenarioQuery(ScenarioWriteRequest Value) : IRequest<ScenarioValidationResult>;
 public sealed record UpdateScenarioCommand(Guid Id, ScenarioWriteRequest Value) : IRequest<ScenarioDetails>;
@@ -28,6 +29,7 @@ public sealed record DeleteInputEventCommand(Guid ScenarioId, Guid EventId, int 
 
 public sealed class ScenarioOperations(IScenarioService scenarios, ISceneQueryService scenes) :
     IRequestHandler<ListScenariosQuery, IReadOnlyList<ScenarioSummary>>, IRequestHandler<GetScenarioQuery, ScenarioDetails>,
+    IRequestHandler<ListScenarioRevisionsQuery, IReadOnlyList<ScenarioRevision>>,
     IRequestHandler<CreateScenarioCommand, ScenarioDetails>, IRequestHandler<UpdateScenarioCommand, ScenarioDetails>, IRequestHandler<ValidateScenarioQuery, ScenarioValidationResult>,
     IRequestHandler<DuplicateScenarioCommand, ScenarioDetails>, IRequestHandler<PublishLayoutCommand, PublishedLayout>,
     IRequestHandler<ListLayoutsQuery, IReadOnlyList<LayoutVersionSummary>>, IRequestHandler<GetLayoutQuery, PublishedLayout>,
@@ -44,6 +46,11 @@ public sealed class ScenarioOperations(IScenarioService scenarios, ISceneQuerySe
     }
     public async Task<ScenarioDetails> Handle(GetScenarioQuery request, CancellationToken token) =>
         await scenarios.GetAsync(request.Id, token) ?? throw new ScenarioNotFoundException("Scenario was not found.");
+    public async Task<IReadOnlyList<ScenarioRevision>> Handle(ListScenarioRevisionsQuery request, CancellationToken token)
+    {
+        await Handle(new GetScenarioQuery(request.ScenarioId), token);
+        return await scenarios.RevisionsAsync(request.ScenarioId, 50, token);
+    }
     public Task<ScenarioDetails> Handle(CreateScenarioCommand request, CancellationToken token) => scenarios.CreateAsync(request.Value, token);
     public Task<ScenarioValidationResult> Handle(ValidateScenarioQuery request, CancellationToken token) => scenarios.ValidateAsync(request.Value, token);
     public Task<ScenarioDetails> Handle(UpdateScenarioCommand request, CancellationToken token) => scenarios.UpdateAsync(request.Id, request.Value, token);
@@ -114,9 +121,13 @@ public sealed class ScenarioOperations(IScenarioService scenarios, ISceneQuerySe
         if (value.Scenario.Revision != revision) throw new ScenarioConflictException("Scenario has changed. Reload it before editing.");
         return value;
     }
-    private Task<ScenarioDetails> Save(ScenarioDetails value, ScenarioInputs inputs, CancellationToken token) =>
-        scenarios.UpdateAsync(value.Scenario.Id, new(value.Scenario.Code, value.Scenario.Name, value.Scenario.Description,
+    private Task<ScenarioDetails> Save(ScenarioDetails value, ScenarioInputs inputs, CancellationToken token)
+    {
+        // Routes need passenger profiles; once the last incident or check-in source is gone they go with it.
+        if (!IncidentScenarios.ProfilesActive(inputs)) inputs = inputs with { Navigation = null };
+        return scenarios.UpdateAsync(value.Scenario.Id, new(value.Scenario.Code, value.Scenario.Name, value.Scenario.Description,
             value.Scenario.SceneId, value.Scenario.LayoutVersionId, inputs, value.Scenario.Revision), token);
+    }
     private async Task<ScenarioDetails> SaveFlights(ScenarioDetails value, IReadOnlyList<ScenarioFlight> flights, CancellationToken token)
     {
         var changedGates = flights.Where(flight => value.Inputs.Flights.Any(old => old.Id == flight.Id && old.GateId != flight.GateId))

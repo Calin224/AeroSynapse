@@ -18,13 +18,13 @@ export function outcomeTone(percent: number | null): OutcomeTone {
   return percent === null || Math.abs(percent) < 0.5 ? 'neutral' : percent < 0 ? 'better' : 'worse';
 }
 export function signedPercent(percent: number | null) {
-  return percent === null ? '—' : `${percent < 0 ? '−' : '+'}${Math.abs(Math.round(percent))}%`;
+  return percent === null ? '—' : `${percent < 0 ? '−' : '+'}${Math.abs(percent).toFixed(2)}%`;
 }
 /** A wait a person can read: seconds under a minute, minutes otherwise. */
 export function formatWait(minutes: number | null | undefined) {
   if (minutes == null || !Number.isFinite(minutes)) return '—';
-  if (minutes < 1) return `${Math.round(minutes * 60)} s`;
-  return `${Number(minutes.toFixed(1))} min`;
+  if (minutes < 1) return `${(minutes * 60).toFixed(2)} s`;
+  return `${minutes.toFixed(2)} min`;
 }
 export function percentChange(before: number | null, after: number | null) {
   return before === null || after === null || before <= 0
@@ -160,7 +160,7 @@ export class OutcomeCards {
         tone: outcomeTone(row.percent),
         signed: signedPercent(row.percent),
         // Small values keep a second decimal, so 0.02 does not read as 0.
-        digits: Math.max(row.before ?? 0, row.after ?? 0) < 10 ? '1.0-2' : '1.0-1',
+        digits: '1.2-2',
         beforeWidth: ((row.before ?? 0) / top) * 100,
         afterWidth: ((row.after ?? 0) / top) * 100,
       };

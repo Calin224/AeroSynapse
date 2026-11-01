@@ -20,10 +20,12 @@ public static class CopilotExplanationBuilder
     public static CopilotExplanation Answer(CopilotAnswer answer)
     {
         var facts = answer.Citations.Select((c, i) => new CopilotEvidenceFact(c.Id, c.Label, c.Value, c.Unit,
-            c.RunId, c.ZoneId, $"/citations/{i}/value")).ToArray();
+            c.RunId, c.ZoneId, $"/citations/{i}/value")).Concat(answer.RunFacts ?? []).ToArray();
         return new("1.0", Disclosure, answer.Answer, "run_snapshot", Hash(answer), facts, [], [],
             [new(answer.Scope.RunId, "Rulare investigată")],
-            ["Observațiile sunt valabile numai pentru zona și minutul citate. Nu demonstrează cauzalitate.",
+            [answer.RunFacts is { Count: > 0 }
+                ? "Cifrele vin din datele salvate ale tuturor punctelor de control din această simulare, rotunjite la număr întreg. Nu demonstrează cauzalitate."
+                : "Observațiile sunt valabile numai pentru zona și minutul citate. Nu demonstrează cauzalitate.",
              "Datele lipsă rămân lipsă. Răspunsul nu garantează performanța unui aeroport real."]);
     }
     public static CopilotExplanation Tool(CopilotToolResult value)

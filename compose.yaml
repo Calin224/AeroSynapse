@@ -51,9 +51,12 @@ services:
       Copilot__Model: ${COPILOT_MODEL:-}
       Copilot__ApiKey: ${COPILOT_API_KEY:-}
       Copilot__TimeoutSeconds: ${COPILOT_TIMEOUT_SECONDS:-8}
-      # Live AI agent (Gemini). Without an answer from it, a deterministic fallback rule decides and runs continue.
+      # Post-run AI optimizer: Gemini, or a local Ollama model (no key, no credits).
+      # Without an answer from the model, the simulated options keep a deterministic pick.
+      Agent__Provider: ${AGENT_PROVIDER:-gemini}
       Agent__ApiKey: ${GEMINI_API_KEY:-}
-      Agent__Model: ${AGENT_MODEL:-gemini-2.5-flash}
+      Agent__Model: ${AGENT_MODEL:-gemini-3.8-flash}
+      Agent__Endpoint: ${AGENT_ENDPOINT:-https://generativelanguage.googleapis.com/v1beta}
       CopilotTranscripts__DefaultRetentionHours: ${COPILOT_TRANSCRIPT_RETENTION_HOURS:-24}
       CopilotTranscripts__MaxRetentionHours: ${COPILOT_TRANSCRIPT_MAX_HOURS:-168}
       CopilotTranscripts__KeyDirectory: /data/copilot-keys

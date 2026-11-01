@@ -10,10 +10,11 @@ from simpy.events import URGENT
 
 from app.contracts.models import SimulationResponse
 from app.navigation.graph import NavigationGraph
-from app.navigation.planner import plan_population, summarize
+from app.navigation.planner import plan_population, summarize, without_closed_checkpoints
 from app.optimization.planning import recommend
 from app.passengers.generator import generate_population
 from app.simulation import check_in
+from app.simulation.balancing import MOVE_MINUTES, Walks, balance
 from app.simulation.events import ordered, planned_at
 from app.simulation.metrics import ENGINE, KpiCollector, sample_minutes
 
@@ -41,14 +42,17 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
             'unreachableCount':0,'firstQueueMinute':None,'riskPopulation':0,'atRiskCount':0,'lateGateCount':0,
             # Capacity in effect: staff on duty while available. 'capacity' stays the nominal staffing,
             # the most people a schedule ever puts on duty; 'planned' is the scheduled staffing now.
-            'staff':planned_at(checkpoint,schedules.get(identifier),0),'planned':planned_at(checkpoint,schedules.get(identifier),0),'available':True,'granted':0,'waiting':deque()}
+            'staff':planned_at(checkpoint,schedules.get(identifier),0),'planned':planned_at(checkpoint,schedules.get(identifier),0),'available':True,'granted':0,'waiting':deque(),'inbound':0}
     people, navigation_result, journeys, samples, late, check_in_records = [], None, {}, {}, [], []
     flights, navigation, gates = {}, None, {}
     if request.passenger_generation is not None:
-        population = generate_population(request.passenger_generation)
-        flights = {str(flight.flight_id):flight for flight in request.passenger_generation.flights}
+        generation = request.passenger_generation
         if request.navigation is not None:
             navigation = request.navigation.model_dump(mode='json', by_alias=True)
+            generation = without_closed_checkpoints(generation, navigation)
+        population = generate_population(generation)
+        flights = {str(flight.flight_id):flight for flight in request.passenger_generation.flights}
+        if navigation is not None:
             navigation_result = plan_population(population, request.passenger_generation, navigation)
             journeys = {person['id']:person for person in navigation_result['journeys']}
             gates = {item['flightId']:item['gateId'] for item in navigation['flightGates']}
@@ -79,6 +83,10 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         # Generated and surge arrivals are terminal arrivals; check-in moves the control arrival of hold-baggage passengers.
         people, late, check_in_records = check_in.route(request.check_in, request.seed, request.duration_minutes, people)
     people.sort(key=lambda person:(person['arrivalMinute'],person['id']))
+    rebalanced = set()
+    if request.passenger_generation is not None and len(stations) > 1:
+        walks = Walks(navigation,samples,flights) if navigation is not None else None
+        rebalanced = balance(people,surged,{key:station['input'] for key,station in stations.items()},flights,schedules,walks)
     collector=KpiCollector(request,stations,[person for person in people if person['id'] not in surged],
                            [person for person in late if person['id'] not in surged]) if request.engine==ENGINE else None
     routing = Routing(navigation, samples, flights, journeys) if events and navigation is not None else None
@@ -207,12 +215,16 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         person['stage'] = 'queued'
         station['queuedCount'] += 1
         grant = request_slot(station, person)
-        record_queue(station,len(station['waiting']))
+        # Passengers still walking in from another control's queue are part of this queue too.
+        record_queue(station,len(station['waiting'])+station['inbound'])
         destination = yield grant  # A control without capacity waits until capacity returns or a queue transfer.
-        if destination is not None:
+        while destination is not None:
             station = stations[destination]
             yield env.timeout(person['transferMinutes'])
-            yield request_slot(station, person)
+            station['inbound'] -= 1
+            grant = request_slot(station, person)
+            if not station['available']: relocate(grant, destination, int(env.now))  # It closed while they walked here.
+            destination = yield grant
         station['queuedCount'] -= 1
         change_busy(station,1)
         station['peakBusy'] = max(station['peakBusy'],station['processingCount'])
@@ -251,43 +263,68 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
             set_missed(person,env.now > person['boardingCloseMinute'])
             if person['deadlineMissed']: station['lateGateCount']+=1
 
+    def transfer(grant, source, target, minute, walking):
+        """Move a waiting request to another control: the passenger walks `walking` minutes there and queues again."""
+        origin, destination, person = stations[source], stations[target], grant.person
+        origin['waiting'].remove(grant)
+        origin['queuedCount'] -= 1
+        origin['arrivedCount'] -= 1
+        origin['transferredOut'] += 1
+        destination['queuedCount'] += 1
+        destination['arrivedCount'] += 1
+        destination['inbound'] += 1
+        # assignedCheckpointId stays the original control; redistributedAtMinute and transferMinutes repeat the last move.
+        person.setdefault('assignedCheckpointId', source)
+        person.setdefault('transfers', []).append({'fromCheckpointId': source, 'toCheckpointId': target, 'minute': minute, 'walkingMinutes': walking})
+        person.update(checkpointId=target, redistributedAtMinute=minute, transferMinutes=walking)
+        if collector is not None: collector.move(source, target)
+        if person['boardingCloseMinute'] is not None:
+            origin['riskPopulation'] -= 1; destination['riskPopulation'] += 1
+            if person['deadlineMissed']:
+                origin['atRiskCount'] -= 1; destination['atRiskCount'] += 1
+        record_queue(destination, destination['queuedCount'])
+        grant.succeed(target)
+
+    def staffed_at(key, minute):
+        # Staff once this minute's schedule steps apply (they act after its events), as the .NET timeline counts it.
+        item = stations[key]
+        return (planned_at(item['input'], schedules[key], minute) if key in schedules and item['available'] else capacity_now(item)) > 0
+
+    def relocate(grant, source, minute):
+        """Someone waiting at an unavailable control goes to the open control with the shortest queue (walkers included),
+        however often they were moved or redirected before; with no open control they stay."""
+        person = grant.person
+        candidates = [key for key in stations if staffed_at(key, minute) and (routing is None
+                      or (routing.can_serve(person, key) if person['id'] in samples else routing.bound(key)))]
+        if candidates:
+            transfer(grant, source, min(candidates, key=lambda key: (stations[key]['queuedCount'], key)), minute, int(MOVE_MINUTES))
+
     def apply(batch):
+        closing = []
         for event in batch:
             kind = event['type']
             if kind in ('checkpoint_unavailable','staff_reduction') or kind == 'resume' and 'checkpointId' in event:
                 station = stations[event['checkpointId']]
-                if kind == 'checkpoint_unavailable': station['available'] = False
+                if kind == 'checkpoint_unavailable':
+                    station['available'] = False
+                    closing.append(event['checkpointId'])
                 elif kind == 'staff_reduction': station['staff'] = event['staffCount']  # In-service passengers finish.
                 else:
                     station['available'], station['staff'] = True, station['planned']
                     dispatch(station)
             elif kind == 'queue_redistribution':
                 source, target = event['checkpointId'], event['targetCheckpointId']
-                origin, destination = stations[source], stations[target]
+                destination = stations[target]
                 moved = 0
                 opening_now = any(step.start_minute == event['minute'] for step in schedules.get(target, []))
                 capacity = planned_at(destination['input'], schedules.get(target), event['minute']) if opening_now else capacity_now(destination)
                 if destination['available'] and capacity > 0:
-                    for grant in list(origin['waiting']):
+                    for grant in list(stations[source]['waiting']):
                         person = grant.person
-                        # shortcut: One queue transfer per passenger per run; add transfer history before allowing repeated moves.
+                        # A decided transfer takes only people never moved or redirected; closures move everyone.
                         if 'assignedCheckpointId' in person or (routing is not None and not routing.can_serve(person, target)):
                             continue
-                        origin['waiting'].remove(grant)
-                        origin['queuedCount'] -= 1
-                        origin['arrivedCount'] -= 1
-                        origin['transferredOut'] += 1
-                        destination['queuedCount'] += 1
-                        destination['arrivedCount'] += 1
-                        person.update(assignedCheckpointId=source, checkpointId=target,
-                                      redistributedAtMinute=event['minute'], transferMinutes=event['windowMinutes'])
-                        if collector is not None: collector.move(source, target)
-                        if person['boardingCloseMinute'] is not None:
-                            origin['riskPopulation'] -= 1; destination['riskPopulation'] += 1
-                            if person['deadlineMissed']:
-                                origin['atRiskCount'] -= 1; destination['atRiskCount'] += 1
-                        record_queue(destination, destination['queuedCount'])
-                        grant.succeed(target)
+                        transfer(grant, source, target, event['minute'], event['windowMinutes'])
                         moved += 1
                         if moved >= event['passengerCount']: break
             elif kind in ('corridor_closure','resume'):
@@ -308,6 +345,10 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
                         stations[person['checkpointId']]['riskPopulation']+=1
                         watch(person)
             log.append({'eventId':event['eventId'],'type':kind,'minute':event['minute'],'sequence':len(log)+1})
+        # After the whole batch, so nobody is sent to a control that closes at the same minute.
+        for key in closing:
+            for grant in list(stations[key]['waiting']) if not stations[key]['available'] else []:
+                relocate(grant, key, batch[0]['minute'])
 
     # Event batches are scheduled first and urgently: they act before anything else at their minute.
     for minute in sorted({event['minute'] for event in events}):
@@ -383,7 +424,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         envelope['metrics'].append({'zoneId':key,'recordedAtUtc':recorded,'meanWaitMinutes':mean,'throughputPerMinute':round(processed/request.duration_minutes,6),'processedPassengers':processed})
         envelope['snapshots'].append({'contractVersion':'1.0','zoneId':key,'elapsedMinutes':request.duration_minutes,'queuedPassengers':station['queuedCount'],'processedPassengers':processed})
     if navigation_result is not None:
-        reassigned = {person['id']: person['checkpointId'] for person in people if 'redistributedAtMinute' in person}
+        reassigned = {person['id']: person['checkpointId'] for person in people if 'redistributedAtMinute' in person or person['id'] in rebalanced}
         if reassigned:
             adjusted = population | {'passengers': [sample | {'checkpointId': reassigned.get(sample['id'], sample['checkpointId'])}
                                                   for sample in population['passengers']]}
@@ -393,7 +434,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
             journey = journeys.get(person['id'])
             if journey is None: continue
             journey['boardingCloseMinute'] = person['boardingCloseMinute']
-            if 'redistributedAtMinute' in person: journey['walkingMinutes'] = person['walkingMinutes']
+            if 'redistributedAtMinute' in person or person['id'] in rebalanced: journey['walkingMinutes'] = person['walkingMinutes']
             if journey['error']: continue
             if person['gateArrivalMinute'] is not None:
                 journey.update(queueWaitMinutes=person['queueWaitMinutes'],gateArrivalMinute=person['gateArrivalMinute'],boardingRisk=person['boardingRisk'])

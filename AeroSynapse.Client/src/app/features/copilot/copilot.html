@@ -43,22 +43,6 @@
 
 <section class="panel chat" aria-label="Conversație cu Copilot">
   @if (context(); as c) {
-    <div class="focus fields">
-      <label
-        >Zona
-        <select [(ngModel)]="zoneId">
-          @for (zone of c.zones; track zone.id) {
-            <option [value]="zone.id">{{ zone.code }} · {{ zone.name }}</option>
-          }
-        </select>
-      </label>
-      <label>
-        <span
-          >Minutul <strong>{{ minute }}</strong> din {{ c.durationMinutes ?? '—' }}</span
-        >
-        <input type="range" [(ngModel)]="minute" min="0" [max]="c.durationMinutes ?? 0" step="1" />
-      </label>
-    </div>
     @if (c.unavailableReason) {
       <p class="notice">
         Nu pot trage concluzii din această rulare:
@@ -78,7 +62,14 @@
     @for (turn of turns(); track turn.id) {
       <article class="turn" [attr.data-turn]="turn.id">
         <p class="you">
-          {{ turn.prompt }}<small>{{ turn.zone }} · minutul {{ turn.scope.minute }}</small>
+          {{ turn.prompt }}
+          @if (turn.state === 'done') {
+            <small>{{
+              turn.tool || turn.answer?.citations?.length
+                ? turn.zone + ' · minutul ' + turn.scope.minute
+                : 'Toată simularea'
+            }}</small>
+          }
         </p>
         <div class="reply" [attr.aria-busy]="turn.state === 'pending'">
           @switch (turn.state) {
@@ -90,34 +81,42 @@
             }
             @default {
               @if (turn.answer; as answer) {
-                <p class="verdict" [class.warn]="answer.status !== 'answered'">
-                  {{ answer.status === 'answered' ? 'Din datele rulării' : 'Date insuficiente' }}
-                  <small>{{ modelLabel(answer.modelStatus) }}</small>
-                </p>
-                <p class="text" data-answer>{{ plain(answer.answer) }}</p>
-                @if (answer.queueAdvice; as advice) {
-                  <section aria-label="Recomandări pentru puncte de control și cozi">
-                    <h3>Variante de evaluat</h3>
-                    <ul>@for (option of advice.options; track option.id) { <li>{{ option.text }}</li> }</ul>
-                    <p class="notice">{{ advice.limitation }}</p>
-                    <details><summary>Datele folosite pentru recomandări</summary>
-                      <dl class="figures">@for (fact of advice.facts; track fact.id) {
-                        <div><dt>{{ fact.label }}</dt><dd>{{ fact.value | number:'1.0-2' }} <small>{{ fact.unit }}</small></dd></div>
-                      }</dl>
-                    </details>
-                  </section>
+                @if (answer.reasonCode !== 'help') {
+                  <p class="verdict" [class.warn]="answer.status !== 'answered'">
+                    {{
+                      answer.status === 'answered'
+                        ? 'Din datele simulării'
+                        : 'Nu pot răspunde exact'
+                    }}
+                  </p>
                 }
-                @if (answer.citations.length) {
-                  <dl class="figures">
-                    @for (citation of answer.citations; track citation.id) {
-                      <div [attr.data-citation]="citation.id">
-                        <dt>{{ citation.label }}</dt>
-                        <dd>
-                          {{ citation.value | number: '1.0-2' }} <small>{{ citation.unit }}</small>
-                        </dd>
-                      </div>
+                <p class="text" data-answer>{{ say(answer) }}</p>
+                @if (
+                  answer.reasonCode === 'help' || answer.reasonCode === 'question_not_supported'
+                ) {
+                  <div class="starters" role="group" aria-label="Întrebări sugerate">
+                    @for (starter of starters; track starter) {
+                      <button
+                        type="button"
+                        class="btn-sm chip"
+                        [disabled]="busy()"
+                        (click)="ask(starter)"
+                      >
+                        {{ starter }}
+                      </button>
                     }
-                  </dl>
+                  </div>
+                }
+                @if (answer.queueAdvice; as advice) {
+                  <section class="advice" aria-label="Ce poți încerca">
+                    <h3>Ce poți încerca</h3>
+                    <ul>
+                      @for (option of advice.options; track option.id) {
+                        <li>{{ option.text }}</li>
+                      }
+                    </ul>
+                    <p class="note">{{ advice.limitation }}</p>
+                  </section>
                 }
               }
               @if (turn.tool?.forecast; as forecast) {
@@ -176,11 +175,36 @@
                 }
               }
               <details class="disclosure sources">
-                <summary>Surse și detalii</summary>
-                <p>
-                  runId <code>{{ turn.scope.runId }}</code> · zoneId
-                  <code>{{ turn.scope.zoneId }}</code> · minutul {{ turn.scope.minute }}
-                </p>
+                <summary>Pe ce se bazează răspunsul</summary>
+                @if (turn.answer; as answer) {
+                  <p>{{ modelLabel(answer.modelStatus) }}</p>
+                  @if (
+                    answer.citations.length ||
+                    answer.runFacts?.length ||
+                    answer.queueAdvice?.facts?.length
+                  ) {
+                    <dl class="figures">
+                      @for (citation of answer.citations; track citation.id) {
+                        <div [attr.data-citation]="citation.id">
+                          <dt>{{ citation.label }}</dt>
+                          <dd>{{ figure(citation.value, citation.unit) }}</dd>
+                        </div>
+                      }
+                      @for (fact of answer.runFacts ?? []; track fact.id) {
+                        <div [attr.data-fact]="fact.id">
+                          <dt>{{ fact.label }}</dt>
+                          <dd>{{ figure(fact.value, fact.unit) }}</dd>
+                        </div>
+                      }
+                      @for (fact of answer.queueAdvice?.facts ?? []; track fact.id) {
+                        <div>
+                          <dt>{{ fact.label }}</dt>
+                          <dd>{{ figure(fact.value, fact.unit) }}</dd>
+                        </div>
+                      }
+                    </dl>
+                  }
+                }
                 @if (turn.tool?.forecast; as forecast) {
                   <p>{{ forecast.formula }}</p>
                   <div class="table-wrap">
@@ -208,7 +232,7 @@
                             <td>{{ point.minute }}</td>
                             <td>{{ point.arrivals | number: '1.0-1' }}</td>
                             <td>{{ point.capacity | number: '1.0-1' }}</td>
-                            <td>{{ point.queuePassengers | number: '1.0-1' }}</td>
+                            <td>{{ point.queuePassengers | number: '1.0-0' }}</td>
                           </tr>
                         }
                       </tbody>
@@ -218,11 +242,13 @@
                 @if (explanation(turn); as evidence) {
                   <app-copilot-evidence [explanation]="evidence" />
                 }
-                @if (turn.answer?.sourceHash; as hash) {
-                  <p>
-                    Amprenta sursei <code>{{ hash }}</code>
-                  </p>
-                }
+                <p class="ids">
+                  Simulare <code>{{ turn.scope.runId }}</code> · zonă
+                  <code>{{ turn.scope.zoneId }}</code> · minutul {{ turn.scope.minute }}
+                  @if (turn.answer?.sourceHash; as hash) {
+                    · amprenta datelor <code>{{ hash }}</code>
+                  }
+                </p>
               </details>
             }
           }
@@ -231,7 +257,15 @@
     } @empty {
       <div class="empty">
         @if (context()) {
-          <strong>Conversație</strong>
+          <strong>Ce vrei să afli despre această simulare?</strong>
+          <p>Alege o întrebare sau scrie una mai jos.</p>
+          <div class="starters" role="group" aria-label="Întrebări sugerate">
+            @for (starter of starters; track starter) {
+              <button type="button" class="btn-sm chip" [disabled]="busy()" (click)="ask(starter)">
+                {{ starter }}
+              </button>
+            }
+          </div>
         } @else if (loading()) {
           <p class="loading-pill" role="status">Se încarcă rularea…</p>
         } @else {
@@ -242,39 +276,78 @@
   </div>
 
   <form class="composer" (ngSubmit)="ask()">
-    <div class="suggestions" role="group" aria-label="Sugestii">
-      <button type="button" class="btn-sm chip" [disabled]="!context() || busy()"
-        (click)="ask('Ce puncte de control recomanzi să deschid și cum distribui coada?')">Puncte de control și cozi</button>
-      <button
-        type="button"
-        class="btn-sm chip"
-        [disabled]="!context() || busy() || !canForecast()"
-        (click)="forecast()"
-      >
-        @if (canForecast() || !context()) {
-          Prognoză {{ forecastMinutes }} min
-        } @else if (forecastLimit() >= 0) {
-          Prognoză: alege minutul ≤ {{ forecastLimit() }}
-        } @else {
-          Prognoză indisponibilă
+    @if (context(); as c) {
+      <details class="moment">
+        <summary>
+          Despre un moment anume: <strong>{{ zoneLabel() }} · minutul {{ minute }}</strong>
+        </summary>
+        <div class="focus fields">
+          <label
+            >Zona
+            <select name="zone" [(ngModel)]="zoneId">
+              @for (zone of c.zones; track zone.id) {
+                <option [value]="zone.id">{{ zone.code }} · {{ zone.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span
+              >Minutul <strong>{{ minute }}</strong> din {{ c.durationMinutes ?? '—' }}</span
+            >
+            <input
+              type="range"
+              name="minute"
+              [(ngModel)]="minute"
+              min="0"
+              [max]="c.durationMinutes ?? 0"
+              [step]="c.snapshotIntervalMinutes || 1"
+            />
+          </label>
+        </div>
+        @if (atBusiest()) {
+          <p class="focus-hint">
+            Am ales momentul cu cea mai mare coadă din simulare. Schimbă zona sau minutul ca să
+            întrebi despre alt moment.
+          </p>
         }
-      </button>
-      <button
-        type="button"
-        class="btn-sm chip"
-        [disabled]="!context() || busy()"
-        (click)="events()"
-      >
-        Evenimente în zonă
-      </button>
-    </div>
+        <div class="suggestions" role="group" aria-label="Despre zona și minutul alese">
+          <button
+            type="button"
+            class="btn-sm chip"
+            [disabled]="!context() || busy()"
+            (click)="ask('Ce puncte de control recomanzi să deschid și cum distribui coada?')"
+          >
+            Puncte de control și cozi
+          </button>
+          @if (canForecast()) {
+            <button
+              type="button"
+              class="btn-sm chip"
+              [disabled]="!context() || busy()"
+              (click)="forecast()"
+            >
+              Prognoză {{ forecastMinutes }} min
+            </button>
+          }
+          <button
+            type="button"
+            class="btn-sm chip"
+            [disabled]="!context() || busy()"
+            (click)="events()"
+          >
+            Evenimente în zonă
+          </button>
+        </div>
+      </details>
+    }
     <div class="input">
       <textarea
         name="question"
         [(ngModel)]="question"
         rows="1"
         maxlength="1000"
-        aria-label="Întrebare despre zona selectată"
+        aria-label="Întrebare pentru Copilot"
+        placeholder="Scrie o întrebare, de exemplu: Câți pasageri au pierdut zborul?"
         [disabled]="!context()"
         (keydown.enter)="enter($event)"
       ></textarea>

@@ -26,14 +26,13 @@ internal static class RunStorageEndpoints
         runs.MapGet("/journey", async (Guid runId, int? offset, int? limit, ISender sender, CancellationToken token) =>
             Results.Ok(await sender.Send(new GetRunJourneyQuery(runId, offset ?? 0, limit ?? 100), token)))
             .Document<AeroSynapse.Application.Contracts.JourneyReport>("Read captured passport queues, transfers, boarding and the rolling gate schedule");
-        runs.MapGet("/agent-decisions", async (Guid runId, AeroSynapse.Infrastructure.Execution.AgentDecisionReader reader, CancellationToken token) =>
-            Results.Ok(await reader.ListAsync(runId, token)))
-            .Document<IReadOnlyList<AgentDecisionView>>("Read the AI agent's decisions in this run, in order, while it runs and after");
-        runs.MapGet("/agent-impact", async (Guid runId, AeroSynapse.Infrastructure.Execution.AgentImpactService impact, CancellationToken token) =>
-            await impact.GetAsync(runId, token) is { } value ? Results.Ok(value) : Results.NoContent())
-            .Document<AgentImpact>("What the agent changed in a finished run, against the same day simulated without its decisions");
-        app.MapGet("/agent/status", (IAgentModel model) => Results.Ok(model.Status)).WithTags("Runs")
-            .Document<AgentStatus>("Whether the live AI agent's model is configured; never returns credentials");
+        runs.MapGet("/ai-optimization", async (Guid runId, AeroSynapse.Infrastructure.Execution.RunOptimizationService optimization, CancellationToken token) =>
+            await optimization.GetAsync(runId, token) is { } value ? Results.Ok(value) : Results.NoContent())
+            .Document<RunOptimization>("Staffing options for a finished run, each simulated on the same day and seed, explained and ranked by the AI model");
+        runs.MapPost("/ai-optimization/apply", async (Guid runId, OptimizationApplyRequest request, AeroSynapse.Infrastructure.Execution.RunOptimizationService optimization, CancellationToken token) =>
+            Results.Ok(await optimization.ApplyAsync(runId, request.StaffDelta, request.DeskDelta, token)))
+            .Document<ScenarioDetails>("Write a staffing option into the run's scenario as a new revision; 409 once the scenario changed since the run")
+            .ProducesProblem(409);
         runs.MapGet("/processes", async (Guid runId, int? offset, int? limit, ISender sender, CancellationToken token) =>
             Results.Ok(await sender.Send(new GetRunProcessesQuery(runId, offset ?? 0, limit ?? 100), token)))
             .Document<AeroSynapse.Application.Contracts.ProcessResult>("Read captured SimPy resource capacity and passenger stage timestamps");

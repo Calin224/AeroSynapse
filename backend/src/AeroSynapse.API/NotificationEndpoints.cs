@@ -20,6 +20,9 @@ internal static class NotificationEndpoints
         group.MapPost("/queue-forecast", async (PublishQueueAlertsRequest request, IOperationalNotifications notifications, CancellationToken token) =>
             Results.Ok(await notifications.PublishAsync(request, token)))
             .Document<NotificationReceipt>("Recalculate evidence and aggregate notification observations; idempotent by command ID").ProducesProblem(502);
+        group.MapPost("/run-queues", async (PublishRunAlertsRequest request, IOperationalNotifications notifications, CancellationToken token) =>
+            Results.Ok(await notifications.PublishRunsAsync(request, token)))
+            .Document<NotificationReceipt>("Alert on recorded queues over the whole period of one, a scenario's or every completed synthetic run; idempotent by command ID");
         group.MapPost("/{id:guid}/actions", async (Guid id, AlertActionRequest request, IOperationalNotifications notifications, CancellationToken token) =>
             Results.Ok(await notifications.ActAsync(id, request, token)))
             .Document<NotificationReceipt>("Acknowledge, comment or assign within the application only; audited and idempotent");

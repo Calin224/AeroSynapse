@@ -44,12 +44,12 @@ describe('batch spread chart', () => {
   it('draws one labelled dot per simulated day with a single tab stop', () => {
     const element: HTMLElement = chart().nativeElement;
     expect(dots(element)).toEqual([
-      'Scenariul de pornire, ziua 1: 10 min',
-      'Scenariul de pornire, ziua 2: 20 min',
-      'Scenariul de pornire, ziua 3: 30 min',
-      'Scenariul de pornire, ziua 4: 40 min, dincolo de prag',
-      'Varianta 1, ziua 1: 5 min',
-      'Varianta 1, ziua 2: 6 min',
+      'Scenariul de pornire, ziua 1: 10.00 min',
+      'Scenariul de pornire, ziua 2: 20.00 min',
+      'Scenariul de pornire, ziua 3: 30.00 min',
+      'Scenariul de pornire, ziua 4: 40.00 min, dincolo de prag',
+      'Varianta 1, ziua 1: 5.00 min',
+      'Varianta 1, ziua 2: 6.00 min',
     ]);
     expect(element.querySelectorAll('.dot[tabindex="0"]')).toHaveLength(1);
     expect(element.querySelector('.plot')!.getAttribute('aria-label')).toContain(
@@ -69,11 +69,11 @@ describe('batch spread chart', () => {
       fixture.detectChanges();
       return document.activeElement?.getAttribute('aria-label');
     };
-    expect(press('ArrowRight')).toBe('Scenariul de pornire, ziua 2: 20 min');
-    expect(press('End')).toBe('Scenariul de pornire, ziua 4: 40 min, dincolo de prag');
+    expect(press('ArrowRight')).toBe('Scenariul de pornire, ziua 2: 20.00 min');
+    expect(press('End')).toBe('Scenariul de pornire, ziua 4: 40.00 min, dincolo de prag');
     expect(element.querySelector('.caption')!.textContent).toContain('Cea mai grea zi din 4');
-    expect(press('ArrowDown')).toBe('Varianta 1, ziua 2: 6 min');
-    expect(press('ArrowUp')).toBe('Scenariul de pornire, ziua 1: 10 min');
+    expect(press('ArrowDown')).toBe('Varianta 1, ziua 2: 6.00 min');
+    expect(press('ArrowUp')).toBe('Scenariul de pornire, ziua 1: 10.00 min');
     expect(element.querySelector('.dot.on')!.getAttribute('tabindex')).toBe('0');
     expect(element.querySelector('.caption a')!.getAttribute('href')).toBe('/replay?runId=run-a-0');
   });
@@ -87,7 +87,7 @@ describe('batch spread chart', () => {
       [...row.children].map((cell) => cell.textContent?.trim()),
     );
     expect(rows).toEqual([
-      ['Scenariul de pornire · Pornire', '1', 'ziua 1: 12.3 min'],
+      ['Scenariul de pornire · Pornire', '1', 'ziua 1: 12.34 min'],
       ['Varianta 1 · Mai mult personal', '0', '—'],
     ]);
     expect(element.textContent).toContain('Nicio zi finalizată.');

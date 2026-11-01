@@ -25,7 +25,7 @@ import {
   ScenarioEvent,
 } from './events.models';
 import { AbsoluteTimeInput } from '../../shared/ui/absolute-time-input';
-import { absoluteTimeLabel, addMinutes } from '../../shared/absolute-time';
+import { absoluteTimeLabel, addMinutes, clockTime } from '../../shared/absolute-time';
 
 interface Draft {
   type: EventType;
@@ -44,11 +44,7 @@ interface Draft {
   selector: 'app-events-panel',
   imports: [WriteAccess, FormsModule, AbsoluteTimeInput],
   templateUrl: './events-panel.html',
-  styles: `
-    :host {
-      display: block;
-    }
-  `,
+  styleUrl: './setup-panels.css',
 })
 export class EventsPanel {
   private readonly api = inject(ApiClient);
@@ -71,7 +67,11 @@ export class EventsPanel {
   readonly timeline = computed(() =>
     this.scenario()
       .inputs.events.filter((item) => isOperational(item.type))
-      .map((item) => ({ item, time: this.clock(item.occurredAtUtc) }))
+      .map((item) => ({
+        item,
+        time: clockTime(item.occurredAtUtc, this.scenario().inputs.timeZone),
+        full: this.clock(item.occurredAtUtc),
+      }))
       .sort(
         (a, b) =>
           Date.parse(a.item.occurredAtUtc) - Date.parse(b.item.occurredAtUtc) ||
@@ -227,17 +227,23 @@ export class EventsPanel {
       event.type === 'passenger_surge' && event.flightId
         ? ` · zbor ${this.scenario().inputs.flights.find((item) => item.id === event.flightId)?.code ?? event.flightId}`
         : '';
+    const delay = Number(payload['delayMinutes']);
     switch (event.type) {
       case 'passenger_surge':
         return `${payload['passengerCount']} pasageri în ${payload['windowMinutes']} min${flight}`;
       case 'staff_reduction':
-        return `${payload['staffCount']} operatori în serviciu`;
+        return `rămân ${payload['staffCount']} operatori`;
       case 'flight_change':
-        return `${this.scenario().inputs.journey ? 'întârziere zbor și replanificare porți' : 'termen boarding'} ${Number(payload['delayMinutes']) > 0 ? '+' : ''}${payload['delayMinutes']} min`;
+        return this.scenario().inputs.journey
+          ? `zborul întârzie ${delay} min; porțile se replanifică`
+          : `boardingul se mută cu ${delay > 0 ? '+' : ''}${delay} min`;
       case 'resume':
         return typeof payload['zoneId'] === 'string'
-          ? 'redeschide coridorul'
-          : 'disponibilitate și personal nominal';
+          ? 'coridorul se redeschide'
+          : 'controlul revine la normal';
+      case 'checkpoint_unavailable':
+      case 'corridor_closure':
+        return 'închis până la reluare';
       default:
         return '—';
     }

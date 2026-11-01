@@ -75,6 +75,47 @@ public sealed class NotificationTests
         Assert.Equal(HttpStatusCode.Conflict, purge.StatusCode);
     }
 
+    [Fact]
+    public async Task Completed_runs_alert_on_recorded_queues_over_the_whole_period_for_one_run_a_scenario_or_every_scenario()
+    {
+        await using var host = await ManagementHost.CreateAsync(realEngine: true);
+        var source = await StaffingEvaluationTests.Create(host, scheduledSurge: true);
+        var first = await Read<SimulationRun>(await host.Client.PostAsync($"/scenarios/{source.Scenario.Id}/runs", null, Token));
+        Assert.True(await host.Dispatch(Token));
+        var second = await Read<SimulationRun>(await host.Client.PostAsync($"/scenarios/{source.Scenario.Id}/runs", null, Token));
+        Assert.True(await host.Dispatch(Token));
+        async Task<NotificationReceipt> Publish(PublishRunAlertsRequest body) =>
+            await Read<NotificationReceipt>(await host.Client.PostAsJsonAsync("/operational-notifications/run-queues", body, Json, Token));
+
+        var queued = (await host.Client.GetFromJsonAsync<KpiResult>($"/runs/{first.Id}/kpis?limit=50000", Json, Token))!
+            .Snapshots.Where(s => s.QueuedPassengers > 0).ToArray();
+        Assert.NotEmpty(queued);
+        var single = await Publish(new(Guid.NewGuid(), source.Scenario.Id, first.Id, 0, 100000));
+        Assert.Equal(queued.Select(s => s.ZoneId).Distinct().Count(), single.AlertIds.Count);
+        var alert = (await Detail(host, single.AlertIds[0])).Alert;
+        var zone = queued.Where(s => s.ZoneId == alert.ZoneId).ToArray();
+        Assert.Equal(("warning", "recorded_queue", 0, first.Id), (alert.Level, alert.Source, alert.HorizonMinutes, alert.RunId));
+        Assert.Equal((zone.Min(s => s.Minute), zone.Max(s => s.Minute), (double)zone.Max(s => s.QueuedPassengers)),
+            (alert.Evidence.FromMinute, alert.Evidence.ToMinute, alert.Evidence.PeakQueuePassengers));
+
+        var scenario = await Publish(new(Guid.NewGuid(), source.Scenario.Id, null, 0, 100000));
+        Assert.Equal(single.AlertIds.Count, scenario.Duplicates);
+        Assert.Contains(scenario.AlertIds, id => !single.AlertIds.Contains(id));
+        var everyCommand = new PublishRunAlertsRequest(Guid.NewGuid(), null, null, 0, 100000);
+        var every = await Publish(everyCommand); var replay = await Publish(everyCommand);
+        Assert.Superset(scenario.AlertIds.ToHashSet(), every.AlertIds.ToHashSet());
+        Assert.Equal(every.AlertIds, replay.AlertIds);
+        var listed = (await host.Client.GetFromJsonAsync<NotificationPage<OperationalAlert>>($"/operational-notifications?scenarioId={source.Scenario.Id}&limit=100", Json, Token))!;
+        Assert.Equal(new[] { first.Id, second.Id }.Order(), listed.Items.Select(a => a.RunId).Distinct().Order());
+
+        using var foreign = await host.Client.PostAsJsonAsync("/operational-notifications/run-queues",
+            new PublishRunAlertsRequest(Guid.NewGuid(), Guid.NewGuid(), first.Id, 0, 100000), Json, Token);
+        Assert.Equal(HttpStatusCode.Conflict, foreign.StatusCode);
+        using var invalid = await host.Client.PostAsJsonAsync("/operational-notifications/run-queues",
+            new PublishRunAlertsRequest(Guid.NewGuid(), null, first.Id, 0, 100000), Json, Token);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+    }
+
     private sealed class LiveInspector : IIntelligenceClient
     {
         public EngineExecution? Current { get; set; }

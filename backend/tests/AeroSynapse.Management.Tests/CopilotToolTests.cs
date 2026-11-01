@@ -67,7 +67,7 @@ public sealed class CopilotToolTests
             s.Scenario.Description, s.Scenario.SceneId, s.Scenario.LayoutVersionId, s.Inputs with { Events = [.. s.Inputs.Events, injected] }, s.Scenario.Revision), Json, Token);
         Assert.Equal(HttpStatusCode.OK, edit.StatusCode); s = (await edit.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
         var run = await Run(host, s); var before = await State(host);
-        var result = await Call(host, s, run, "inspect_zone", new { question = "Diagnostichează coada" });
+        var result = await Call(host, s, run, "inspect_zone", new { question = "Câți pasageri sunt în coadă?" });
         Assert.Equal("read_only", result.Effect); Assert.NotNull(result.Investigation);
         Assert.Equal(run.Id, result.Investigation.Observation.Scope.RunId);
         Assert.Contains(result.Investigation.Events, e => e.Type == "passenger_surge");

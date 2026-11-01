@@ -126,8 +126,8 @@ describe('batch insight', () => {
   });
 
   it('formats waits in minutes or seconds and counts as whole passengers', () => {
-    expect(formatValue('minutes', 16.748)).toBe('16.7 min');
-    expect(formatValue('minutes', 0.5)).toBe('30 s');
+    expect(formatValue('minutes', 16.748)).toBe('16.75 min');
+    expect(formatValue('minutes', 0.5)).toBe('30.00 s');
     expect(formatValue('passengers', 443.6)).toBe('444 pasageri');
     expect(formatValue('minutes', null)).toBe('—');
   });

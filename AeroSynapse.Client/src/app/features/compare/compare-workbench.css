@@ -138,3 +138,79 @@ select {
   color: var(--text-muted);
   font-size: 13px;
 }
+
+/* Result: verdict first, then side-by-side cards. Tone is always spelled out, never colour alone. */
+[data-tone] {
+  --tone: var(--text-muted);
+}
+[data-tone='better'] {
+  --tone: #1c6b58;
+}
+[data-tone='worse'] {
+  --tone: var(--danger);
+}
+.verdict {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--tone);
+  background: var(--surface-sunken);
+}
+.tone-word {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tone);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.verdict-text {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 12px;
+}
+.kpi {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--tone);
+}
+.kpi h3 {
+  font-size: 15px;
+}
+.kpi dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+.kpi dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.kpi dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .change {
+  color: var(--tone);
+}
+.notes {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+}
+.caveat {
+  font-size: 12px;
+}

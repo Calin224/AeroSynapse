@@ -4,14 +4,11 @@ import { finalize, Subscription } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { ScenarioDetails } from './operations.models';
 import { IntegratedResourceConfig, ResourceResult, ResourceSettings, ResourceWindow } from './resource.models';
+import { addMinutes, clockTime } from '../../shared/absolute-time';
 
 @Component({
   selector: 'app-resource-panel', imports: [FormsModule], templateUrl: './resource-panel.html',
-  styles: `:host { display: block; } fieldset { border: 1px solid var(--border-color, #64748b); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
-    label { display: inline-flex; flex-direction: column; gap: .3rem; margin: .4rem; }
-    input[type=number] { width: 6rem; } select[multiple] { min-height: 5rem; min-width: 12rem; }
-    .window { display: inline-flex; align-items: end; flex-wrap: wrap; } th, td { padding: .5rem; text-align: left; }
-    table { width: 100%; } .scroll { overflow-x: auto; }`,
+  styleUrl: './setup-panels.css',
 })
 export class ResourcePanel {
   readonly scenario = input.required<ScenarioDetails>();
@@ -64,6 +61,10 @@ export class ResourcePanel {
   }
   edit() { this.dirty.set(true); this.result.set(null); this.message.set(''); }
   blocked() { return this.disabled() || this.loading() || this.busy(); }
+  selectResource(values: string[], id: string, checked: boolean) {
+    this.edit();
+    return checked ? [...new Set([...values, id])] : values.filter(value => value !== id);
+  }
   skills(text: string) { return text.split(',').map(item => item.trim()).filter(Boolean); }
   addWindow(windows: ResourceWindow[]) { windows.push({ startMinute: 0, endMinute: this.settings()!.durationMinutes }); this.edit(); }
   removeWindow(windows: ResourceWindow[], index: number) { windows.splice(index, 1); this.edit(); }
@@ -106,11 +107,30 @@ export class ResourcePanel {
   interval(id: string) {
     const settings = this.settings()!; const flight = settings.flights.find(item => item.id === id)!;
     const minute = (at: string) => (Date.parse(at) - Date.parse(settings.startsAtUtc)) / 60000 + (flight.delayMinutes ?? 0);
-    return `${minute(flight.boardingOpensAtUtc!)}–${minute(flight.departureAtUtc)} min`;
+    const [start, end] = [minute(flight.boardingOpensAtUtc!), minute(flight.departureAtUtc)];
+    return `${this.clock(start)}–${this.clock(end)} · ${start}–${end} min`;
   }
   assignmentInterval(flightId: string) {
     const flight = this.result()?.constraints.flights.find(item => item.flightId === flightId);
-    return flight ? `${flight.startMinute}–${flight.endMinute} min` : '';
+    return flight ? `${this.clock(flight.startMinute)}–${this.clock(flight.endMinute)} · ${flight.startMinute}–${flight.endMinute} min` : '';
+  }
+  /** Scenario minute as local HH:mm, so minute offsets read as clock times. */
+  clock(minute: number) {
+    const settings = this.settings();
+    return settings ? clockTime(addMinutes(settings.startsAtUtc, minute), this.scenario().inputs.timeZone) : '—';
+  }
+  // Checklist hints only; the server validates the configuration on save and on calculation.
+  gatesReady() { return !!this.draft?.gates.length && this.draft.gates.every(gate => gate.availability.length); }
+  workersReady() { return !!this.draft?.workers.length && this.draft.workers.every(worker => worker.shifts.length); }
+  teamsReady() { return !!this.draft?.teams.length && this.draft.teams.every(team => team.memberIds.length && team.gateIds.length); }
+  flightsReady() { return !!this.draft && this.draft.requirements.every(item => item.compatibleGateIds.length); }
+  saveBlocker(settings: ResourceSettings) {
+    return !settings.compatible || this.busy() ? '' : !this.draft?.gates.length ? 'Pentru a salva, alege cel puțin o poartă la pasul 1.' : '';
+  }
+  proposeBlocker(settings: ResourceSettings) {
+    if (!settings.compatible || this.busy()) return '';
+    if (this.dirty()) return 'Ai modificări nesalvate. Salvează-le, apoi calculează propunerea.';
+    return settings.resources ? '' : 'Calculul pornește după ce salvezi resursele.';
   }
   memberNames(teamId: string) {
     return this.result()?.constraints.resources.teams.find(team => team.teamId === teamId)?.memberIds.map(id => this.name(id)).join(', ') ?? '';
@@ -140,8 +160,8 @@ export class ResourcePanel {
       }, error: error => this.report(error) });
   }
   status(value: ResourceResult) {
-    return { optimal: 'Optim · număr minim de schimbări de poartă', feasible: 'Soluție fezabilă · limita de timp a oprit căutarea',
-      infeasible: 'Infezabil · regulile nu pot fi respectate simultan', timeout: 'Timp expirat fără o soluție', invalid_model: 'Model invalid' }[value.status];
+    return { optimal: 'Propunere găsită · cele mai puține schimbări de poartă', feasible: 'Propunere bună · timpul de calcul s-a terminat înainte de a confirma că e cea mai bună',
+      infeasible: 'Nu se poate · regulile nu pot fi respectate simultan', timeout: 'Timp expirat fără o soluție', invalid_model: 'Configurația nu poate fi calculată' }[value.status];
   }
   private start() { this.message.set(''); this.busy.set(true); this.working.emit(true); }
   private finish() { this.busy.set(false); this.working.emit(false); }

@@ -133,7 +133,8 @@ public sealed class AnomalyOperations(IRunStorageService runs, IBatchService bat
         if (kpis.HasMore || !rows.Keys.ToHashSet().SetEquals(keys) || rows.Values.Any(items => !items.Select(row => row.Minute).SequenceEqual(grid)))
             return null;
         return keys.ToDictionary(key => key, key => new AnomalySeries(rows[key].Select(row => row.QueuedPassengers).ToArray(),
-            rows[key].Select(row => row.ArrivedPassengers).ToArray(), rows[key].Select(row => row.EffectiveCapacity ?? row.Capacity).ToArray()));
+            // Cumulative arrivals: people moved on to another control's queue still arrived here.
+            rows[key].Select(row => row.ArrivedPassengers + (row.TransferredOutPassengers ?? 0)).ToArray(), rows[key].Select(row => row.EffectiveCapacity ?? row.Capacity).ToArray()));
     }
 
     private static AnomalySettings Read(AnomalySettings settings, int interval)

@@ -1,77 +1,79 @@
-# Agent AI în simulare
+# AI în simulare
 
-Agentul ia decizii singur în timpul unei rulări de simulare. Scenariul nu se modifică: fiecare decizie devine un
-input al rulării respective și acționează abia după minutul în care a fost luată.
+AI-ul nu mai ia decizii în timpul unei rulări: simularea rulează exact inputurile scenariului. Agentul AI live (mutări
+de operatori, rezervă, ghișee și porți decise în timpul rulării) a fost scos din aplicație. Un scenariu salvat cu
+câmpul `inputs.agent` se încarcă, se validează și se salvează în continuare, dar câmpul este ignorat la rulare: nu se
+mai înregistrează decizii și personalul nu se schimbă în timpul simulării. Deciziile salvate de rulările vechi rămân în
+`twin.agent_decisions`, dar nu mai sunt afișate.
 
-## Ce poate face
+AI-ul apare doar după o rulare terminată, în optimizarea de mai jos.
 
-- **Mută operatori între controale.** Algoritmul propune mutări către controlul cel mai încărcat: coada plus
-  sosirile din următoarele 30 de minute, raportate la capacitatea de servire. Operatorii vin de la cele mai libere
-  controale, iar fiecare control păstrează cel puțin o persoană. Un operator mutat servește din nou după
-  `transferMinutes`.
-- **Cheamă operatori din rezervă** la controlul cel mai încărcat, când nu are pe cine să mute: 2, 5 sau tot ce a
-  rămas, din cel mult `reserveOperators` pe rulare. Un agent care mută operatori și nu are rezerva setată primește
-  implicit 10, inclusiv scenariile salvate înainte de această opțiune; `reserveOperators: 0` o dezactivează. Și ei
-  servesc după `transferMinutes`. Rezerva nu e disponibilă pe un plan de ture.
-- **Deschide ghișee de check-in**, câte cel mult două la un pas, până la numărul de ghișee din zonă.
-- **Aplică planul optim (`plan`).** La fiecare punct periodic motorul Python rezolvă un model CP-SAT al cozii (fluid, pe
-  blocuri de 5 minute, următoarea oră) din sosirile estimate ale rulării. Rezultă câte ghișee de check-in să fie
-  deschise pe minut (se pot și închide; un ghișeu închis își termină pasagerul servit) și câți operatori să aibă fiecare
-  control. Obiectivul minimizează coada maximă și coada rămasă, la cost minim de personal (ghișee/operatori deschiși și
-  schimbări). Operatorii se repartizează dintr-un total fix (cei de acum plus rezerva rămasă), fiecare control păstrează
-  cel puțin unul, iar cei adăugați servesc după `transferMinutes`. Planul se oferă întreg sau pe părți
-  (`plan`, `plan-staff`, `plan-desks`) și se recalculează la fiecare punct: primul punct acționează ca plan inițial.
-  Ghișeele se planifică doar cu `checkInDesks`, operatorii doar cu `staffMoves`.
-- **Alege porțile la o întârziere programată.** Variantele sunt replanificarea optimă sau păstrarea fiecărui zbor
-  la poarta lui, când un astfel de plan există.
-- **Deschide o poartă inactivă cu un membru al personalului.** Când coada de îmbarcare a unui zbor nu se golește
-  în timp util (minute necesare = coadă × `boardingServiceMinutes` ÷ benzi), algoritmul oferă poarta eligibilă la
-  care niciun zbor nu e planificat până la plecarea lui și un `StaffMember` liber din același terminal (nealocat la
-  securitate, ture sau echipe). Zborul își păstrează poarta: poarta deschisă adaugă o bandă de îmbarcare, iar
-  pasagerii merg acolo doar dacă așteptarea câștigată depășește mersul (`gateChangeWalkingMinutes`). Agentul nu
-  mută și nu schimbă niciodată porțile între zboruri. Se decide periodic și imediat după fiecare întârziere
-  programată, cu `gateChoices` activ; deschiderea acționează după minutul deciziei și se salvează în
-  `journey.gateOpenings`.
+## Optimizare propusă după simulare
 
-Controalele care au evenimente programate (închidere, reducere de personal) rămân în afara mutărilor și a rezervei.
-Testele repetate și evaluările de personal rulează fără agent, ca variantele să rămână comparabile.
+Sub rezumatul fiecărei rulări terminate, panoul „Optimizare propusă de AI” (`GET /runs/{id}/ai-optimization`)
+arată variante de personal în jurul controlului cu cea mai lungă coadă: mută un operator, adaugă unul,
+adaugă doi, retrage unul unde e cel mai puțin nevoie. Când scenariul are check-in cu coadă, apar și „încă un ghișeu” și
+„încă două ghișee”, primele când coada de la check-in e mai mare decât la securitate. Așteptarea medie include atunci
+și check-in-ul. Se propun doar variante pe care oamenii scenariului le pot acoperi (aceeași regulă ca what-if): un
+operator în plus vine doar dintre operatorii de securitate nealocați ai scenariului (fără echipă proprie, dintr-un post
+liber din layout), un ghișeu în plus doar de la un operator de check-in care nu e deja la ghișeu și în limita ghișeelor
+zonei. Dacă
+blocajul nu poate primi oameni, panoul spune de ce. Fiecare variantă este simulată din nou pe aceeași zi și cu
+același seed (id derivat, calculat o singură dată de motor). Controalele cu plan de ture sunt lăsate neschimbate.
 
-## Cum decide
+Tot ce se poate calcula se calculează în cod, nu de model (`RunOptimizationPlanner.Brief`):
 
-1. La fiecare `decisionIntervalMinutes` minute simulate (5 când agentul e pornit din Control Tower, unde se poate
-   schimba din panou; 15 în API dacă lipsește) și la fiecare întârziere programată,
-   .NET cere motorului Python să ruleze ziua până la acel minut (`POST /simulation/v1/observe`).
-2. Progresul se înregistrează, deci Control Tower avansează live.
-3. Algoritmul oferă câteva variante plus „nicio schimbare”, între ele planul optim când există.
-4. Gemini alege una după id, sub o schemă JSON cu enum. Motivul pe care îl scrie este afișat operatorului. Modelul
-   nu poate adăuga acțiuni sau cifre.
-5. Decizia se salvează în `twin.agent_decisions`, iar UI o citește din `GET /runs/{id}/agent-decisions`.
-6. La final, rularea completă se execută cu toate deciziile ca inputuri: programe de personal (mutări și rezervă), ghișee deschise,
-   alegeri de porți și porți deschise de personal (`journey.gateOpenings`). Validarea, corelarea, hash-urile și stocarea rămân cele existente.
-7. O rulare reconciliată sau reluată refolosește deciziile salvate, fără să întrebe din nou modelul.
+- **blocajul**: cea mai lungă coadă din orice minut, check-in inclus — același „moment de vârf” ca titlul rezumatului
+  rulării („Cea mai lungă coadă: 14 pasageri la CHECK-IN, în minutul 7.”);
+- pentru fiecare variantă: verdictul (`better` / `worse` / `same`, cu pragurile de 5% de mai jos), așteptarea
+  („9 s → 8 s (-10%)”), coada maximă, P95, personalul și o propoziție deterministă („Pasagerii așteaptă în medie cu
+  1 s mai puțin, cu un operator în plus.”);
+- **recomandarea** (`Recommend`) și de ce („scurtează cel mai mult așteptarea medie…” sau „economisește personal fără să
+  lungească vizibil așteptarea”). Modelul nu alege niciodată.
 
-Dacă nu există cheie, dacă modelul nu răspunde la timp, dacă răspunsul e invalid sau dacă s-a terminat creditul,
-decide o regulă de rezervă deterministă: aplică planul optim când există, altfel mută operatori sau deschide ghișee doar unde coada plus sosirile din următoarele
-30 de minute depășesc capacitatea, sau deschide o poartă doar dacă coada de îmbarcare nu s-ar goli până la închidere, altfel „nicio schimbare” (la întârzieri, replanificarea optimă). Motivul începe cu
-„Regulă de rezervă”, iar starea modelului rămâne înregistrată. Fiecare apel este
-înregistrat în `ai_agent_events` (`agent_model_call`), cu limită zilnică și limită per rulare.
+Modelul primește aceste fapte deja digerate (text, nu numere brute) și scrie doar cuvinte: o propoziție scurtă pe
+variantă și o frază de recomandare. Titlul cardului este acțiunea însăși. Fiecare propoziție a modelului e verificată
+(`OptimizationText.Agrees`): fără cifre, fără locuri pe care varianta nu le atinge, așteptarea descrisă în sensul
+verdictului (o variantă `worse` nu poate „scădea”/„scurta”/„reduce” așteptarea, una `better` nu o poate „crește”, una
+`same` trebuie să spună că rămâne la fel), personalul în sensul variantei și „recomandat” doar la cea recomandată. Fraza
+de recomandare trebuie să conțină acțiunea recomandată exact. Ce nu trece verificarea, sau lipsește, e înlocuit cu
+propoziția deterministă, deci panoul nu arată niciodată text care contrazice cifrele. Rezumatul este fraza despre blocaj
+(mereu din cod) plus fraza de recomandare.
 
-## Rezultatul agentului
+O variantă merită recomandată doar dacă scurtează așteptarea medie cu cel puțin 5% sau economisește un operator cu cel
+mult 5% așteptare în plus. Pasagerii au prioritate: dintre variantele care scurtează așteptarea se alege cea cu cel mai
+puțin personal în plus care e la cel mult 5% de cea mai bună așteptare (o mutare gratuită bate o angajare aproape la fel
+de bună); o economie de personal e recomandată doar când nicio variantă nu scurtează așteptarea. Pragurile nu se
+suprapun, deci o economie aplicată nu este propusă înapoi la rularea următoare.
+Când nicio variantă nu merită, panoul spune „Scenariul este deja optim”, nu recomandă nimic și păstrează variantele
+testate într-o secțiune pliată.
 
-După o rulare în care agentul a schimbat ceva, panoul compară rularea cu aceeași zi și același seed simulate fără
-deciziile lui (`GET /runs/{id}/agent-impact`): ce a schimbat („4 operatori din rezervă la CP-1”), așteptarea medie și
-P95 maxim (calculate ca în cardurile Control Tower), coada maximă și ora la care se golește coada. Simularea fără agent
-are un id derivat din cel al rulării, deci motorul o calculează o singură dată și o servește apoi din execuțiile
-salvate. Pașii fără schimbare sunt strânși într-un singur rând.
+„Aplică în scenariu” (`POST /runs/{id}/ai-optimization/apply`, doar cu drept de scriere) salvează varianta ca revizie
+nouă a scenariului: retragerea scoate ultima persoană alocată la acel control, mutarea o realocă la controlul țintă,
+adăugarea ia un operator liber după regula de mai sus, iar un ghișeu în plus crește ghișeele deschise la check-in.
+Dacă scenariul s-a modificat după rulare, serverul răspunde 409 și nu scrie nimic.
 
 ## Configurare
 
 În `.env`, local, niciodată în Git:
 
 ```dotenv
+AGENT_PROVIDER=gemini
 GEMINI_API_KEY=
-AGENT_MODEL=gemini-2.5-flash
+AGENT_MODEL=gemini-3.8-flash
 ```
 
-`GET /agent/status` spune dacă modelul e configurat, fără să expună cheia. În Control Tower, comutatorul
-„Agent AI” salvează agentul pe scenariu, cu toate acțiunile pe care scenariul le permite.
+Alternativă gratuită, locală, fără cheie și fără credite: [Ollama](https://ollama.com). Instalează-l, descarcă un model
+(`ollama pull qwen2.5:7b`, ~4,7 GB) și setează:
+
+```dotenv
+AGENT_PROVIDER=ollama
+AGENT_MODEL=qwen2.5:7b
+AGENT_ENDPOINT=http://host.docker.internal:11434
+```
+
+API-ul din Docker ajunge la Ollama de pe calculator prin `host.docker.internal`. Același contract JSON (schema cu
+variantele permise) se trimite în câmpul `format` al Ollama, deci modelul local nu poate inventa variante sau cifre.
+Primul apel după pornire încarcă modelul în memorie și durează mai mult.
+Pe rulări reale, `qwen2.5:7b` a scris ~2–6 s per panou, fără contradicții rămase după verificare; `qwen2.5:14b` a fost de
+~2,5 ori mai lent și a avut mai multe propoziții respinse, deci 7b rămâne recomandat.

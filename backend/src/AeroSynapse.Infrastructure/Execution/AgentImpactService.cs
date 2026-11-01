@@ -43,7 +43,11 @@ public sealed class AgentImpactService(TwinDbContext db, IIntelligenceClient eng
     private static Guid ComparisonId(Guid runId) =>
         new(SHA256.HashData(Encoding.UTF8.GetBytes($"agent-impact/{runId:N}")).AsSpan(0, 16));
 
-    private async Task<IReadOnlyList<KpiSnapshot>> ExecuteAsync(SimulationRequest request, CancellationToken token)
+    public async Task<IReadOnlyList<KpiSnapshot>> ExecuteAsync(SimulationRequest request, CancellationToken token) =>
+        (await SimulateAsync(request, token)).KpiResult!.Snapshots;
+
+    /// <summary>Simulates a captured request to completion; a request id the engine already ran is served from its result.</summary>
+    public async Task<SimulationResponse> SimulateAsync(SimulationRequest request, CancellationToken token)
     {
         var correlationId = request.RunId.ToString("N");
         var deadline = DateTime.UtcNow.AddSeconds(settings.Value.ReconciliationSeconds);
@@ -57,8 +61,8 @@ public sealed class AgentImpactService(TwinDbContext db, IIntelligenceClient eng
             try { execution = await engine.GetAsync(request.RunId, correlationId, token); }
             catch (IntelligenceException error) when (error.Transient) { }
         }
-        if (execution.Result.Status != "completed" || execution.Result.KpiResult is not { } result)
+        if (execution.Result.Status != "completed" || execution.Result.KpiResult is null)
             throw new SimulationEngineException("engine_failed", "The comparison without the agent could not be simulated.");
-        return result.Snapshots;
+        return execution.Result;
     }
 }

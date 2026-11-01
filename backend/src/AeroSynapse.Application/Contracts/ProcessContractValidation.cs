@@ -42,10 +42,18 @@ public static class ProcessContractValidation
             }
             else if (person.Stage == "walking" && clear!.Value + hold + person.WalkingMinutes <= report.HorizonMinutes) Invalid(prefix);
             if (person.RouteHoldMinutes.HasValue && clear is null) Invalid(prefix);
-            if (person.AssignedCheckpointId == person.CheckpointId) Invalid(prefix);
-            if (person.RedistributedAtMinute.HasValue != person.TransferMinutes.HasValue) Invalid(prefix);
+            // Only a chain of moves can bring a passenger back to the control they were assigned.
+            var hops = person.Transfers;
+            if (person.AssignedCheckpointId == person.CheckpointId && hops is null) Invalid(prefix);
+            if (person.RedistributedAtMinute.HasValue != person.TransferMinutes.HasValue || person.RedistributedAtMinute.HasValue != (hops is not null)) Invalid(prefix);
             if (person.RedistributedAtMinute is { } moved && (person.AssignedCheckpointId is null
-                || moved < person.ArrivalMinute || moved > report.HorizonMinutes || start < moved + person.TransferMinutes)) Invalid(prefix);
+                || moved < person.ArrivalMinute || moved > report.HorizonMinutes || start < moved + person.TransferMinutes
+                // Moves chain from control to control; each starts once the previous walk has ended.
+                || hops is null || hops[0].Minute < person.ArrivalMinute || hops[^1].ToCheckpointId != person.CheckpointId
+                || hops[^1].Minute != moved || hops[^1].WalkingMinutes != person.TransferMinutes
+                || hops.Any(hop => hop.FromCheckpointId == hop.ToCheckpointId)
+                || hops.Zip(hops.Skip(1)).Any(pair => pair.Second.FromCheckpointId != pair.First.ToCheckpointId
+                    || pair.Second.Minute < pair.First.Minute + pair.First.WalkingMinutes))) Invalid(prefix);
             var missed = person.BoardingCloseMinute is { } close && (gate.HasValue ? gate.Value > close : report.HorizonMinutes >= close);
             var risk = person.Stage == "unreachable" ? "unreachable" : person.BoardingCloseMinute is null ? "not_applicable"
                 : gate.HasValue ? missed ? "late" : "safe" : missed ? "missed" : "pending";

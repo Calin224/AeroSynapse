@@ -30,6 +30,32 @@ public sealed class EventTests
         Assert.Contains(people, person => person.Id.StartsWith("demo-surge-", StringComparison.Ordinal));
     }
 
+    [Theory][InlineData("closure")][InlineData("closure-staggered")]
+    public void Closing_controls_send_their_whole_queue_on_to_the_open_controls(string name)
+    {
+        // Three controls: A closes at 5 with 37 waiting, B at 20; "closure" also reopens A at 10 (test_queue_redistribution.py).
+        var request = ContractJson.Read<SimulationRequest>(Example(name + "-request"), "SimulationRequest");
+        var response = ContractJson.Read<SimulationResponse>(Example(name + "-response"), "SimulationResponse");
+        Assert.Empty(VersionedContract.Validate("KpiSimulationResponse", Example(name + "-response")));
+        Assert.Empty(ContractCorrelation.Validate(request, response));
+        var people = response.ProcessResult!.Passengers;
+        Assert.Equal(37, people.Count(person => person.Transfers is [{ Minute: 5 } first, ..] && first.FromCheckpointId == ControlA));
+        Assert.Contains(people, person => person.Transfers is { Count: 2 });
+    }
+
+    [Fact]
+    public void Queue_moves_leave_an_unavailable_control_and_chain_from_where_the_passenger_arrived()
+    {
+        var request = ContractJson.Read<SimulationRequest>(Example("closure-request"), "SimulationRequest");
+        var response = ContractJson.Read<SimulationResponse>(Example("closure-response"), "SimulationResponse");
+        SimulationResponse Forge(Func<ProcessPassenger, ProcessPassenger> change) => response with { ProcessResult = response.ProcessResult! with {
+            Passengers = response.ProcessResult.Passengers.Select(person => person.Transfers is { Count: 2 } ? change(person) : person).ToArray() } };
+        // A reopened at 10: leaving its queue at 12 would need a queue_redistribution decision.
+        Assert.False(ProcessCorrelation.Valid(request, Forge(person => person with { Transfers = [person.Transfers![0] with { Minute = 12 }, person.Transfers[1]] })));
+        // Dropping the first move would mean a redirect to B on arrival, but A was open then.
+        Assert.False(ProcessCorrelation.Valid(request, Forge(person => person with { Transfers = [person.Transfers![1]] })));
+    }
+
     [Fact]
     public void Applied_events_must_follow_the_deterministic_order()
     {

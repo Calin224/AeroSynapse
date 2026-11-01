@@ -13,6 +13,12 @@ public sealed record ScenarioSummary(Guid Id, string Code, string Name, string D
     Guid SceneId, Guid LayoutVersionId, int Revision, DateTime CreatedAtUtc, DateTime UpdatedAtUtc, bool IsSynthetic, DateTime? DeletedAtUtc = null,
     DataSourceProvenance? DataSource = null);
 public sealed record ScenarioDetails(ScenarioSummary Scenario, ScenarioInputs Inputs);
+// Kind: created, flight, event, staffing, passengers, routes, resources, settings, details, layout or other.
+// Action: added, changed or removed. Ids name the flights or events; the audit keeps no codes or texts.
+public sealed record ScenarioRevisionChange(string Kind, string Action, IReadOnlyList<Guid> Ids);
+public sealed record ScenarioRevisionRun(Guid Id, string Status);
+public sealed record ScenarioRevision(int Revision, DateTime RecordedAtUtc, string Actor,
+    IReadOnlyList<ScenarioRevisionChange> Changes, IReadOnlyList<ScenarioRevisionRun> Runs);
 public sealed record RunInputSnapshot(int SchemaVersion, DateTime CapturedAtUtc,
     ScenarioDetails Scenario, PublishedLayout Layout,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Engine = null,
@@ -32,6 +38,7 @@ public interface IScenarioService
     Task<SimulationRun> CreateRunAsync(Guid id, CancellationToken cancellationToken = default, bool executionRequested = false);
     Task<SimulationRun?> GetRunAsync(Guid scenarioId, Guid runId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SimulationRun>> RunsAsync(Guid scenarioId, int limit, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ScenarioRevision>> RevisionsAsync(Guid scenarioId, int limit, CancellationToken cancellationToken = default);
 }
 
 public sealed class ScenarioValidationException(IReadOnlyDictionary<string, string[]> errors)

@@ -13,6 +13,7 @@ import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, map, Observable, switchMap } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
+import { SimulationContext } from '../../core/simulation-context';
 import { ApiError } from '../../core/http/api-error.interceptor';
 import { createDataResource } from '../../shared/data-resource';
 import { DataState } from '../../shared/ui/data-state';
@@ -54,6 +55,7 @@ export class ScenarioStudio {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly api = inject(ApiClient);
   private readonly destroy = inject(DestroyRef);
+  private readonly simulation = inject(SimulationContext);
   readonly scenes = createDataResource(
     () => this.api.get<(SceneSummary & { isSynthetic?: boolean })[]>('scenes'),
     (rows) => !rows.length,
@@ -309,6 +311,8 @@ export class ScenarioStudio {
       .subscribe({
         next: (value) => {
           this.accept(value);
+          // "Scenariile mele" opens the scenario just saved instead of an older (maybe deleted) one.
+          this.simulation.remember(value.scenario.id);
           this.errors.set({});
           this.message.set(message);
           this.step.set(4);

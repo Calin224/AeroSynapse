@@ -316,6 +316,29 @@
 .tabs button > i {
   font-size: 14px;
 }
+.tab-step {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tabs button[aria-selected='true'] .tab-step {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--on-accent);
+}
+.detail > [role='tabpanel'] {
+  scroll-margin-top: 72px;
+}
+.next-step {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
 .detail {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

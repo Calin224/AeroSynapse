@@ -16,6 +16,7 @@ import { RunSettingsPanel } from '../operations/run-settings-panel';
 import { StaffingPanel } from '../operations/staffing-panel';
 import { Scenario } from './scenario';
 import { SimulationExecution, SimulationPanel } from './simulation-panel';
+import { AiOptimization } from './ai-optimization';
 
 const editorImports = [
   FlightSchedulePanel,
@@ -41,6 +42,7 @@ class PreparationPanelStub {
   readonly disabled = input(false);
   readonly changed = output<ScenarioDetails>();
   readonly working = output<boolean>();
+  readonly goTo = output<'schedule' | 'passengers'>();
 }
 
 @Component({
@@ -65,6 +67,14 @@ export class SimulationPanelStub {
   readonly resume = vi.fn();
 }
 
+/** The AI panel fetches and simulates on its own; page tests cover what surrounds it. */
+@Component({ selector: 'app-ai-optimization', template: '' })
+class AiOptimizationStub {
+  readonly runId = input('');
+  readonly stale = input(false);
+  readonly applied = output<void>();
+}
+
 /** A renderer factory that fails, so the twin falls back to the 2D map. */
 export const noWebGl = {
   provide: TWIN_RENDERER_FACTORY,
@@ -76,8 +86,8 @@ export const noWebGl = {
 /** Stubs the Scenario workspace's editor panels, launcher and live stream. Call after configureTestingModule. */
 export function stubScenarioPanels(status = 'idle') {
   TestBed.overrideComponent(Scenario, {
-    remove: { imports: [SimulationPanel, ...editorImports] },
-    add: { imports: [SimulationPanelStub, PreparationPanelStub] },
+    remove: { imports: [SimulationPanel, AiOptimization, ...editorImports] },
+    add: { imports: [SimulationPanelStub, PreparationPanelStub, AiOptimizationStub] },
   });
   TestBed.overrideComponent(Scenario, {
     set: {

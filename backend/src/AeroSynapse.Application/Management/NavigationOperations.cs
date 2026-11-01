@@ -25,7 +25,7 @@ public sealed class NavigationOperations(IScenarioService scenarios,IRunStorageS
     public async Task<NavigationSettings> Handle(GetNavigationSettingsQuery query,CancellationToken token)
     {
         var scenario = await Require(query.ScenarioId,token); var layout = await Layout(scenario,token);
-        return new(query.ScenarioId,scenario.Scenario.Revision,scenario.Inputs.PassengerGeneration is not null,scenario.Inputs.Navigation,
+        return new(query.ScenarioId,scenario.Scenario.Revision,IncidentScenarios.ProfilesActive(scenario.Inputs),scenario.Inputs.Navigation,
             NavigationScenarios.Defaults(layout.Layout),layout.Layout.Checkpoints.Select(item => new NavigationResource(item.Id,item.Name)).ToArray(),
             layout.Layout.Gates.Select(item => new NavigationResource(item.Id,item.Name)).ToArray());
     }

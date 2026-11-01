@@ -3,108 +3,117 @@
   gap: 1rem;
   min-width: 0;
 }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.8rem;
-}
-label {
+.compare {
   display: grid;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-}
-.pickers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-.picker-column {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  min-width: 0;
-}
-.picker-column + .picker-column {
-  padding-left: 24px;
-  border-left: 1px solid var(--border);
-}
-.picker-column h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.picker-column h2 small {
-  color: var(--text-muted);
-  font-weight: 400;
-}
-.step {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
+  gap: 6px;
+  max-width: 420px;
   font-size: 12px;
-}
-.clear {
-  margin-left: auto;
-}
-@media (max-width: 900px) {
-  .pickers {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .picker-column + .picker-column {
-    padding: 20px 0 0;
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
-}
-.table-wrap {
-  max-height: min(440px, 60dvh);
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-.table-wrap thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--surface-sunken);
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-th,
-td {
-  padding: 0.7rem;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border);
-}
-small {
-  display: block;
+  font-weight: 500;
   color: var(--text-muted);
 }
 .hint {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 13px;
 }
-h2 {
-  margin: 0.5rem 0;
+code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
 }
-p {
-  margin: 0.7rem 0;
+
+/* Same tones as the comparison result: the headline always says it in words, never colour alone. */
+[data-tone] {
+  --tone: var(--text-muted);
 }
+[data-tone='good'] {
+  --tone: #1c6b58;
+}
+[data-tone='warning'] {
+  --tone: #9a5b00;
+}
+[data-tone='critical'] {
+  --tone: var(--danger);
+}
+.verdict {
+  display: grid;
+  gap: 10px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--tone);
+  background: var(--surface-sunken);
+}
+.eyebrow {
+  color: var(--tone);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.verdict h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
+}
+.summary {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 12px;
+}
+.card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--tone);
+  background: var(--surface-raised);
+}
+.card:not([data-tone]) {
+  --tone: var(--border-strong);
+}
+.card h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.value {
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.card[data-tone] .value {
+  color: var(--tone);
+}
+.versus {
+  color: var(--text);
+  font-size: 13px;
+}
+.meaning {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 svg {
+  display: block;
   width: 100%;
   height: auto;
   max-height: 26rem;
 }
-line {
-  stroke: var(--border-strong);
+.grid {
+  stroke: var(--border);
+  stroke-dasharray: 2 4;
 }
 text {
   fill: var(--text-muted);
@@ -112,35 +121,94 @@ text {
 }
 path {
   fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
 }
-.before {
-  color: var(--accent);
+.area {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  stroke: none;
 }
-.after {
-  color: var(--warning);
+.mine {
+  stroke: var(--accent);
 }
-.after path {
+.other {
+  stroke: var(--text-muted);
   stroke-dasharray: 6 4;
 }
-.observations {
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-dasharray: none !important;
+.peak {
+  fill: var(--danger);
+  stroke: var(--surface-raised);
+  stroke-width: 2;
 }
 .legend {
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
-  font-size: 0.8rem;
-}
-[data-baseline-run-id] {
-  min-width: 0;
-  display: grid;
   gap: 1rem;
+  font-size: 13px;
+}
+.swatch {
+  display: inline-block;
+  width: 24px;
+  vertical-align: middle;
+  border-top: 3px solid var(--accent);
+}
+.swatch.dashed {
+  border-top: 3px dashed var(--text-muted);
 }
 
+.table-wrap {
+  max-height: min(440px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
 table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-sunken);
+}
+thead th {
+  white-space: normal;
+}
+/* Row headers are checkpoint names, not column labels: undo the global uppercase table header style. */
+tbody th {
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  background: none;
+}
+td {
+  white-space: nowrap;
+}
+.bar {
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: var(--border);
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
 }

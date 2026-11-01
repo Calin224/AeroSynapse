@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -15,11 +14,11 @@ import { finalize, Observable } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { FlightSchedule, ScenarioDetails, ScenarioFlight } from './operations.models';
 import { AbsoluteTimeInput } from '../../shared/ui/absolute-time-input';
-import { addMinutes } from '../../shared/absolute-time';
+import { absoluteTimeLabel, addMinutes, clockTime } from '../../shared/absolute-time';
 
 @Component({
   selector: 'app-flight-schedule-panel',
-  imports: [FormsModule, DatePipe, AbsoluteTimeInput],
+  imports: [FormsModule, AbsoluteTimeInput],
   templateUrl: './flight-schedule-panel.html',
   styleUrl: './flight-schedule-panel.css',
 })
@@ -35,6 +34,7 @@ export class FlightSchedulePanel {
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly message = signal('');
+  readonly confirmDelete = signal(false);
   readonly statuses = [
     { value: 'scheduled', label: 'Programat' },
     { value: 'delayed', label: 'Întârziat' },
@@ -81,6 +81,7 @@ export class FlightSchedulePanel {
     if (!this.busy()) {
       this.message.set('');
       this.draft = null;
+      this.confirmDelete.set(false);
       this.refresh.update((value) => value + 1);
     }
   }
@@ -102,7 +103,7 @@ export class FlightSchedulePanel {
       );
     this.draft = {
       id: flight?.id ?? '',
-      code: flight?.code ?? `DEMO-${schedule.flights.length + 1}`,
+      code: flight?.code ?? `ZBOR-${schedule.flights.length + 1}`,
       gateId: flight?.gateId ?? schedule.gates[0]?.id ?? '',
       departure,
       open: flight?.boardingOpensAtUtc ?? addMinutes(departure, -30),
@@ -111,13 +112,15 @@ export class FlightSchedulePanel {
       delay: flight?.delayMinutes ?? 0,
       status: flight?.status ?? 'scheduled',
     };
+    this.confirmDelete.set(false);
     this.message.set('');
   }
   save() {
     const schedule = this.schedule();
     const draft = this.draft;
     if (!schedule || !draft || this.blocked()) return;
-    if (
+    const end = addMinutes(schedule.startsAtUtc, schedule.durationMinutes);
+    const error =
       !draft.code.trim() ||
       !draft.gateId ||
       !Number.isInteger(draft.capacity) ||
@@ -125,19 +128,20 @@ export class FlightSchedulePanel {
       draft.capacity > 2147483647 ||
       !Number.isInteger(draft.delay) ||
       draft.delay < 0 ||
-      draft.delay > 10080 ||
-      ![draft.open, draft.close, draft.departure].every((value) =>
-        Number.isFinite(Date.parse(value)),
-      ) ||
-      Date.parse(draft.open) >= Date.parse(draft.close) ||
-      Date.parse(draft.close) >= Date.parse(draft.departure) ||
-      Date.parse(draft.departure) < Date.parse(schedule.startsAtUtc) ||
-      Date.parse(addMinutes(draft.departure, draft.delay)) >
-        Date.parse(addMinutes(schedule.startsAtUtc, schedule.durationMinutes))
-    ) {
-      this.message.set(
-        'Verifică numărul, poarta și capacitatea. Deschidere < închidere < plecare; plecarea cu întârziere trebuie să fie în intervalul scenariului.',
-      );
+      draft.delay > 10080
+        ? 'Completează codul, poarta, locurile (cel puțin 1) și întârzierea (0–10080 minute).'
+        : ![draft.open, draft.close, draft.departure].every((value) =>
+              Number.isFinite(Date.parse(value)),
+            ) ||
+            Date.parse(draft.open) >= Date.parse(draft.close) ||
+            Date.parse(draft.close) >= Date.parse(draft.departure)
+          ? 'Îmbarcarea trebuie să înceapă înainte să se închidă, iar ambele înainte de plecare.'
+          : Date.parse(draft.departure) < Date.parse(schedule.startsAtUtc) ||
+              Date.parse(addMinutes(draft.departure, draft.delay)) > Date.parse(end)
+            ? `Plecarea, cu tot cu întârzierea, trebuie să fie în intervalul simulării (${this.time(schedule.startsAtUtc)}–${this.time(end)}).`
+            : '';
+    if (error) {
+      this.message.set(error);
       return;
     }
     const flight: ScenarioFlight = {
@@ -162,7 +166,7 @@ export class FlightSchedulePanel {
         : this.api.post<ScenarioDetails>(path, { revision: schedule.revision, flight }),
     );
   }
-  remove(flight: ScenarioFlight) {
+  remove(flight: { id: string }) {
     const schedule = this.schedule();
     if (!schedule || this.blocked()) return;
     this.mutate(
@@ -179,6 +183,14 @@ export class FlightSchedulePanel {
   }
   effective(time: string | null | undefined, delay = 0) {
     return time ? new Date(Date.parse(time) + delay * 60000).toISOString() : null;
+  }
+  /** Local HH:mm in the scenario's zone, delay included. */
+  time(utc: string | null | undefined, delay = 0) {
+    return clockTime(this.effective(utc, delay), this.scenario().inputs.timeZone);
+  }
+  /** Full local date for hover, since HH:mm alone hides a day change. */
+  fullTime(utc: string | null | undefined, delay = 0) {
+    return absoluteTimeLabel(this.effective(utc, delay), this.scenario().inputs.timeZone);
   }
   blocked() {
     return this.disabled() || this.loading() || this.busy();
@@ -199,9 +211,8 @@ export class FlightSchedulePanel {
         next: (value) => {
           this.draft = null;
           this.changed.emit(value);
-          this.message.set(
-            'Orarul demo a fost salvat. Următoarea rulare va captura această revizie.',
-          );
+          this.confirmDelete.set(false);
+          this.message.set('Orarul a fost salvat. Următoarea simulare îl va folosi.');
         },
         error: (error) => this.report(error),
       });

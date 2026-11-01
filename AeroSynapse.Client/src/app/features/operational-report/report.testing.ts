@@ -1,7 +1,6 @@
 import { ids, replayData, replayEnvelope } from '../replay/replay.testing';
-import { prepareReplay, ReplayData } from '../replay/replay.models';
+import { prepareReplay, PreparedReplay, ReplayData } from '../replay/replay.models';
 import type { RunComparison } from '../operations/comparison.models';
-import type { ReportPair, ReportRun } from './report.models';
 import type { StudioLayout } from '../scenario-studio/studio.models';
 export function comparisonFixture(): RunComparison {
   const provenance = replayData().run.provenance;
@@ -46,24 +45,8 @@ export function candidateData() {
   }
   return data;
 }
-export async function pairFixture(
-  left: ReplayData = replayData(),
-  right: ReplayData = candidateData(),
-): Promise<ReportPair> {
-  const run = async (data: ReplayData): Promise<ReportRun> => ({
-    id: data.run.id,
-    status: 'completed',
-    resultsValid: true,
-    failureReason: null,
-    message: '',
-    replay: await prepareReplay(await replayEnvelope(data)),
-  });
-  return {
-    baseline: await run(left),
-    candidate: await run(right),
-    comparison: comparisonFixture(),
-    comparisonError: '',
-  };
+export async function prepared(data: ReplayData = replayData()): Promise<PreparedReplay> {
+  return prepareReplay(await replayEnvelope(data));
 }
 export function bottleneckLayout(): StudioLayout {
   const layout = structuredClone(replayData().captured.layout);

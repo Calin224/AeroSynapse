@@ -53,7 +53,7 @@ const schedule: FlightSchedule = {
   })),
 };
 
-describe('Synthetic flight schedule controls', () => {
+describe('Flight schedule panel', () => {
   let http: HttpTestingController;
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -70,13 +70,32 @@ describe('Synthetic flight schedule controls', () => {
     fixture.detectChanges();
     return fixture;
   }
-  it('shows five flights with gates, effective delayed times and a clear demo notice', () => {
+  it('shows five flights with gates, local HH:mm times with the delay and a status pill', () => {
     const fixture = component();
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelectorAll('tbody tr')).toHaveLength(5);
-
-    expect(root.textContent).toContain('11:05:00');
+    const first = root.querySelector('tbody tr')!.textContent!.replace(/\s+/g, ' ');
+    expect(first).toContain('11:05 +5 min');
+    expect(first).toContain('10:35–11:00');
+    expect(first).not.toContain(':00:00');
+    expect(root.querySelector('tbody .meta-chip')!.textContent).toContain('Întârziat');
     expect(root.textContent).toContain('G-5');
+    expect(root.textContent).not.toContain('DEMO ·');
+  });
+  it('deletes only after confirming inside the edit form', () => {
+    const fixture = component();
+    const root: HTMLElement = fixture.nativeElement;
+    (root.querySelector('button[aria-label="Editează DEMO-1"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const button = (text: string) =>
+      [...root.querySelectorAll('form button')].find((item) => item.textContent!.trim() === text) as HTMLButtonElement;
+    button('Șterge zborul').click();
+    fixture.detectChanges();
+    http.expectNone(() => true);
+    button('Da, șterge').click();
+    const request = http.expectOne('/api/scenarios/scenario-1/flights/flight-1?revision=7');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(scenario);
   });
   it('saves an edited flight with the schedule revision, boarding cutoff and synthetic marker', () => {
     const fixture = component();
@@ -107,15 +126,15 @@ describe('Synthetic flight schedule controls', () => {
     view.edit(schedule.flights[0]);
     view.draft!.close = view.draft!.departure;
     view.save();
-    expect(view.message()).toContain('Deschidere < închidere < plecare');
+    expect(view.message()).toContain('înainte de plecare');
     view.draft!.close = '2026-10-13T10:55:00.000Z';
     view.draft!.delay = 31;
     view.save();
-    expect(view.message()).toContain('intervalul scenariului');
+    expect(view.message()).toContain('intervalul simulării (10:00–11:30)');
     view.draft!.delay = 0;
     view.draft!.open = 'invalid';
     view.save();
-    expect(view.message()).toContain('Deschidere < închidere < plecare');
+    expect(view.message()).toContain('înainte de plecare');
     http.expectNone('/api/scenarios/scenario-1/flights/flight-1');
   });
   it('preserves the editor after a rejected update', () => {

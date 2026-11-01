@@ -48,6 +48,17 @@ function notificationError(error: unknown): string {
   return operationError(error).replace(/^Timeout:/, 'Timp de așteptare depășit:');
 }
 
+function runsMessage({ alertIds, duplicates, skippedRuns }: NotificationReceipt): string {
+  const created = alertIds.length - duplicates;
+  return (
+    (alertIds.length
+      ? `Gata: ${created} ${created === 1 ? 'alertă nouă' : 'alerte noi'}` +
+        (duplicates ? `, ${duplicates} existau deja.` : '.')
+      : 'Nicio coadă nu a depășit pragul de avertizare.') +
+    (skippedRuns ? ` ${skippedRuns} rulări nu au date despre cozi și au fost sărite.` : '')
+  );
+}
+
 @Injectable()
 export class NotificationStore {
   private readonly api = inject(ApiClient);
@@ -281,6 +292,8 @@ export class NotificationStore {
         ((saved.kind === 'publish' &&
           validRunId(saved.body.scenarioId) &&
           validRunId(saved.body.runId)) ||
+          (saved.kind === 'runs' &&
+            [saved.body.scenarioId, saved.body.runId].every((id) => id === null || validRunId(id))) ||
           (saved.kind === 'action' &&
             validRunId(saved.alertId) &&
             Number.isSafeInteger(saved.body.revision) &&
@@ -387,6 +400,16 @@ export class NotificationStore {
     });
     this.retry();
   }
+  /** Alerts on the recorded queues of every completed run in the selected scope, over the whole simulation. */
+  publishRuns(warningThreshold: number, criticalThreshold: number) {
+    if (this.pending() || this.working() || this.contextLoading()) return;
+    const { scenarioId, runId } = this.selection();
+    this.save({
+      kind: 'runs',
+      body: { commandId: crypto.randomUUID(), scenarioId, runId, warningThreshold, criticalThreshold },
+    });
+    this.retry();
+  }
   act(action: AlertAction['action'], actor: string, text = '') {
     const alert = this.detail()?.alert;
     if (
@@ -420,7 +443,9 @@ export class NotificationStore {
     const path =
       command.kind === 'publish'
         ? 'operational-notifications/queue-forecast'
-        : `operational-notifications/${command.alertId}/actions`;
+        : command.kind === 'runs'
+          ? 'operational-notifications/run-queues'
+          : `operational-notifications/${command.alertId}/actions`;
     this.commandRequest = this.api
       .post<NotificationReceipt>(path, command.body)
       .pipe(
@@ -444,7 +469,9 @@ export class NotificationStore {
           this.save(null);
           this.completed.next(command);
           this.message.set(
-            `Salvat și auditat. Duplicate ignorate: ${receipt.duplicates}; observații vechi ignorate: ${receipt.staleObservations}.`,
+            command.kind === 'runs'
+              ? runsMessage(receipt)
+              : `Salvat și auditat. Duplicate ignorate: ${receipt.duplicates}; observații vechi ignorate: ${receipt.staleObservations}.`,
           );
           if (
             command.kind === 'publish' &&

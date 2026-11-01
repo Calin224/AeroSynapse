@@ -38,6 +38,21 @@ public sealed class PassengerTests
         Flights = [new(Guid.NewGuid(), "DEMO-1", GateId, Start.AddMinutes(60), 120, Start.AddMinutes(20), Start.AddMinutes(55))] };
 
     [Fact]
+    public void Default_arrivals_follow_the_flight_flow_window_instead_of_the_whole_scenario()
+    {
+        var inputs = Inputs;
+        var flight = Assert.Single(inputs.Flights);
+        // Without a flow: from the scenario start to boarding close, as before.
+        Assert.Equal(new PassengerDistribution("uniform", 0, 55, 27.5, 55 / 6.0, 27.5),
+            Assert.Single(PassengerScenarios.Defaults(inputs, Layout).Batches).Arrival);
+        var windowed = inputs with { Flows = [new(Guid.NewGuid(), Guid.NewGuid(), flight.Id, RouteId, 120, Start.AddMinutes(10), Start.AddMinutes(40))] };
+        var arrival = Assert.Single(PassengerScenarios.Defaults(windowed, Layout).Batches).Arrival;
+        Assert.Equal(("triangular", 10.0, 40.0, 25.0), (arrival.Kind, arrival.Minimum, arrival.Maximum, arrival.Mode));
+        var request = PassengerScenarios.Request(windowed with { PassengerGeneration = PassengerScenarios.Defaults(windowed, Layout) }, Layout);
+        Assert.Empty(VersionedContract.Validate("PassengerGenerationRequest", JsonSerializer.SerializeToElement(request, ContractJson.Options)));
+    }
+
+    [Fact]
     public void Defaults_and_subsets_synchronize_exact_populations_and_flows_and_snapshot_captures_profiles()
     {
         var inputs = Inputs;
@@ -80,6 +95,14 @@ public sealed class PassengerTests
         var inputs = Inputs;
         Assert.Null(Assert.Single(PassengerScenarios.Defaults(inputs, layout).Batches).CheckpointMode);
         Assert.Null(Assert.Single(PassengerScenarios.Request(inputs with { PassengerGeneration = PassengerScenarios.Defaults(inputs, layout) }, layout).Flights).CheckpointRoutes);
+        // A fixed flight whose own control is closed on the routes map spreads over the other controls; closing another one changes nothing.
+        var map = NavigationScenarios.Defaults(layout);
+        var fixedInputs = inputs with { PassengerGeneration = PassengerScenarios.Defaults(inputs, layout) };
+        var rerouted = PassengerScenarios.Request(fixedInputs with { Navigation = map with { ClosedZoneIds = [CheckpointId] } }, layout);
+        Assert.Equal(PassengerBatchConfig.Spread, Assert.Single(rerouted.Batches).CheckpointMode);
+        Assert.Contains(Assert.Single(rerouted.Flights).CheckpointRoutes!, route => route.CheckpointId == other);
+        Assert.Empty(VersionedContract.Validate("PassengerGenerationRequest", JsonSerializer.SerializeToElement(rerouted, ContractJson.Options)));
+        Assert.Null(Assert.Single(PassengerScenarios.Request(fixedInputs with { Navigation = map with { ClosedZoneIds = [other] } }, layout).Flights).CheckpointRoutes);
 
         inputs = PassengerScenarios.Synchronize(inputs with { PassengerGeneration = PassengerScenarios.SpreadDefaults(inputs, layout) }, layout);
         PassengerScenarios.Validate(inputs, layout);

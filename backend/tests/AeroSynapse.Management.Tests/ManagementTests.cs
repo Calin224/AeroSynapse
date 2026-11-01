@@ -129,6 +129,7 @@ public sealed class ManagementTests
     [InlineData("/scenarios/{id}/flights")]
     [InlineData("/scenarios/{id}/events")]
     [InlineData("/scenarios/{id}/runs")]
+    [InlineData("/scenarios/{id}/revisions")]
     [InlineData("/scenes/{id}/events")]
     [InlineData("/scenes/{id}/layout-versions")]
     public async Task Absent_parent_resources_return_404(string path)

@@ -4,10 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
+import { clockTime } from '../../shared/absolute-time';
 import { DigitalTwin } from '../digital-twin/digital-twin';
 import { TwinScene } from '../digital-twin/twin-model';
-import { NavigationConfig, NavigationResult, NavigationSettings } from './navigation.models';
+import { NavigationConfig, NavigationNode, NavigationResult, NavigationSettings } from './navigation.models';
 import { RunDetails, ScenarioDetails } from './operations.models';
+
+const ZONE_GROUPS = [{ kind: 'Walkway', label: 'Coridoare' }, { kind: 'Security', label: 'Controale de securitate' }, { kind: 'Gate', label: 'Porți' }];
 
 @Component({ selector: 'app-navigation-panel', imports: [FormsModule, DecimalPipe, DigitalTwin],
   templateUrl: './navigation-panel.html', styleUrl: './navigation-panel.css' })
@@ -17,12 +20,19 @@ export class NavigationPanel {
   readonly scenario = input.required<ScenarioDetails>();
   readonly run = input<RunDetails | null>(null);
   readonly disabled = input(false);
+  /** False while the tab is hidden, so the automatic impact preview waits until someone looks at it. */
+  readonly active = input(true);
   readonly changed = output<ScenarioDetails>();
   readonly working = output<boolean>();
+  /** Asks the page to open the step that unblocks this one. */
+  readonly goTo = output<'schedule' | 'passengers'>();
   readonly settings = signal<NavigationSettings | null>(null);
   readonly result = signal<NavigationResult | null>(null);
   readonly loading = signal(false);
   readonly busy = signal(false);
+  /** Previews are read-only, so they never lock the page; a newer one cancels the older. */
+  readonly previewing = signal(false);
+  readonly previewError = signal('');
   readonly dirty = signal(false);
   readonly message = signal('');
   readonly showingRun = signal<string | null>(null);
@@ -46,9 +56,14 @@ export class NavigationPanel {
         onCleanup(() => subscription.unsubscribe());
       });
     });
+    // Show the impact as soon as the step is open, instead of waiting for a button press.
+    effect(() => {
+      const ready = this.active() && !this.disabled() && this.settings()?.passengerProfilesActive;
+      untracked(() => { if (ready && !this.result() && !this.previewing() && !this.dirty()) this.preview(); });
+    });
   }
   private syncJson() { this.graphJson = JSON.stringify(this.config, null, 2); }
-  modified() { this.dirty.set(true); this.result.set(null); this.showingRun.set(null); this.showRoutes.set(false); }
+  modified() { this.previewSubscription?.unsubscribe(); this.dirty.set(true); this.result.set(null); this.showingRun.set(null); this.showRoutes.set(false); }
   private parse(): boolean {
     try {
       const config: unknown = JSON.parse(this.graphJson);
@@ -68,8 +83,10 @@ export class NavigationPanel {
     this.config.closedZoneIds = closed ? [...new Set([...this.config.closedZoneIds, id])] : this.config.closedZoneIds.filter(item => item !== id);
     this.syncJson(); this.modified(); this.preview();
   }
-  nodeType(kind: string) {
-    return ({ Walkway: 'Coridor', Security: 'Punct de control', Gate: 'Poartă' } as Record<string, string>)[kind] ?? 'Zonă';
+  zoneGroups(nodes: NavigationNode[]) {
+    const known = ZONE_GROUPS.map(group => group.kind);
+    return [...ZONE_GROUPS.map(group => ({ label: group.label, nodes: nodes.filter(node => node.kind === group.kind) })),
+      { label: 'Alte zone', nodes: nodes.filter(node => !known.includes(node.kind)) }].filter(group => group.nodes.length);
   }
   connections(id: string) {
     const graph = this.config?.graph;
@@ -110,12 +127,14 @@ export class NavigationPanel {
   preview(offset = 0) {
     const settings = this.settings();
     if (!settings || !settings.passengerProfilesActive || this.blocked() || !this.parse()) return;
-    this.start(); this.showingRun.set(null);
     this.previewSubscription?.unsubscribe();
+    this.showingRun.set(null); this.previewing.set(true); this.previewError.set('');
     this.previewSubscription = this.api.post<NavigationResult>(`scenarios/${settings.scenarioId}/navigation/preview${offset ? `?offset=${offset}&limit=100` : ''}`,
       { revision: settings.revision, config: this.config })
-      .pipe(finalize(() => this.stop()), takeUntilDestroyed(this.destroy))
-      .subscribe({ next: result => this.result.set(result), error: error => { this.result.set(null); this.report(error); } });
+      .pipe(finalize(() => this.previewing.set(false)), takeUntilDestroyed(this.destroy))
+      .subscribe({ next: result => this.result.set(result), error: error => {
+        this.result.set(null); this.previewError.set(error instanceof Error ? error.message : 'Traseele nu au putut fi calculate.');
+      } });
   }
   inspectRun(offset = 0) {
     const run = this.run();
@@ -124,6 +143,7 @@ export class NavigationPanel {
   }
   private loadRun(id: string, offset: number) {
     if (this.blocked()) return;
+    this.previewSubscription?.unsubscribe();
     this.start(); this.showingRun.set(id);
     this.api.get<NavigationResult>(`runs/${id}/navigation?offset=${offset}&limit=100`)
       .pipe(finalize(() => this.stop()), takeUntilDestroyed(this.destroy))
@@ -136,6 +156,11 @@ export class NavigationPanel {
     return count ? routes.reduce((sum, route) => sum + route.passengerCount * route.baseWalkingMinutes, 0) / count : null;
   }
   toggleRoutes() { this.showRoutes.update(value => !value); }
+  /** Simulation minutes count from the scenario start; show them as the local wall clock. */
+  clock(minute: number | null) {
+    const inputs = this.scenario().inputs;
+    return minute === null ? '—' : clockTime(new Date(Date.parse(inputs.startsAtUtc) + minute * 60000).toISOString(), inputs.timeZone);
+  }
   flightName(id: string) { return this.scenario().inputs.flights.find(item => item.id === id)?.code ?? id; }
   gateName(id: string) { return this.settings()?.gates.find(item => item.id === id)?.name ?? id; }
   risk(kind: string) { return ({ pending: 'Necesită simularea cozii', safe: 'Ajunge la timp', late: 'Risc: ajunge după închidere', unserved: 'Etape neterminate în interval', unreachable: 'Risc: traseu indisponibil' } as Record<string, string>)[kind] ?? kind; }

@@ -310,7 +310,7 @@ export function evaluationSummary(evaluation: StaffingEvaluationDetails): Evalua
     const before = base.metrics ? read(base.metrics) : null,
       after = best?.metrics ? read(best.metrics) : null,
       scale = (value: number | null) =>
-        value === null ? null : seconds ? Math.round(value * 60) : Number(value.toFixed(1));
+        value === null ? null : seconds ? value * 60 : value;
     return {
       key,
       label,

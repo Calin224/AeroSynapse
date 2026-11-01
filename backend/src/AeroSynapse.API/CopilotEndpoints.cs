@@ -29,7 +29,7 @@ internal static class CopilotEndpoints
             }
         }).Document<CopilotToolResult>("Execute one validated, intent-restricted simulation tool; no approval/apply tool").ProducesProblem(422).ProducesProblem(502);
         group.MapGet("/context", async (Guid scenarioId, Guid runId, ICopilotService copilot, CancellationToken token) =>
-            Results.Ok(await copilot.ContextAsync(scenarioId, runId, token)))
+            Results.Ok(await copilot.ContextAsync(scenarioId, runId, token, busiest: true)))
             .Document<CopilotContext>("Get immutable scenario/run context for the read-only Copilot");
         group.MapPost("", async (Guid scenarioId, Guid runId, CopilotQuestion request, ICopilotService copilot, CopilotReceipts receipts, CancellationToken token) =>
             Results.Ok(receipts.Attach(await copilot.AskAsync(scenarioId, runId, request, token), request.Question)))

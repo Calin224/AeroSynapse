@@ -39,7 +39,7 @@ const report: PassengerFlowReport = {
     maxJourneyMinutes: 30, meanQueueMinutes: 7, meanClosureDelayMinutes: 4.25 }],
 };
 
-describe('Deterministic passenger profiles', () => {
+describe('Passenger panel', () => {
   let http: HttpTestingController;
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
@@ -55,6 +55,27 @@ describe('Deterministic passenger profiles', () => {
     return fixture;
   }
 
+  it('shows each flight with its passenger count and checkpoint, with technical settings collapsed', () => {
+    const fixture = component();
+    const root: HTMLElement = fixture.nativeElement;
+    const row = root.querySelector('.flight-row')!;
+    expect(row.textContent).toContain('DEMO-1');
+    expect(row.textContent).toContain('din 120');
+    expect(row.querySelector('select')).not.toBeNull();
+    const seed = root.querySelector('input[name=passengerSeed]')!;
+    expect(seed.closest('details')!.open).toBe(false);
+    expect(seed.closest('details')!.querySelector('summary')!.textContent).toBe('Setări avansate');
+    expect(fixture.componentInstance.config).toEqual(config);
+    expect(fixture.componentInstance.dirty()).toBe(false);
+  });
+  it('keeps the full aircraft as full and anything less as an explicit subset', () => {
+    const view = component().componentInstance, batch = view.config!.batches[0];
+    view.countChanged(batch, 23);
+    expect(batch).toMatchObject({ countMode: 'subset', modeledCount: 23 });
+    expect(view.dirty()).toBe(true);
+    view.countChanged(batch, 120);
+    expect(batch).toMatchObject({ countMode: 'full', modeledCount: 120 });
+  });
   it('saves profiles and seed against the current revision and leaves edits available after a rejection', () => {
     const view = component().componentInstance;
     const changed = vi.fn(); view.changed.subscribe(changed);
@@ -71,9 +92,9 @@ describe('Deterministic passenger profiles', () => {
 
   it('offers all open checkpoints first and saves either a spread or a pinned control', () => {
     const fixture = component(), view = fixture.componentInstance;
-    const select = [...fixture.nativeElement.querySelectorAll('label') as NodeListOf<HTMLLabelElement>]
-      .find(label => label.textContent!.startsWith('Control de securitate'))!.querySelector('select')!;
-    expect([...select.options].map(option => option.textContent!.trim())).toEqual(['Toate controalele deschise spre poartă', 'Doar Control DEMO']);
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('.flight-row select');
+    expect(select.closest('label')!.textContent).toContain('Control de securitate');
+    expect([...select.options].map(option => option.textContent!.trim())).toEqual(['Toate controalele spre poartă', 'Doar Control DEMO']);
     view.laneChanged(view.config!.batches[0], 'spread'); view.save();
     const spread = http.expectOne('/api/scenarios/scenario-1/passengers/settings');
     expect(spread.request.body.config.batches[0]).toMatchObject({ checkpointMode: 'spread', checkpointId: 'checkpoint-1' });
@@ -88,8 +109,8 @@ describe('Deterministic passenger profiles', () => {
     const fixture = component(); const view = fixture.componentInstance;
     view.generate(); http.expectOne('/api/scenarios/scenario-1/passengers?revision=7&offset=0&limit=100').flush(preview);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Pasageri nemodelați: 97');
-    expect(fixture.nativeElement.textContent).toContain('Supraîncărcare estimată');
+    expect(fixture.nativeElement.textContent).toContain('Pasageri nesimulați: 97');
+    expect(fixture.nativeElement.textContent).toContain('Supraaglomerat');
     expect(fixture.nativeElement.textContent).toContain(preview.fingerprint);
     view.generate(100); http.expectOne('/api/scenarios/scenario-1/passengers?revision=7&offset=100&limit=100').flush({ ...preview, offset: 100, hasMore: false });
     view.modified(); view.generate();
@@ -105,7 +126,7 @@ describe('Deterministic passenger profiles', () => {
     fixture.componentRef.setInput('scenario', source); fixture.detectChanges();
     http.expectOne('/api/scenarios/scenario-1/passengers/settings').flush({ ...settings, config: null });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('active prin incidente');
+    expect(fixture.nativeElement.textContent).toContain('din incidentele scenariului');
     const view = fixture.componentInstance; view.generate();
     http.expectOne('/api/scenarios/scenario-1/passengers?revision=7&offset=0&limit=100').flush(preview);
     expect(view.preview()?.batches[0].surgePassengerCount).toBe(15);
@@ -114,7 +135,7 @@ describe('Deterministic passenger profiles', () => {
 
   it('prevents invalid seeds and disables operations while another scenario operation is running', () => {
     const fixture = component(); const view = fixture.componentInstance;
-    view.seed = 4.5; view.save(); expect(view.message()).toContain('Seed-ul trebuie să fie un întreg');
+    view.seed = 4.5; view.save(); expect(view.message()).toContain('seed) trebuie să fie un întreg');
     fixture.componentRef.setInput('disabled', true); fixture.detectChanges();
     view.seed = 42; view.save(); view.generate();
     http.expectNone(request => request.url.includes('/passengers') && !request.url.endsWith('/settings'));

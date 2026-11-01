@@ -197,6 +197,28 @@ describe('Persistent operational notification coordination', () => {
       recordedAtUtc: '2026-10-20T10:00:01Z',
     });
   });
+  it('restores an unconfirmed whole-run generation for all scenarios and retries the same command', async () => {
+    store.publishRuns(5, 10);
+    const first = http.expectOne('/api/operational-notifications/run-queues'),
+      body = first.request.body;
+    expect(body).toMatchObject({ scenarioId: null, runId: null, warningThreshold: 5, criticalThreshold: 10 });
+    first.error(new ProgressEvent('error'));
+    TestBed.resetTestingModule();
+    configure();
+    expect(store.pending()?.body).toEqual(body);
+    store.retry();
+    const retry = http.expectOne('/api/operational-notifications/run-queues');
+    expect(retry.request.body).toEqual(body);
+    retry.flush({
+      commandId: body.commandId,
+      alertIds: [notificationIds.alert],
+      duplicates: 1,
+      staleObservations: 0,
+      recordedAtUtc: '2026-10-20T10:00:01Z',
+    });
+    expect(store.message()).toBe('Gata: 0 alerte noi, 1 existau deja.');
+    expect(store.pending()).toBeNull();
+  });
   it('retains a command after a foreign receipt and preserves a revision conflict message after refreshing the feed', async () => {
     await open();
     store.act('acknowledge', 'Supervisor');
