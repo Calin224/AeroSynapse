@@ -196,6 +196,28 @@ def test_a_closed_control_sends_its_whole_queue_to_the_open_ones(closed):
     assert validate('KpiSimulationResponse', response) == []
 
 
+def spread_run(with_events):
+    value = three_controls()
+    flight = value['passengerGeneration']['flights'][0]
+    flight['checkpointRoutes'] = [{'checkpointId': key, 'routeId': flight['routeId'], 'routeTravelMinutes': flight['routeTravelMinutes']}
+                                  for key in sorted([A, B, C])]
+    value['passengerGeneration']['batches'][0]['checkpointMode'] = 'spread'
+    if not with_events: del value['events']
+    return value
+
+
+@pytest.mark.parametrize('with_events', [True, False])
+def test_arrivals_are_rerouted_to_the_least_loaded_controls_during_the_run(with_events):
+    value = spread_run(with_events)
+    response = run(value)
+    result = people(response)
+    assert validate('KpiSimulationResponse', response) == []
+    assert len({person['checkpointId'] for person in result.values()}) > 1
+    assert all(person['checkpointId'] != person.get('assignedCheckpointId') for person in result.values())
+    assert response['processResult']['atGateCount'] == 40
+    assert run(spread_run(with_events)) == response
+
+
 def test_a_control_closed_on_the_map_gets_no_passengers_of_spread_flights():
     value = three_controls()
     flight = value['passengerGeneration']['flights'][0]

@@ -13,12 +13,13 @@ public sealed record ProcessPassenger(string Id, Guid CheckpointId, Guid? Flight
     // Every queue move in order; RedistributedAtMinute and TransferMinutes repeat the last one.
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<ProcessTransfer>? Transfers = null)
 {
-    // The control a passenger belongs to at a time: the assigned one until arrival, then the one queued at
-    // (a redirect on arrival when it differs), then each move's target from its minute.
-    public Guid CheckpointAt(double time)
+    // The control a passenger belongs to at a time: the assigned one until arrival, or until the engine rerouted them to
+    // another lane before arriving, then the one queued at (a redirect on arrival when it differs), then each move's target.
+    public Guid CheckpointAt(double time, double? reroutedAt = null)
     {
-        if (time < ArrivalMinute) return AssignedCheckpointId ?? CheckpointId;
-        var at = Transfers is [var first, ..] ? first.FromCheckpointId : CheckpointId;
+        var seat = Transfers is [var first, ..] ? first.FromCheckpointId : CheckpointId;
+        if (time < ArrivalMinute) return reroutedAt <= time ? seat : AssignedCheckpointId ?? CheckpointId;
+        var at = seat;
         foreach (var hop in Transfers ?? []) if (hop.Minute <= time) at = hop.ToCheckpointId;
         return at;
     }

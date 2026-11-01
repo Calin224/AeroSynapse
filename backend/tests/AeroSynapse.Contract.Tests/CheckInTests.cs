@@ -40,6 +40,23 @@ public sealed class CheckInTests
     }
 
     [Fact]
+    public void A_spread_flight_may_check_in_for_one_lane_and_be_screened_at_another()
+    {
+        var request = Request(); var response = Response();
+        var joined = response.CheckInResult!.Passengers.First(person => person.SecurityArrivalMinute is not null);
+        var other = Guid.NewGuid();
+        var moved = With(response, result => Passengers(result, people =>
+            people.Select(person => person.Id == joined.Id ? person with { CheckpointId = other } : person)));
+        var withLane = request with { Checkpoints = [.. request.Checkpoints, request.Checkpoints[0] with { CheckpointId = other }] };
+        // A fixed flight has one control, so check-in and screening must agree.
+        Assert.False(CheckInCorrelation.Valid(withLane, moved));
+        var flight = request.PassengerGeneration!.Flights[0];
+        var spread = withLane with { PassengerGeneration = withLane.PassengerGeneration! with { Flights = [flight with { CheckpointRoutes =
+            [new(flight.CheckpointId, flight.RouteId, flight.RouteTravelMinutes), new(other, flight.RouteId, flight.RouteTravelMinutes)] }] } };
+        Assert.True(CheckInCorrelation.Valid(spread, moved));
+    }
+
+    [Fact]
     public void A_passenger_still_at_check_in_cannot_reach_a_control()
     {
         var response = Response();

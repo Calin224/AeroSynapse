@@ -325,90 +325,110 @@ const X0 = 50,
   WIDTH = 640,
   Y0 = 200,
   HEIGHT = 170;
+/** Column lengths in minutes: a day gets about 30 columns, none shorter than one snapshot interval. */
+const SLOTS = [1, 2, 5, 10, 15, 30, 60, 120, 240];
+const TICKS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 360, 720];
 
-/** SVG path with a gap wherever a value is missing, so nothing is drawn that was not recorded. */
-function linePath(points: QueuePoint[], horizon: number, maximum: number) {
-  let path = '',
-    open = false;
-  for (const point of points) {
-    if (point.value === null) {
-      open = false;
-      continue;
-    }
-    const x = (X0 + (point.minute / horizon) * WIDTH).toFixed(1),
-      y = (Y0 - (point.value / maximum) * HEIGHT).toFixed(1);
-    path += `${open ? 'L' : 'M'}${x},${y} `;
-    open = true;
-  }
-  return path.trim();
+/** A round gridline step (1, 2, 5 × 10ⁿ whole passengers). */
+function niceStep(value: number) {
+  const power = 10 ** Math.max(0, Math.floor(Math.log10(value)));
+  return ([1, 2, 5, 10].find((factor) => factor * power >= value) ?? 10) * power;
 }
 
-/** The line's segments closed down to the baseline, for a filled area under it. */
-function areaPath(line: string) {
-  return line
-    .split(/ (?=M)/)
-    .filter(Boolean)
-    .map((segment) => {
-      const xs = [...segment.matchAll(/[ML]([\d.]+),/g)].map((match) => match[1]);
-      return `${segment} L${xs.at(-1)},${Y0} L${xs[0]},${Y0} Z`;
-    })
-    .join(' ');
-}
-
-/** A round axis top (1, 2, 5 × 10ⁿ) so gridlines land on readable numbers. */
-function niceTop(value: number) {
-  const step = 10 ** Math.floor(Math.log10(value));
-  return ([1, 2, 5, 10].find((factor) => factor * step >= value) ?? 10) * step;
-}
-
+/** The queue as columns: the longest queue in each clock-aligned slot, beside the comparison run's. */
 export function queueChart(run: PreparedReplay, other: PreparedReplay | null) {
   const horizon = Math.max(1, run.data.captured.scenario.inputs.durationMinutes);
-  const mine = queueSeries(run),
-    theirs = other ? queueSeries(other) : [];
-  const values = [...mine, ...theirs].flatMap((point) =>
-    point.value === null ? [] : [point.value],
+  const time = clock(run);
+  // Local minute of the day the run starts at, so slots and ticks land on round clock times.
+  const [, hour, minute] = time(0).match(/(\d\d):(\d\d)/) ?? [];
+  const offset = hour ? Number(hour) * 60 + Number(minute) : 0;
+  const slot =
+    SLOTS.find((step) => step >= horizon / 30 && step >= (run.data.intervalMinutes ?? 0)) ??
+    SLOTS.at(-1)!;
+  const last = Math.ceil((horizon + offset) / slot) - 1;
+  /** Longest queue per slot; null when a snapshot in it is missing, so a gap never reads as calm. */
+  const longest = (points: QueuePoint[]) => {
+    const slots = new Map<number, number | null>();
+    for (const point of points) {
+      // The closing snapshot joins the last slot instead of opening an empty one.
+      const key = Math.min(Math.floor((point.minute + offset) / slot), last);
+      const known = slots.has(key) ? slots.get(key)! : 0;
+      slots.set(key, point.value === null || known === null ? null : Math.max(known, point.value));
+    }
+    return slots;
+  };
+  const series = queueSeries(run);
+  const mine = longest(series),
+    theirs = other ? longest(queueSeries(other)) : null;
+  const tallest = Math.max(
+    1,
+    ...[...mine.values(), ...(theirs?.values() ?? [])].flatMap((value) =>
+      value === null ? [] : [value],
+    ),
   );
-  const maximum = niceTop(Math.max(1, ...values));
-  const peak = mine.reduce<QueuePoint | null>(
+  const step = niceStep(tallest / 3),
+    top = Math.ceil(tallest / step) * step;
+  const x = (at: number) => X0 + (Math.min(Math.max(at, 0), horizon) / horizon) * WIDTH,
+    y = (value: number) => Y0 - (value / top) * HEIGHT;
+  const columns = [...mine].map(([key, value]) => {
+    const from = Math.max(0, key * slot - offset),
+      to = Math.min(horizon, (key + 1) * slot - offset);
+    const left = x(from),
+      band = x(to) - left,
+      centre = left + band / 2;
+    const width = Math.max(1, theirs ? Math.min(12, (band - 6) / 2) : Math.min(24, band - 4));
+    const compared = theirs?.get(key) ?? null;
+    const bar = (at: number, of: number) => ({ x: at, y: y(of), width, height: Y0 - y(of) });
+    const say = (count: number | null) =>
+      count === null ? 'fără date' : count ? `cel mult ${people(count)}` : 'fără coadă';
+    const label = `${time(from)}–${time(to)}`;
+    return {
+      from,
+      label,
+      /** Hover text for the slot, with the comparison run's figure when there is one. */
+      tip: `${label} · ${say(value)}${theirs ? ` · rularea de comparat: ${say(compared)}` : ''}`,
+      value,
+      other: compared,
+      band: { x: left, width: band },
+      mine: value ? bar(theirs ? centre - width - 1 : centre - width / 2, value) : null,
+      theirs: compared ? bar(centre + 1, compared) : null,
+    };
+  });
+  const highest = columns.reduce<(typeof columns)[number] | null>(
+    (best, column) => ((column.value ?? 0) > (best?.value ?? 0) ? column : best),
+    null,
+  );
+  const peak = series.reduce<QueuePoint | null>(
     (best, point) => (point.value !== null && point.value > (best?.value ?? -1) ? point : best),
     null,
   );
-  const compared = new Map(theirs.map((point) => [point.minute, point.value]));
-  const time = clock(run);
-  const path = linePath(mine, horizon, maximum);
+  const every = TICKS.find((tick) => tick >= horizon / 6) ?? TICKS.at(-1)!;
+  const ticks: { x: number; label: string }[] = [];
+  for (let at = Math.ceil(offset / every) * every - offset; at <= horizon; at += every)
+    ticks.push({ x: x(at), label: time(at) });
+  const known = series.filter((point) => point.value !== null);
   return {
-    maximum,
-    path,
-    area: path && areaPath(path),
-    otherPath: other ? linePath(theirs, horizon, maximum) : '',
-    ticks: [0, 0.25, 0.5, 0.75, 1].map((share) => ({
-      x: X0 + share * WIDTH,
-      label: time(Math.round(share * horizon)),
+    slot,
+    from: time(0),
+    to: time(horizon),
+    ticks,
+    grid: Array.from({ length: top / step + 1 }, (_, i) => ({
+      y: y(i * step),
+      label: num(i * step),
     })),
-    // Passengers are whole people, so a half-way gridline appears only on a whole number.
-    grid: [0, 0.5, 1]
-      .filter((share) => Number.isInteger(share * maximum))
-      .map((share) => ({ y: Y0 - share * HEIGHT, label: num(share * maximum) })),
-    /** Share of recorded moments with nobody queuing, in whole percent; null without data. */
-    idle: (() => {
-      const known = mine.filter((point) => point.value !== null);
-      return known.length
-        ? // Rounded down: one short queue must never read as "empty 100% of the time".
-          Math.floor((known.filter((point) => point.value === 0).length / known.length) * 100)
-        : null;
-    })(),
-    peak: peak && {
-      value: peak.value!,
-      time: time(peak.minute),
-      x: X0 + (peak.minute / horizon) * WIDTH,
-      y: Y0 - (peak.value! / maximum) * HEIGHT,
+    columns,
+    /** Value written above the tallest column of the chosen run, clear of its comparison column. */
+    mark: highest?.mine && {
+      value: highest.value!,
+      x: highest.mine.x + highest.mine.width / 2,
+      y: Math.min(highest.mine.y, highest.theirs?.y ?? Y0) - 6,
     },
-    missing: mine.filter((point) => point.value === null).length,
-    rows: mine.map((point) => ({
-      minute: point.minute,
-      time: time(point.minute),
-      value: point.value,
-      other: other ? (compared.get(point.minute) ?? null) : null,
-    })),
+    /** Share of recorded moments with nobody queuing, in whole percent; null without data. */
+    idle: known.length
+      ? // Rounded down: one short queue must never read as "empty 100% of the time".
+        Math.floor((known.filter((point) => point.value === 0).length / known.length) * 100)
+      : null,
+    peak: peak && { value: peak.value!, time: time(peak.minute) },
+    missing: series.length - known.length,
   };
 }

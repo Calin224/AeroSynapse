@@ -24,6 +24,9 @@ public sealed record GetFlightsQuery(Guid ScenarioId) : IRequest<ScenarioItems<S
 public sealed record GetInputEventsQuery(Guid ScenarioId) : IRequest<ScenarioItems<ScenarioInputEvent>>;
 public sealed record WriteFlightCommand(Guid ScenarioId, Guid? FlightId, FlightWriteRequest Value) : IRequest<ScenarioDetails>;
 public sealed record DeleteFlightCommand(Guid ScenarioId, Guid FlightId, int Revision) : IRequest<ScenarioDetails>;
+public sealed record FlightGateChange(Guid FlightId, Guid GateId);
+public sealed record FlightGateMoveRequest(int Revision, IReadOnlyList<FlightGateChange> Flights);
+public sealed record MoveFlightGatesCommand(Guid ScenarioId, FlightGateMoveRequest Value) : IRequest<ScenarioDetails>;
 public sealed record WriteInputEventCommand(Guid ScenarioId, Guid? EventId, EventWriteRequest Value) : IRequest<ScenarioDetails>;
 public sealed record DeleteInputEventCommand(Guid ScenarioId, Guid EventId, int Revision) : IRequest<ScenarioDetails>;
 
@@ -37,7 +40,7 @@ public sealed class ScenarioOperations(IScenarioService scenarios, ISceneQuerySe
     IRequestHandler<WriteFlightCommand, ScenarioDetails>, IRequestHandler<DeleteFlightCommand, ScenarioDetails>,
     IRequestHandler<WriteInputEventCommand, ScenarioDetails>, IRequestHandler<DeleteInputEventCommand, ScenarioDetails>,
     IRequestHandler<GetFlightScheduleQuery, FlightSchedule>, IRequestHandler<ExportFlightScheduleQuery, string>,
-    IRequestHandler<ImportFlightScheduleCommand, ScenarioDetails>
+    IRequestHandler<ImportFlightScheduleCommand, ScenarioDetails>, IRequestHandler<MoveFlightGatesCommand, ScenarioDetails>
 {
     public async Task<IReadOnlyList<ScenarioSummary>> Handle(ListScenariosQuery request, CancellationToken token)
     {
@@ -100,6 +103,19 @@ public sealed class ScenarioOperations(IScenarioService scenarios, ISceneQuerySe
         var value = await Editable(request.ScenarioId, request.Revision, token);
         RequireItem(value.Inputs.Flights, request.FlightId, x => x.Id);
         return await SaveFlights(value, value.Inputs.Flights.Where(x => x.Id != request.FlightId).ToArray(), token);
+    }
+    /// <summary>Several gate changes in one revision, rerouted like a single flight edit.</summary>
+    public async Task<ScenarioDetails> Handle(MoveFlightGatesCommand request, CancellationToken token)
+    {
+        var value = await Editable(request.ScenarioId, request.Value.Revision, token);
+        var changes = request.Value.Flights ?? [];
+        var flights = value.Inputs.Flights.Where(item => item.Status != "cancelled").Select(item => item.Id).ToHashSet();
+        if (changes.Count == 0 || changes.Any(item => item is null || !flights.Contains(item.FlightId))
+            || changes.Select(item => item.FlightId).Distinct().Count() != changes.Count)
+            throw Invalid("flights", "Choose one gate for each moved, non-cancelled flight of this scenario.");
+        var gates = changes.ToDictionary(item => item.FlightId, item => item.GateId);
+        return await SaveFlights(value, value.Inputs.Flights
+            .Select(item => gates.TryGetValue(item.Id, out var gate) ? item with { GateId = gate } : item).ToArray(), token);
     }
     public async Task<ScenarioDetails> Handle(WriteInputEventCommand request, CancellationToken token)
     {

@@ -393,7 +393,7 @@ export class PassengerLayer {
               0,
               Math.min(1, (time - packet.snapshotMinute) / (nextMinute - packet.snapshotMinute)),
             );
-      // Replay pages hold the exact snapshot (no interpolation), so they also show no motion.
+      // A frozen snapshot shows only queues; motion needs the flow between two snapshots.
       const moving = packet.interpolateAggregates !== false;
       const flowing = moving
         ? rows.filter((row) => this.flows.has(row.zoneId) && this.series.has(row.zoneId))

@@ -57,6 +57,30 @@ public sealed class EventTests
     }
 
     [Fact]
+    public void With_routes_an_arrival_may_be_rerouted_beforehand_to_another_lane_of_its_flight()
+    {
+        var request = ContractJson.Read<SimulationRequest>(Example("closure-request"), "SimulationRequest");
+        var response = ContractJson.Read<SimulationResponse>(Example("closure-response"), "SimulationResponse");
+        var timeline = new EventTimeline(request);
+        // A generated passenger arriving at 12.5, between A reopening and B closing, sent there from a lane that never closed.
+        var person = response.ProcessResult!.Passengers.First(p => p.FlightId is not null && p.AssignedCheckpointId is null
+            && p.Transfers is null && timeline.Surge(p.Id) is null) with { ArrivalMinute = 12.5 };
+        var other = request.Checkpoints.Select(c => c.CheckpointId).First(id => id != person.CheckpointId && timeline.Available(id, request.DurationMinutes));
+        var rerouted = person with { AssignedCheckpointId = other };
+        var flight = request.PassengerGeneration!.Flights.Single(f => f.FlightId == person.FlightId);
+        var spread = request with { PassengerGeneration = request.PassengerGeneration with { Flights = [flight with { CheckpointRoutes =
+            [new(person.CheckpointId, flight.RouteId, flight.RouteTravelMinutes), new(other, flight.RouteId, flight.RouteTravelMinutes)] }] } };
+        // Decided at the start of the five-minute window the arrival falls in; from then it counts at its new lane.
+        var decided = ProcessCorrelation.ReroutedAt(spread, new EventTimeline(spread), rerouted);
+        Assert.Equal(Math.Floor(person.ArrivalMinute / 5) * 5, decided);
+        Assert.Equal(other, rerouted.CheckpointAt(decided!.Value - 0.5, decided));
+        Assert.Equal(person.CheckpointId, rerouted.CheckpointAt(decided.Value, decided));
+        // A fixed flight has one lane, and without routes nothing is rerouted: such a move stays a forged redirect.
+        Assert.Null(ProcessCorrelation.ReroutedAt(request, timeline, rerouted));
+        Assert.Null(ProcessCorrelation.ReroutedAt(spread with { Navigation = null }, new EventTimeline(spread), rerouted));
+    }
+
+    [Fact]
     public void Applied_events_must_follow_the_deterministic_order()
     {
         var response = Response();

@@ -110,7 +110,7 @@ export const PRESETS = [
     detail: '4 ore · 5 zboruri în 40 de minute · 900 pasageri',
     count: 180,
     durationMinutes: 240,
-    // A departure bank: flights an hour apart never queue anyone, five within 40 minutes do.
+    // A departure bank from five gates: flights an hour apart never queue anyone, five within 40 minutes do.
     departureSpacingMinutes: 10,
     firstDepartureMinutes: 150,
   },
@@ -122,7 +122,25 @@ export const PRESETS = [
     durationMinutes: 480,
     flightCount: 8,
   },
+  {
+    id: 'showcase',
+    name: 'Prezentare completă',
+    detail: '4 ore · 5 zboruri · 1020 pasageri · 4 incidente',
+    count: 180,
+    durationMinutes: 240,
+    departureSpacingMinutes: 10,
+    firstDepartureMinutes: 150,
+  },
 ] as const;
+/** Minutes from the start of the showcase incidents, all inside its departure bank. */
+const SHOWCASE = {
+  surge: 100,
+  surgePassengers: 120,
+  closed: 110,
+  reopened: 135,
+  delayed: 140,
+  delay: 20,
+};
 
 export function fromScenario(value: ScenarioDetails): StudioDraft {
   const { code, name, description, sceneId, layoutVersionId, revision } = value.scenario;
@@ -193,18 +211,26 @@ export function makeDraft(
   const checkpointCode = (id: string) =>
     layout.layout.checkpoints.find((checkpoint) => checkpoint.id === id)?.code ?? id;
   const flightCount = 'flightCount' in preset ? preset.flightCount : 5;
+  // A bank departs closer together only across gates; each gate keeps the hour rule.
   const spacing =
     'departureSpacingMinutes' in preset
       ? preset.departureSpacingMinutes
       : MINIMUM_DEPARTURE_SPACING_MINUTES;
-  inputs.minimumDepartureSpacingMinutes = spacing;
   let departureAtUtc = addMinutes(
     inputs.startsAtUtc,
     ('firstDepartureMinutes' in preset ? preset.firstDepartureMinutes : spacing) - spacing,
   );
   for (let index = 0; index < flightCount; index++) {
-    departureAtUtc = addMinutes(departureAtUtc, spacing);
     const gateId = gates[index % gates.length];
+    const previousAtGate = inputs.flights[index - gates.length];
+    departureAtUtc = new Date(
+      Math.max(
+        Date.parse(addMinutes(departureAtUtc, spacing)),
+        previousAtGate
+          ? Date.parse(addMinutes(previousAtGate.departureAtUtc, MINIMUM_DEPARTURE_SPACING_MINUTES))
+          : 0,
+      ),
+    ).toISOString();
     // Flights take the checkpoints toward their gate in turn, so no single control carries the whole day.
     const toGate = routes
       .filter((item) => item.toGateId === gateId)
@@ -247,6 +273,11 @@ export function makeDraft(
       endsAtUtc: addMinutes(departureAtUtc, preset.id === 'bottleneck' ? -2 : -30),
     });
   }
+  // Too few gates push the bank later; the horizon grows so every departure stays inside it.
+  inputs.durationMinutes = Math.max(
+    inputs.durationMinutes,
+    (Date.parse(departureAtUtc) - +start) / 60000,
+  );
   inputs.staffAllocations = layout.layout.staff
     .filter(
       (member) =>
@@ -327,6 +358,67 @@ export function makeDraft(
     };
     draft.description =
       'DEMO sintetic Bottleneck: 600 de pasageri sosesc între 45 și 10 minute înainte de zborul lor; o linie de control procesează 3 pasageri/min, cu un singur operator. Comparația caută până la trei operatori fără a modifica populația sau seed-ul.';
+  }
+  // One of each operational incident during the bank, so every page has something to show after one run.
+  if (preset.id === 'showcase') {
+    const [first, , middle, , last] = inputs.flights;
+    const control = (flightId: string) =>
+      routes.find(
+        (route) => route.id === inputs.flows.find((flow) => flow.flightId === flightId)!.routeId,
+      )!.fromCheckpointId;
+    const event = (
+      type: string,
+      minute: number,
+      target: Partial<InputEvent>,
+      payload = {},
+    ): InputEvent => ({
+      id: crypto.randomUUID(),
+      type,
+      occurredAtUtc: addMinutes(inputs.startsAtUtc, minute),
+      checkpointId: null,
+      flightId: null,
+      gateId: null,
+      ...target,
+      payloadJson: JSON.stringify(payload),
+    });
+    const surged = control(middle.id),
+      closed = control(first.id);
+    inputs.events = [
+      event(
+        'passenger_surge',
+        SHOWCASE.surge,
+        { checkpointId: surged, flightId: middle.id },
+        { passengerCount: SHOWCASE.surgePassengers, windowMinutes: 15 },
+      ),
+      event('checkpoint_unavailable', SHOWCASE.closed, { checkpointId: closed }),
+      event('resume', SHOWCASE.reopened, { checkpointId: closed }),
+      event(
+        'flight_change',
+        SHOWCASE.delayed,
+        { flightId: last.id },
+        { delayMinutes: SHOWCASE.delay },
+      ),
+    ];
+    // Every desk open keeps the queue at security, where two spare operators give the AI optimizer and Compare someone to add.
+    if (inputs.checkIn && desks) inputs.checkIn.staffCount = desks.deskCount;
+    inputs.operators = layout.layout.staff
+      .filter(
+        (member) =>
+          !inputs.staffAllocations.some((row) => row.staffMemberId === member.id) &&
+          layout.layout.checkpoints.some(
+            (checkpoint) => checkpoint.terminalId === member.terminalId,
+          ),
+      )
+      .slice(0, 2)
+      .map((member) => ({ id: member.id, name: member.displayName, role: 'security' }));
+    const clock = (minute: number) => `${Math.floor(minute / 60)} h ${minute % 60} min`;
+    draft.description =
+      `Un vârf de plecări în care se vede toată aplicația. Cinci zboruri pleacă la 10 minute unul după altul, fiecare de la poarta lui, iar pasagerii trec prin check-in și securitate. ` +
+      `După ${clock(SHOWCASE.surge)} sosesc încă ${SHOWCASE.surgePassengers} de pasageri la ${checkpointCode(surged)}. ` +
+      `După ${clock(SHOWCASE.closed)} ${checkpointCode(closed)} se închide și coada lui se mută la controlul cu cea mai scurtă coadă; se redeschide după ${clock(SHOWCASE.reopened)}. ` +
+      `După ${clock(SHOWCASE.delayed)} zborul ${last.code} întârzie ${SHOWCASE.delay} de minute. ` +
+      `${inputs.operators.length} operatori de securitate stau în rezervă, ca Optimizarea AI și Compară personalul să aibă pe cine adăuga. ` +
+      'După rulare: harta și alertele în Control Tower, minut cu minut în Time Travel, Raportul operațional, Compară personalul, Teste repetate și Optimizarea AI. Date sintetice; nu reprezintă un aeroport real.';
   }
   return withOperators(draft, layout);
 }
@@ -417,11 +509,13 @@ export function departureSpacingErrors(input: ScenarioInputs): FieldErrors {
     )
     .sort((a, b) => a.time - b.time);
   const errors: Record<string, string[]> = {};
-  for (let index = 1; index < departures.length; index++) {
-    const first = departures[index - 1],
-      second = departures[index];
-    if (second.time - first.time >= minimum! * 60000) continue;
-    const message = `Plecările ${first.flight.code} și ${second.flight.code} trebuie distanțate cu minimum ${minimum} de minute, inclusiv întârzierile configurate.`;
+  // Only a shared gate forces spacing; different gates may depart together.
+  const previousAtGate = new Map<string, (typeof departures)[number]>();
+  for (const second of departures) {
+    const first = previousAtGate.get(second.flight.gateId);
+    previousAtGate.set(second.flight.gateId, second);
+    if (!first || second.time - first.time >= minimum! * 60000) continue;
+    const message = `Plecările ${first.flight.code} și ${second.flight.code} de la aceeași poartă trebuie distanțate cu minimum ${minimum} de minute, inclusiv întârzierile configurate.`;
     for (const departure of [first, second]) {
       const field = `inputs.flights[${departure.index}].departureAtUtc`;
       (errors[field] ??= []).push(message);

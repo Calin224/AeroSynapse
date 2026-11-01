@@ -64,7 +64,9 @@
           </div>
           <div>
             <dt>Personal</dt>
-            <dd>{{ scenario.inputs.staffAllocations.length }}</dd>
+            <dd>
+              {{ scenario.inputs.staffShifts?.shifts?.length || scenario.inputs.staffAllocations.length }}
+            </dd>
           </div>
         </dl>
       </div>
@@ -120,6 +122,13 @@
                 : 'Pornește simularea'
           }}
         </button>
+        <a
+          appWriteAccess
+          class="guided"
+          routerLink="/control-tower/decision"
+          [queryParams]="{ scenarioId: scenario.scenario.id, runId: store.run()?.id }"
+          ><i class="pi pi-sitemap" aria-hidden="true"></i> Rezolvă un incident pas cu pas</a
+        >
         @if (runFailure()) {
           <p class="deck-error" role="alert">{{ runFailure() }}</p>
         }
@@ -159,7 +168,9 @@
       [scenario]="scenario"
       [runs]="store.runs()"
       [selectedRunId]="store.run()?.id ?? null"
+      [canRestore]="session.canWrite() && !locked()"
       (openRun)="openRun($event)"
+      (restored)="scheduleChanged($event)"
     />
 
     <nav class="phases" aria-label="Pași">
@@ -364,6 +375,8 @@
                     <!-- Options were measured on the captured revision; once the scenario moved on they can only be read. -->
                     <app-ai-optimization
                       [runId]="view.runId"
+                      [passengers]="view.totals.population"
+                      [durationMinutes]="view.durationMinutes"
                       [stale]="context.scenario.scenario.revision !== store.selected()?.scenario?.revision"
                       (applied)="optionApplied(view.runId)"
                     />

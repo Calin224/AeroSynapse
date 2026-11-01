@@ -32,6 +32,12 @@ public static class IntegratedResourceScenarios
             .Select(flight => new ResourceFlight(flight.Id, flight.GateId,
                 (flight.BoardingOpensAtUtc!.Value.AddMinutes(flight.DelayMinutes) - inputs.StartsAtUtc).TotalMinutes,
                 (flight.DepartureAtUtc.AddMinutes(flight.DelayMinutes) - inputs.StartsAtUtc).TotalMinutes)).ToArray();
+        // Flights added after the resources were saved may use any configured gate of their terminal; removed flights drop out.
+        var requirements = resources.Requirements.ToDictionary(item => item.FlightId);
+        var terminals = layout.Gates.ToDictionary(gate => gate.Id, gate => gate.TerminalId);
+        resources = resources with { Requirements = flights.Select(flight => requirements.GetValueOrDefault(flight.FlightId)
+            ?? new ResourceRequirement(flight.FlightId, resources.Gates.Where(gate => terminals.GetValueOrDefault(gate.GateId) == terminals.GetValueOrDefault(flight.CurrentGateId))
+                .Select(gate => gate.GateId).ToArray(), [], 1)).ToArray() };
         return ContractJson.Read<ResourceSolveRequest>(JsonSerializer.SerializeToElement(new ResourceSolveRequest("1.0",
             scenario.Scenario.Id, scenario.Scenario.Revision, inputs.DurationMinutes, timeLimitSeconds, resources, flights), ContractJson.Options), "ResourceSolveRequest");
     }
@@ -46,9 +52,9 @@ public static class IntegratedResourceScenarios
                 .ToDictionary(group => group.Key, group => group.Select(error => error.Message).ToArray()));
         }
         if (IncompatibilityReason(inputs) is { } reason) throw Invalid("", reason);
-        var flights = inputs.Flights.Where(flight => flight.Status != "cancelled").ToArray();
-        if (!flights.Select(flight => flight.Id).ToHashSet().SetEquals(config.Requirements.Select(item => item.FlightId)))
-            throw Invalid("requirements", "Provide exactly one requirement for each non-cancelled flight (1–50 flights).");
+        // Requirements are per-flight overrides, so editing the schedule never breaks saved resources.
+        if (config.Requirements.Select(item => item.FlightId).Distinct().Count() != config.Requirements.Count)
+            throw Invalid("requirements", "Provide at most one requirement per flight.");
         var gates = layout.Gates.ToDictionary(item => item.Id);
         var staff = layout.Staff.ToDictionary(item => item.Id);
         var security = inputs.StaffAllocations.Select(item => item.StaffMemberId)

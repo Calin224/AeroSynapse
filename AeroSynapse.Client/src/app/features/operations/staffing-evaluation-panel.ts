@@ -52,21 +52,19 @@ const ASSESSMENTS: Record<string, string> = {
   pending: 'În așteptare',
 };
 const REASONS: Record<string, string> = {
-  mean_wait_degradation: 'Creșterea waiting-ului depășește toleranța.',
-  p95_degradation: 'Creșterea P95 depășește toleranța.',
-  boarding_risk_degradation: 'Riscul de boarding depășește toleranța.',
-  unprocessed_degradation: 'Rămân prea mulți pasageri neprocesați.',
-  reallocation_cost_limit: 'Costul realocării depășește limita.',
-  insufficient_observed_metrics: 'Nu există suficiente observații pentru comparație.',
-  accepted_degradation:
-    'Există o degradare în toleranțele acceptate; aceasta nu este o îmbunătățire fără compromisuri.',
-  no_simulated_improvement: 'Metricile simulate nu arată o îmbunătățire.',
-  baseline_metrics_unavailable: 'Lipsesc metricile baseline.',
-  kpi_unavailable:
-    'Lipsesc sau sunt inconsistente snapshot-urile KPI finale și observațiile individuale ale pasagerilor.',
-  checkpoint_metrics_missing: 'Lipsesc observații pentru unele controale.',
+  mean_wait_degradation: 'Așteptarea medie crește peste limita acceptată.',
+  p95_degradation: 'Așteptarea pentru 95% dintre pasageri crește peste limita acceptată.',
+  boarding_risk_degradation: 'Riscul de a pierde îmbarcarea crește peste limita acceptată.',
+  unprocessed_degradation: 'Rămân prea mulți pasageri necontrolați la final.',
+  reallocation_cost_limit: 'Cere mai multe schimbări de personal decât permite limita.',
+  insufficient_observed_metrics: 'Nu sunt destule date pentru comparație.',
+  accepted_degradation: 'Înrăutățește puțin unele cifre, dar în limitele acceptate.',
+  no_simulated_improvement: 'Simularea nu arată o îmbunătățire față de acum.',
+  baseline_metrics_unavailable: 'Lipsesc cifrele de referință.',
+  kpi_unavailable: 'Lipsesc sau nu se potrivesc cifrele de la finalul simulării.',
+  checkpoint_metrics_missing: 'Lipsesc date pentru unele controale.',
   insufficient_checkpoint_wait_metrics:
-    'Lipsesc observațiile de waiting comparabile pentru acest control.',
+    'Lipsesc timpi de așteptare comparabili pentru acest control.',
 };
 /** Shift plans need a day long enough for real shifts (StaffShiftScenarios.MinimumDurationMinutes). */
 export const SHIFT_MINIMUM_MINUTES = 120;

@@ -8,7 +8,7 @@ Toate modelele curente sunt demonstrative. Geometria 3D, orarul, capacitățile 
 
 Programarea zborurilor, evenimentelor și fluxurilor folosește date și ore absolute: editorul afișează `HH:MM` în fusul orar declarat al scenariului, iar API-ul primește timestamp-uri UTC (`departureAtUtc`, `occurredAtUtc`, `startsAtUtc`, `endsAtUtc`). Data distinge programările de după miezul nopții. Ora plecării este reperul pentru îmbarcare și sosirile pasagerilor; câmpurile de programare nu cer minute scurse de la începutul simulării. Orele locale inexistente sau ambigue la schimbarea orei sunt respinse; un timestamp existent își păstrează instantul. Duratele, întârzierile și separarea dintre plecări rămân durate în minute. Contractele interne istorice pentru distribuțiile pasagerilor convertesc timestamp-urile în offseturi numai la limita cu motorul.
 
-Scenariile noi din Scenario Studio păstrează `minimumDepartureSpacingMinutes = 60`: între două plecări active, inclusiv întârzierile configurate, trebuie să existe cel puțin o oră, indiferent de poartă. Editorul distanțează zborurile adăugate, iar validarea din interfață și API respinge orarele prea apropiate. Presetările de cinci zboruri durează șase ore; presetul de opt ore are opt zboruri. Scenariile istorice fără această proprietate își păstrează regulile originale.
+Scenariile noi din Scenario Studio păstrează `minimumDepartureSpacingMinutes = 60`: între două plecări active, inclusiv întârzierile configurate, de la aceeași poartă trebuie să existe cel puțin o oră; porți diferite pot avea plecări simultane. Editorul distanțează zborurile adăugate, iar validarea din interfață și API respinge orarele prea apropiate. Toate presetările păstrează regula de o oră; presetările de cinci zboruri durează șase ore, presetul de opt ore are opt zboruri, iar „Vârf de trafic” trimite cinci zboruri în 40 de minute, fiecare de la altă poartă. Scenariile istorice fără această proprietate își păstrează regulile originale.
 
 Intervalul de o oră este o regulă solicitată pentru această aplicație, nu un standard aeroportuar universal. De exemplu, [declarația oficială de capacitate Schiphol S26](https://slotcoordination.nl/wp-content/uploads/2025/10/AMS-Capacity-Declaration-Summer-2026.pdf), pagina 3, permite până la 74 de plecări pe oră în configurația de vârf cu două piste de decolare. Modelul aplicației nu simulează separarea ATC pe piste sau restricțiile wake turbulence.
 
@@ -63,6 +63,22 @@ Evaluarea pe ture simulează pe aceeași populație și seed planul de azi, cel 
 
 Limite: toți oamenii sunt presupuși disponibili toată ziua, cu cel mult o tură; check-in-ul nu e planificat pe ture; pe un control cu program `staff_reduction` e respins, iar `resume` doar încheie o indisponibilitate.
 
+## Bani economisiți
+
+Recomandarea AI din simulare și planul recomandat din fluxul de decizie arată un singur rând cu economia (sau costul) estimată în euro față de alocarea de azi ([calcul](../../AeroSynapse.Client/src/app/shared/ui/cost-estimate.ts)):
+
+```text
+economie = pasageri × (așteptare medie azi − cu planul) / 60 × valoarea orei de pasager
+         − (ore de operator cu planul − ore azi) × costul orei de operator
+```
+
+| Valoare fixă | Sursă |
+| --- | --- |
+| 22,89 € / oră de pasager | [EUROCONTROL Standard Inputs v10.0.2](https://ansperformance.eu/economics/cba/standard-inputs/chapters/passenger_value_of_time.html), valoarea de referință UE25 pentru călătorii personale, prețuri 2025 (afaceri: 55,90 €) |
+| 12,5 € / oră de operator | [Eurostat](https://ec.europa.eu/eurostat/web/products-eurostat-news/w/ddn-20250328-1), costul total al orei de muncă în România, 2024 (salariu și contribuții; media UE 33,5 €) |
+
+Orele de operator sunt cele plătite: o tură se numără de la primul la ultimul minut, cu pauze; un plan fix ține oamenii pe toată durata simulării. Valorile nu se editează în interfață; sursele apar la trecerea mouse-ului peste rând. Un plan respins nu primește estimare. Pasagerii care nu mai riscă să piardă zborul nu intră în sumă: Dublin și Schiphol au despăgubit în 2022 pasagerii rămași la cozile de securitate (zbor nou, transport, cazare), fără un cost mediu public pe pasager.
+
 ## KPI și comparații corecte
 
 Pentru snapshot-ul la minutul `t`, mean/median/P95 wait includ numai serviciile terminate până la `t`, cu așteptarea `startService-arrival`. P95 folosește nearest rank, fără interpolare. Throughput-ul ferestrei este numărul de servicii terminate în `(a,t]` împărțit la `t-a`. Utilizarea integrează minutele ocupate, raportate la capacitate × durată. Boarding risk folosește cohorta cu termen cunoscut; fără numitor valid este `null`. În modelul de procese, sosirea exact la închiderea boarding-ului este la timp.
@@ -84,6 +100,7 @@ Batch-ul folosește 1–25 seed-uri distincte și aceleași seed-uri pentru vari
 | A-04 | Boarding și alocarea controlului sunt cunoscute în snapshot | Semnificația timestamp-urilor, întârzieri și excepții operaționale |
 | A-05 | Un seed și un build reproduc aceleași intrări/calcul | Verificarea `inputHash`, `resultHash`, `engineBuild`, lockfiles și regulilor de compatibilitate |
 | A-06 | Coeficienții energiei și resursele airside/bagaje sunt demonstrative | Validări și scopuri separate; nu se adună metrici incompatibile într-un rezultat „real” |
+| A-07 | Economia în euro folosește valori publice europene (EUROCONTROL, Eurostat), nu costurile aeroportului | Costul real al orei de agent de securitate, valoarea timpului pentru profilul de pasageri al aeroportului și costul unui zbor pierdut la control |
 | A-08 | AI vede numai context restrâns și surse suficiente | Evaluări de grounding, injection, context străin, indisponibilitate și revizuire umană |
 
 ## Reproducere și model change

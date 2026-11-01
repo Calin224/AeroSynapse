@@ -154,18 +154,19 @@ describe('Incident designer', () => {
     const source = makeDraft(layout, 'workday', new Date('2026-10-16T10:00:00Z')).inputs;
     fixture.componentRef.setInput('inputs', source);
     fixture.componentRef.setInput('event', newSurge(source, layout));
-    view.setTime('2026-10-16T10:56:00.000Z');
+    view.setTime('2026-10-16T10:26:00.000Z');
     fixture.detectChanges();
+    // Passengers arrive in the flight's flows window, which ends 30 minutes before the 11:00 departure.
     expect(view.arrivalWindow()).toEqual({
       start: '2026-10-16T10:00:00.000Z',
-      end: '2026-10-16T10:58:00.000Z',
+      end: '2026-10-16T10:30:00.000Z',
     });
-    expect(view.problems().join()).toContain('13:58');
+    expect(view.problems().join()).toContain('13:30');
     expect(
       fixture.nativeElement.querySelector('[data-testid=incident-arrival-window]').textContent,
-    ).toContain('13:00–13:58');
-    expect(fixture.nativeElement.querySelectorAll('input')[1].max).toBe('2');
-    view.setPayload('durationMinutes', 2);
+    ).toContain('13:00–13:30');
+    expect(fixture.nativeElement.querySelectorAll('input')[1].max).toBe('4');
+    view.setPayload('durationMinutes', 4);
     fixture.detectChanges();
     expect(view.problems()).toEqual([]);
   });
@@ -213,7 +214,8 @@ describe('Incident designer', () => {
     view.setTime('2026-10-16T11:10:00.000Z');
     view.setFlight(view.inputs().flights[0].id);
     fixture.detectChanges();
-    expect(view.event().occurredAtUtc).toBe('2026-10-16T10:53:00.000Z');
+    // Moved inside the new flight's arrival window, which closes at 10:30.
+    expect(view.event().occurredAtUtc).toBe('2026-10-16T10:25:00.000Z');
     expect(view.duration()).toBe(5);
     expect(view.problems()).toEqual([]);
   });

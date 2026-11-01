@@ -78,6 +78,25 @@ public static class StaffShiftScenarios
         ? Minutes(plan, inputs.DurationMinutes, [checkpointId])[checkpointId].DefaultIfEmpty(0).Max()
         : inputs.StaffAllocations.Count(allocation => allocation.CheckpointId == checkpointId);
 
+    /// <summary>A fixed allocation with these counts per checkpoint. Current people stay first; integrated handling teams keep theirs.</summary>
+    public static IReadOnlyList<StaffAllocation> Allocate(ScenarioInputs inputs, SceneDetails layout, IReadOnlyDictionary<Guid, int> counts, string field)
+    {
+        var assigned = inputs.StaffAllocations.GroupBy(item => item.CheckpointId)
+            .SelectMany(group => group.OrderBy(item => item.StaffMemberId).Take(counts.GetValueOrDefault(group.Key))).ToList();
+        var taken = assigned.Select(item => item.StaffMemberId)
+            .Concat(inputs.IntegratedResources?.Teams.SelectMany(team => team.MemberIds) ?? []).ToHashSet();
+        var pools = layout.Staff.Where(item => !taken.Contains(item.Id)).GroupBy(item => item.TerminalId)
+            .ToDictionary(group => group.Key, group => new Queue<Guid>(group.OrderBy(item => item.Id).Select(item => item.Id)));
+        foreach (var checkpoint in layout.Checkpoints.OrderBy(item => item.Id))
+            for (var needed = counts.GetValueOrDefault(checkpoint.Id) - assigned.Count(item => item.CheckpointId == checkpoint.Id); needed > 0; needed--)
+            {
+                if (!pools.TryGetValue(checkpoint.TerminalId, out var pool) || !pool.TryDequeue(out var id))
+                    throw new ScenarioValidationException(new Dictionary<string, string[]> { [field] = ["The staffing exceeds the captured terminal staff pool."] });
+                assigned.Add(new(id, checkpoint.Id));
+            }
+        return assigned.OrderBy(item => item.StaffMemberId).ToArray();
+    }
+
     /// <summary>Step functions for the KPI engine, one per checkpoint; null without shifts.</summary>
     public static IReadOnlyList<StaffSchedule>? Schedules(ScenarioInputs inputs, SceneDetails layout, string? engine)
     {

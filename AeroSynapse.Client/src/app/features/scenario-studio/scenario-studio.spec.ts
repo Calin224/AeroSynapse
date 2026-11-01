@@ -260,7 +260,7 @@ describe('Scenario Studio', () => {
     expect(flights.map((flight) => flight.gateId)).toEqual(['gate', 'gate-2']);
     expect(flights.map((flight) => flight.departureAtUtc)).toEqual([
       '2026-10-16T11:00:00.000Z',
-      '2026-10-16T12:00:00.000Z',
+      '2026-10-16T11:15:00.000Z',
     ]);
     expect(view.flightsWithoutPassengers()).toEqual([]);
     expect(view.draft!.inputs.populations).toHaveLength(2);

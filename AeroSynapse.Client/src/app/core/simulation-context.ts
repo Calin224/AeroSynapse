@@ -71,14 +71,14 @@ export class SimulationContext {
       'compare',
       'batches',
       'copilot',
-      'operator-workflow',
+      'control-tower/decision',
     ];
     const runPages = [
       'control-tower',
       'scenario',
       'operations',
       'copilot',
-      'operator-workflow',
+      'control-tower/decision',
     ];
     const params = { ...tree.queryParams };
     if (path === 'replay' || path === 'operational-report') {

@@ -20,7 +20,7 @@ test('Flux de decizie runs real CP-SAT/SimPy and preserves verified results afte
 
   const scenarioId: string = (await saveCongestionScenario(page)).scenario.id;
 
-  await page.goto(`/operator-workflow?scenarioId=${scenarioId}`);
+  await page.goto(`/control-tower/decision?scenarioId=${scenarioId}`);
   await expect(
     page.getByRole('heading', { name: '1. Configurare incident', exact: true }),
   ).toBeVisible();

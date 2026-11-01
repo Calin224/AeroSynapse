@@ -64,7 +64,8 @@ public sealed partial class BatchService
                 var name = request.Name.Trim(); if (name.Length > 130) name = name[..(char.IsHighSurrogate(name[129]) ? 129 : 130)];
                 // A fixed candidate drops any shift plan, so its allocation is what staffs the day.
                 var candidates = planning.Candidates.Select(candidate => (Label: "candidat", Inputs: source.Inputs with
-                    { StaffAllocations = Allocate(source.Inputs.StaffAllocations, layout.Layout, candidate.Assignments), StaffShifts = null }))
+                    { StaffAllocations = StaffShiftScenarios.Allocate(source.Inputs, layout.Layout,
+                        candidate.Assignments.ToDictionary(item => item.CheckpointId, item => item.StaffCount), "candidates"), StaffShifts = null }))
                     .Concat(shiftPlanning.Select(plan => (Label: "ture", Inputs: source.Inputs with { StaffShifts = Shifts(plan, source.Inputs.DurationMinutes) })))
                     .DistinctBy(item => JsonSerializer.Serialize(item.Inputs, Json)).ToArray();
                 foreach (var ((label, inputs), index) in candidates.Select((item, index) => (item, index)))
@@ -97,24 +98,6 @@ public sealed partial class BatchService
         plan.Request.Rules.TransferMinutes, plan.Shifts.Select(shift => new ScenarioStaffShift(shift.StaffMemberId,
             shift.Segments.Select(segment => new ScenarioShiftSegment(segment.CheckpointId, segment.StartSlot * plan.Request.SlotMinutes,
                 Math.Min(segment.EndSlot * plan.Request.SlotMinutes, durationMinutes))).ToArray())).ToArray());
-
-    private static IReadOnlyList<StaffAllocation> Allocate(IReadOnlyList<StaffAllocation> current, SceneDetails layout,
-        IReadOnlyList<StaffingAssignment> desired)
-    {
-        var counts = desired.ToDictionary(item => item.CheckpointId, item => item.StaffCount);
-        var assigned = current.GroupBy(item => item.CheckpointId).SelectMany(group => group.OrderBy(item => item.StaffMemberId).Take(counts[group.Key])).ToList();
-        var retained = assigned.Select(item => item.StaffMemberId).ToHashSet();
-        var pools = layout.Staff.Where(item => !retained.Contains(item.Id)).GroupBy(item => item.TerminalId)
-            .ToDictionary(group => group.Key, group => new Queue<Guid>(group.OrderBy(item => item.Id).Select(item => item.Id)));
-        foreach (var checkpoint in layout.Checkpoints.OrderBy(item => item.Id))
-            for (var needed = counts[checkpoint.Id] - assigned.Count(item => item.CheckpointId == checkpoint.Id); needed > 0; needed--)
-            {
-                if (!pools.TryGetValue(checkpoint.TerminalId, out var pool) || !pool.TryDequeue(out var id))
-                    throw Invalid("candidates", "The candidate exceeds the captured terminal staff pool.");
-                assigned.Add(new(id, checkpoint.Id));
-            }
-        return assigned.OrderBy(item => item.StaffMemberId).ToArray();
-    }
 
     public Task<StaffingEvaluationDetails> GetStaffingEvaluationAsync(Guid batchId, CancellationToken token) =>
         new StaffingEvaluationReader(db).GetAsync(batchId, token);

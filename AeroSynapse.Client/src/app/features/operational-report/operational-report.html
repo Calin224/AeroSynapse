@@ -2,7 +2,27 @@
   <div>
     <h1 class="display">Raport operațional</h1>
   </div>
+  @if (replay()) {
+    <div class="export-actions">
+      <button
+        type="button"
+        class="btn-primary"
+        data-export-pdf
+        [disabled]="loading() || comparing()"
+        (click)="exportPdf()"
+      >
+        <i class="pi pi-file-pdf" aria-hidden="true"></i> Exportă PDF detaliat
+      </button>
+      <p class="hint">
+        Include detaliile rulării și comparația validată, dacă este selectată. Alege „Salvează ca
+        PDF” în fereastra de imprimare.
+      </p>
+    </div>
+  }
 </header>
+@if (exportError()) {
+  <p class="notice" role="alert">{{ exportError() }}</p>
+}
 
 <section class="panel panel-body" aria-labelledby="choose-title">
   <h2 id="choose-title">Simularea</h2>
@@ -84,11 +104,14 @@
   @if (chart(); as chart) {
     <section class="panel panel-body" aria-labelledby="chart-title">
       <h2 id="chart-title">Pasageri la coadă în timpul simulării</h2>
-      <p class="hint">Toate punctele de control, adunate, la fiecare moment al zilei simulate.</p>
+      <p class="hint">
+        Fiecare coloană arată cea mai lungă coadă din {{ minutes(chart.slot) }}, cu toate punctele
+        de control adunate.
+      </p>
       @if (otherReplay()) {
         <p class="legend">
           <span><span class="swatch" aria-hidden="true"></span> Rularea aleasă</span>
-          <span><span class="swatch dashed" aria-hidden="true"></span> Rularea de comparat</span>
+          <span><span class="swatch compared" aria-hidden="true"></span> Rularea de comparat</span>
         </p>
       }
       <svg
@@ -96,9 +119,9 @@
         role="img"
         [attr.aria-label]="
           'Pasageri la coadă în timpul simulării, între ' +
-          chart.ticks[0].label +
+          chart.from +
           ' și ' +
-          chart.ticks[4].label +
+          chart.to +
           (chart.peak ? '. Vârf: ' + num(chart.peak.value) + ' la ' + chart.peak.time : '')
         "
       >
@@ -109,15 +132,42 @@
         @for (tick of chart.ticks; track $index) {
           <text [attr.x]="tick.x" y="224" text-anchor="middle">{{ tick.label }}</text>
         }
-        @if (chart.area) {
-          <path class="area" [attr.d]="chart.area" />
+        @for (column of chart.columns; track column.from) {
+          <g class="slot">
+            <title>{{ column.tip }}</title>
+            <rect
+              class="hit"
+              [class.missing]="column.value === null"
+              [attr.x]="column.band.x"
+              y="30"
+              [attr.width]="column.band.width"
+              height="170"
+            />
+            @if (column.mine; as bar) {
+              <rect
+                class="mine"
+                [attr.x]="bar.x"
+                [attr.y]="bar.y"
+                [attr.width]="bar.width"
+                [attr.height]="bar.height"
+              />
+            }
+            @if (column.theirs; as bar) {
+              <rect
+                class="other"
+                [attr.x]="bar.x"
+                [attr.y]="bar.y"
+                [attr.width]="bar.width"
+                [attr.height]="bar.height"
+              />
+            }
+          </g>
         }
-        @if (chart.otherPath) {
-          <path class="other" [attr.d]="chart.otherPath" />
-        }
-        <path class="mine" [attr.d]="chart.path" />
-        @if (chart.peak; as peak) {
-          <circle class="peak" [attr.cx]="peak.x" [attr.cy]="peak.y" r="5" />
+        <line class="base" x1="50" y1="200" x2="690" y2="200" />
+        @if (chart.mark; as mark) {
+          <text class="mark" [attr.x]="mark.x" [attr.y]="mark.y" text-anchor="middle">
+            {{ num(mark.value) }}
+          </text>
         }
       </svg>
       @if (chart.peak) {
@@ -132,7 +182,7 @@
       }
       @if (chart.missing) {
         <p class="hint">
-          Lipsesc date pentru {{ chart.missing }} momente; acolo linia se întrerupe.
+          Lipsesc date pentru {{ chart.missing }} momente; intervalele lor apar gri, fără coloană.
         </p>
       }
     </section>
@@ -207,17 +257,17 @@
           <table>
             <thead>
               <tr>
-                <th scope="col">Ora</th>
-                <th scope="col">Pasageri la coadă</th>
+                <th scope="col">Interval</th>
+                <th scope="col">Cea mai lungă coadă</th>
                 @if (otherReplay()) {
                   <th scope="col">Rularea de comparat</th>
                 }
               </tr>
             </thead>
             <tbody>
-              @for (row of chart.rows; track row.minute) {
+              @for (row of chart.columns; track row.from) {
                 <tr>
-                  <th scope="row">{{ row.time }}</th>
+                  <th scope="row">{{ row.label }}</th>
                   <td>{{ row.value === null ? '—' : num(row.value) }}</td>
                   @if (otherReplay()) {
                     <td>{{ row.other === null ? '—' : num(row.other) }}</td>

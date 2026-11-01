@@ -1,41 +1,73 @@
-<section
-  [class.panel]="!workflowStage()"
-  [class.guided]="!!workflowStage()"
-  aria-labelledby="staffing-title"
->
-  @if (workflowStage()) {
-    <h3 id="staffing-title" class="visually-hidden">Redistribuire personal</h3>
-  } @else {
-    <header class="panel-heading">
-      <div>
-        <h2 id="staffing-title">Redistribuire personal</h2>
-        <p>Vezi câți operatori are fiecare control și cere o împărțire mai bună pentru ziua simulată.</p>
-      </div>
-    </header>
+<ng-template #loadState>
+  @if (message()) {
+    <p class="notice" role="alert">{{ message() }}</p>
   }
-  <div [class.panel-body]="!workflowStage()">
-    @if (message()) {
-      <p class="notice" role="alert">{{ message() }}</p>
+  @if (loading()) {
+    <p role="status">Se încarcă personalul din layoutul scenariului…</p>
+  }
+  @if (!loading() && !settings()) {
+    <button class="btn-secondary" type="button" (click)="loadSettings()" [disabled]="disabled()">
+      Reîncearcă încărcarea personalului
+    </button>
+  }
+</ng-template>
+<ng-template #calculation let-result>
+  <details class="disclosure">
+    <summary>Detalii calcul</summary>
+    <p>
+      Revizia {{ result.constraints.scenarioRevision }} · buget
+      {{ result.constraints.availableStaff }} · limită
+      {{ result.constraints.timeLimitSeconds }} s · durata calculului
+      {{ result.wallTimeSeconds | number: '1.0-3' }} s.
+    </p>
+    @if (result.score !== null) {
+      <p>
+        Scor de minimizat: <strong>{{ result.score }}</strong> · limită inferioară demonstrată
+        {{ result.bestBound }} · operatori alocați {{ result.usedStaff }} · nealocați
+        {{ result.unassignedStaff }}.
+      </p>
     }
-    @if (loading()) {
-      <p role="status">Se încarcă personalul din layoutul scenariului…</p>
-    }
-    @if (!loading() && !settings()) {
-      <button class="btn-secondary" type="button" (click)="loadSettings()" [disabled]="disabled()">
-        Reîncearcă încărcarea personalului
-      </button>
-    }
+    <p>Bugete maxime pe terminal:</p>
+    <ul>
+      @for (pool of result.constraints.staffPools; track pool.terminalId) {
+        <li>Terminal {{ pool.terminalId }}: {{ pool.availableStaff }} operatori.</li>
+      }
+    </ul>
+    <ul>
+      @for (item of result.constraints.checkpoints; track item.checkpointId) {
+        <li>
+          {{ name(item.checkpointId) }}: actual {{ item.currentStaff }}, minim
+          {{ item.minimumStaff }}, maxim {{ item.maximumStaff }}, limită fizică
+          {{ item.physicalLimit }}, {{ item.closed ? 'închis' : 'disponibil' }},
+          {{ item.requiredOpen ? 'obligatoriu deschis' : 'opțional' }}, cost
+          {{ item.changeCost }}; cerere
+          {{ item.demandMilli / 1000 | number: '1.0-3' }} pas/min, capacitate/operator
+          {{ item.capacityMilli / 1000 | number: '1.0-3' }} pas/min.
+        </li>
+      }
+    </ul>
+  </details>
+</ng-template>
+
+@if (workflowStage()) {
+  <section class="guided" aria-labelledby="staffing-title">
+    <h3 id="staffing-title" class="visually-hidden">Redistribuire personal</h3>
+    <ng-container *ngTemplateOutlet="loadState" />
     @if (settings(); as settings) {
-      @if (!workflowStage() || workflowStage() === 'optimize') {
+      @if (workflowStage() === 'optimize') {
         <div class="situation">
           <p>
-            Personal disponibil: <strong>{{ settings.availableStaff }} operatori</strong>. Alocări
-            curente:
+            Scenariul are
+            <strong
+              >{{ ownStaff() }} {{ ownStaff() === 1 ? 'operator' : 'operatori' }}
+              {{ shiftPlan() ? 'pe ture' : 'la controale' }}</strong
+            >. Aeroportul mai are {{ settings.availableStaff - ownStaff() }} în rezervă.
+            {{ shiftPlan() ? 'Cei mai mulți odată, pe fiecare control:' : 'Pe fiecare control:' }}
           </p>
           <ul class="chips" aria-label="Personal actual pe controale">
             @for (row of rows; track row.checkpointId) {
               <li [class.empty]="!row.currentStaff">
-                {{ row.name }} · {{ row.currentStaff }}
+                {{ row.name }} · {{ shiftPlan() ? 'până la ' : '' }}{{ row.currentStaff }}
                 {{ row.currentStaff === 1 ? 'operator' : 'operatori' }}
               </li>
             }
@@ -47,26 +79,13 @@
             sosirilor.
           </p>
         }
-        @if (!workflowStage()) {
-          <div class="toolbar">
-            <button
-              class="btn-primary"
-              type="button"
-              [disabled]="blocked() || !settings.passengerProfilesActive"
-              (click)="propose()"
-            >
-              {{ busy() ? 'Se calculează…' : 'Propune redistribuirea' }}
-            </button>
-          </div>
-        }
         <details class="advanced disclosure">
-          <summary>
-            {{ workflowStage() ? 'Setări avansate · limite pe controale' : 'Setări avansate' }}
-          </summary>
+          <summary>Setări avansate · limite pe controale</summary>
           <form (ngSubmit)="propose()">
             <div class="fields">
               <label
-                >Câți operatori poți folosi (din {{ settings.availableStaff }})<input
+                >Câți operatori poți folosi (acum {{ ownStaff() }}, cel mult
+                {{ settings.availableStaff }})<input
                   type="number"
                   name="staffBudget"
                   [(ngModel)]="availableStaff"
@@ -234,47 +253,7 @@
               </table>
             </div>
           }
-          <details class="disclosure">
-            <summary>Detalii calcul</summary>
-            <p>
-              Revizia {{ result.constraints.scenarioRevision }} · buget
-              {{ result.constraints.availableStaff }} · limită
-              {{ result.constraints.timeLimitSeconds }} s · durata calculului
-              {{ result.wallTimeSeconds | number: '1.0-3' }} s.
-            </p>
-            @if (result.score !== null) {
-              <p>
-                Scor de minimizat: <strong>{{ result.score }}</strong> · limită inferioară demonstrată
-                {{ result.bestBound }} · operatori alocați {{ result.usedStaff }} · nealocați
-                {{ result.unassignedStaff }}.
-              </p>
-              <p>
-                Cost schimbare:
-                @for (item of result.assignments; track item.checkpointId) {
-                  {{ name(item.checkpointId) }} {{ item.changePenalty }};
-                }
-              </p>
-            }
-            <p>Bugete maxime pe terminal:</p>
-            <ul>
-              @for (pool of result.constraints.staffPools; track pool.terminalId) {
-                <li>Terminal {{ pool.terminalId }}: {{ pool.availableStaff }} operatori.</li>
-              }
-            </ul>
-            <ul>
-              @for (item of result.constraints.checkpoints; track item.checkpointId) {
-                <li>
-                  {{ name(item.checkpointId) }}: actual {{ item.currentStaff }}, minim
-                  {{ item.minimumStaff }}, maxim {{ item.maximumStaff }}, limită fizică
-                  {{ item.physicalLimit }}, {{ item.closed ? 'închis' : 'disponibil' }},
-                  {{ item.requiredOpen ? 'obligatoriu deschis' : 'opțional' }}, cost
-                  {{ item.changeCost }}; cerere
-                  {{ item.demandMilli / 1000 | number: '1.0-3' }} pas/min, capacitate/operator
-                  {{ item.capacityMilli / 1000 | number: '1.0-3' }} pas/min.
-                </li>
-              }
-            </ul>
-          </details>
+          <ng-container *ngTemplateOutlet="calculation; context: { $implicit: result }" />
         </div>
       }
       <app-staffing-evaluation-panel
@@ -289,5 +268,121 @@
         (working)="reviewing.set($event); working.emit($event)"
       />
     }
-  </div>
-</section>
+  </section>
+} @else {
+  <section class="panel" aria-labelledby="staffing-title" [attr.aria-busy]="loading() || busy()">
+    <header class="panel-heading">
+      <div>
+        <h2 id="staffing-title">Personal la controale</h2>
+        <p>
+          Alege câți operatori lucrează la fiecare control de securitate, apoi salvează în scenariu.
+        </p>
+      </div>
+      @if (settings(); as settings) {
+        <span class="meta-chip">{{ total() }} din {{ settings.availableStaff }} operatori</span>
+      }
+    </header>
+    <div class="panel-body">
+      <ng-container *ngTemplateOutlet="loadState" />
+      @if (notice()) {
+        <p class="notice" role="status">{{ notice() }}</p>
+      }
+      @if (settings(); as settings) {
+        @if (shiftPlan()) {
+          <p class="notice" role="status">
+            Scenariul folosește ture, așa că cifrele de mai jos sunt cei mai mulți operatori odată.
+            Dacă salvezi, fiecare control primește un număr fix de operatori pentru toată ziua.
+          </p>
+        }
+        <ul class="staff-list" aria-label="Operatori pe fiecare control">
+          @for (row of rows; track row.checkpointId) {
+            <li class="staff-row" [class.edited]="row.target !== row.currentStaff">
+              <span class="staff-name">
+                <strong>{{ row.name }}</strong>
+                <small>{{
+                  row.target === row.currentStaff
+                    ? 'salvat în scenariu'
+                    : 'în scenariu: ' + row.currentStaff
+                }}</small>
+              </span>
+              <span class="stepper" role="group" [attr.aria-label]="'Operatori la ' + row.name">
+                <button
+                  type="button"
+                  (click)="step(row, -1)"
+                  [disabled]="blocked() || row.target <= 0"
+                  [attr.aria-label]="'Un operator mai puțin la ' + row.name"
+                >
+                  <i class="pi pi-minus" aria-hidden="true"></i>
+                </button>
+                <output>{{ row.target }}</output>
+                <button
+                  type="button"
+                  (click)="step(row, 1)"
+                  [disabled]="blocked() || spare(row) <= 0"
+                  [attr.aria-label]="'Un operator în plus la ' + row.name"
+                >
+                  <i class="pi pi-plus" aria-hidden="true"></i>
+                </button>
+              </span>
+              @if (coverage(row); as load) {
+                <span class="coverage" [class.short]="load.short">
+                  <span class="bar" aria-hidden="true"
+                    ><span [style.width.%]="load.percent"></span
+                  ></span>
+                  <small
+                    >{{ load.short ? 'Prea puțini' : 'Suficient' }} · la vârf sosesc
+                    {{ load.demand | number: '1.0-1' }} pas/min, pot controla
+                    {{ load.capacity | number: '1.0-1' }}</small
+                  >
+                </span>
+              } @else {
+                <span class="coverage"><small>Cererea apare după „Propune automat”.</small></span>
+              }
+            </li>
+          }
+        </ul>
+        <p class="hint">
+          {{ settings.availableStaff - total() }} operatori liberi în rezervă.
+          @if (settings.passengerProfilesActive) {
+            „Propune automat” împarte cei {{ total() }} operatori după cererea estimată de pasageri.
+          } @else {
+            Pentru „Propune automat” activează profilurile de pasageri la pasul Pasageri.
+          }
+        </p>
+        <div class="toolbar">
+          <button class="btn-primary" type="button" (click)="save()" [disabled]="blocked() || !edited()">
+            Salvează în scenariu
+          </button>
+          <button
+            class="btn-secondary"
+            type="button"
+            (click)="propose()"
+            [disabled]="blocked() || !settings.passengerProfilesActive"
+          >
+            {{ busy() ? 'Se calculează…' : 'Propune automat' }}
+          </button>
+          @if (edited()) {
+            <button class="btn-secondary" type="button" (click)="reset()" [disabled]="blocked()">
+              Renunță la modificări
+            </button>
+          }
+        </div>
+        @if (result(); as result) {
+          <div class="result">
+            <p [attr.role]="result.assignments.length ? 'status' : 'alert'">
+              <strong>{{ status(result) }}</strong>
+              @if (result.assignments.length) {
+                Am pus cifrele propuse mai sus; salvează-le dacă îți convin.
+              }
+            </p>
+            <ng-container *ngTemplateOutlet="calculation; context: { $implicit: result }" />
+          </div>
+        }
+        <p class="hint">
+          Vrei să compari variantele în simulare înainte să decizi? Folosește
+          <a routerLink="/control-tower/decision" queryParamsHandling="preserve">Flux de decizie</a>.
+        </p>
+      }
+    </div>
+  </section>
+}

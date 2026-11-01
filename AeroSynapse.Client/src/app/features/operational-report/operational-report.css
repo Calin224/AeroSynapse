@@ -111,34 +111,38 @@ svg {
   height: auto;
   max-height: 26rem;
 }
+:host {
+  --compared: color-mix(in srgb, var(--text-muted) 65%, var(--surface-raised));
+}
 .grid {
   stroke: var(--border);
-  stroke-dasharray: 2 4;
+}
+.base {
+  stroke: var(--border-strong);
 }
 text {
   fill: var(--text-muted);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
-path {
-  fill: none;
-  stroke-width: 2.5;
-  stroke-linejoin: round;
+.mark {
+  fill: var(--text);
+  font-weight: 700;
 }
-.area {
-  fill: color-mix(in srgb, var(--accent) 12%, transparent);
-  stroke: none;
+.hit {
+  fill: transparent;
+}
+.hit.missing {
+  fill: color-mix(in srgb, var(--border) 45%, transparent);
+}
+.slot:hover .hit {
+  fill: color-mix(in srgb, var(--border) 30%, transparent);
 }
 .mine {
-  stroke: var(--accent);
+  fill: var(--accent);
 }
 .other {
-  stroke: var(--text-muted);
-  stroke-dasharray: 6 4;
-}
-.peak {
-  fill: var(--danger);
-  stroke: var(--surface-raised);
-  stroke-width: 2;
+  fill: var(--compared);
 }
 .legend {
   display: flex;
@@ -148,12 +152,13 @@ path {
 }
 .swatch {
   display: inline-block;
-  width: 24px;
-  vertical-align: middle;
-  border-top: 3px solid var(--accent);
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+  background: var(--accent);
 }
-.swatch.dashed {
-  border-top: 3px dashed var(--text-muted);
+.swatch.compared {
+  background: var(--compared);
 }
 
 .table-wrap {
@@ -211,4 +216,19 @@ td {
   display: block;
   height: 100%;
   background: var(--accent);
+}
+
+.export-actions {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  max-width: 34rem;
+}
+.export-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.export-actions .hint {
+  margin: 0;
 }

@@ -12,6 +12,7 @@ export const CONTROL_TOWER_PAGES = [
     path: '/control-tower/configure',
     icon: 'file-edit',
   },
+  { id: 'decision', label: 'Flux de decizie', path: '/control-tower/decision', icon: 'sitemap' },
   { id: 'compare', label: 'Compară personalul', path: '/control-tower/compare', icon: 'clone' },
   { id: 'repeat', label: 'Teste repetate', path: '/control-tower/batches', icon: 'chart-bar' },
 ] as const;
@@ -32,7 +33,7 @@ const destinations: WorkspaceDestination[] = [
   {
     path: '/control-tower',
     label: 'Control Tower',
-    description: 'Scenarii și rulări de simulare',
+    description: 'Scenarii, rulări de simulare și fluxul de decizie pentru incidente',
     icon: 'th-large',
     group: 'Operațiuni',
     children: CONTROL_TOWER_PAGES,
@@ -42,14 +43,6 @@ const destinations: WorkspaceDestination[] = [
     label: 'Centru de alerte',
     description: 'Incidente și notificări pentru operatori',
     icon: 'bell',
-    group: 'Operațiuni',
-    access: 'write',
-  },
-  {
-    path: '/operator-workflow',
-    label: 'Flux de decizie',
-    description: 'Incident → simulare → optimizare → decizie',
-    icon: 'sitemap',
     group: 'Operațiuni',
     access: 'write',
   },

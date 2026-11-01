@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Component, input } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { ScenarioDetails } from './operations.models';
 import { StaffingPanel, StaffingSettings, StaffingProposal } from './staffing-panel';
 import { StaffingEvaluationPanel } from './staffing-evaluation-panel';
@@ -56,6 +57,7 @@ describe('Staff redistribution proposals', () => {
       providers: [
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
+        provideRouter([]),
       ],
     });
     TestBed.overrideComponent(StaffingPanel, {
@@ -82,10 +84,11 @@ describe('Staff redistribution proposals', () => {
     },
     wallTimeSeconds: 5,
   });
-  function component() {
+  function component(workflowStage: string | null = null) {
     const fixture = TestBed.createComponent(StaffingPanel);
     fixture.componentRef.setInput('scenario', structuredClone(scenario));
     fixture.componentRef.setInput('active', true);
+    fixture.componentRef.setInput('workflowStage', workflowStage);
     fixture.detectChanges();
     http.expectOne('/api/scenarios/scenario-1/staffing/settings').flush(settings);
     fixture.detectChanges();
@@ -108,14 +111,55 @@ describe('Staff redistribution proposals', () => {
       element.querySelector('details.advanced [aria-label="Limită fizică Control A"]'),
     ).not.toBeNull();
   });
-  it('leads with current staff, folds the limits away and sends the current revision with all constraints', () => {
-    const fixture = component();
+  it("budgets the scenario's own operators, not the layout's whole roster, and counts a shift roster as people", () => {
+    const own = structuredClone(scenario);
+    own.inputs.staffAllocations = [
+      { staffMemberId: 'staff-1', checkpointId: 'cp-1' },
+      { staffMemberId: 'staff-2', checkpointId: 'cp-1' },
+    ];
+    let fixture = TestBed.createComponent(StaffingPanel);
+    fixture.componentRef.setInput('scenario', own);
+    fixture.componentRef.setInput('active', true);
+    fixture.componentRef.setInput('workflowStage', 'optimize');
+    fixture.detectChanges();
+    http.expectOne('/api/scenarios/scenario-1/staffing/settings').flush(settings);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.proposal()?.availableStaff).toBe(2);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Aeroportul mai are 2 în rezervă',
+    );
+
+    const shifts = structuredClone(own);
+    shifts.inputs.staffShifts = {
+      slotMinutes: 15,
+      transferMinutes: 5,
+      shifts: ['staff-1', 'staff-2', 'staff-3'].map((staffMemberId) => ({
+        staffMemberId,
+        segments: [{ checkpointId: 'cp-1', startMinute: 0, endMinute: 60 }],
+      })),
+    };
+    fixture = TestBed.createComponent(StaffingPanel);
+    fixture.componentRef.setInput('scenario', shifts);
+    fixture.componentRef.setInput('active', true);
+    fixture.componentRef.setInput('workflowStage', 'optimize');
+    fixture.detectChanges();
+    http.expectOne('/api/scenarios/scenario-1/staffing/settings').flush(settings);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.proposal()?.availableStaff).toBe(3);
+    const text = (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('3 operatori pe ture');
+    expect(text).toContain('Control A · până la 2 operatori');
+  });
+  it('in the guided workflow leads with current staff, folds the limits away and sends the current revision with all constraints', () => {
+    const fixture = component('optimize');
     const view = fixture.componentInstance,
       element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('Control A · 2 operatori');
     expect(element.textContent).not.toContain('Timeout solver');
     expect(
-      element.querySelector('details.disclosure:not([open]) [aria-label="Limită fizică Control A"]'),
+      element.querySelector(
+        'details.disclosure:not([open]) [aria-label="Limită fizică Control A"]',
+      ),
     ).not.toBeNull();
     expect(view.rows[0].physicalLimit).toBe(4);
     view.rows[0].physicalLimit = null;
@@ -183,7 +227,7 @@ describe('Staff redistribution proposals', () => {
     fixture.destroy();
   });
   it('preserves the review component and refreshes staffing counts after its own approval', () => {
-    const fixture = component();
+    const fixture = component('optimize');
     const view = fixture.componentInstance;
     const evaluation = fixture.debugElement.query(By.directive(EvaluationStub)).componentInstance;
     const approved = {
@@ -294,7 +338,7 @@ describe('Staff redistribution proposals', () => {
   it.each(['optimal', 'feasible'])(
     'shows the configuration and score with the correct %s status and captured terminal budgets',
     (status) => {
-      const fixture = component();
+      const fixture = component('optimize');
       const view = fixture.componentInstance;
       view.rows[0].physicalLimit = 2;
       view.propose();
@@ -349,4 +393,83 @@ describe('Staff redistribution proposals', () => {
       expect(text).toContain('Terminal terminal-1: 4 operatori');
     },
   );
+
+  it('sets each control with + and − within its terminal pool and can undo the edits', () => {
+    const fixture = component();
+    const view = fixture.componentInstance,
+      element = fixture.nativeElement as HTMLElement;
+    expect(fixture.debugElement.query(By.directive(EvaluationStub))).toBeNull();
+    const plus = element.querySelector<HTMLButtonElement>('[aria-label="Un operator în plus la Control A"]')!;
+    plus.click();
+    plus.click();
+    fixture.detectChanges();
+    expect(view.rows[0].target).toBe(4);
+    expect(plus.disabled).toBe(true);
+    expect(element.querySelector('.meta-chip')!.textContent).toContain('4 din 4 operatori');
+    expect(element.textContent).toContain('în scenariu: 2');
+    [...element.querySelectorAll<HTMLButtonElement>('button')]
+      .find((button) => button.textContent!.includes('Renunță'))!
+      .click();
+    fixture.detectChanges();
+    expect(view.rows[0].target).toBe(2);
+    expect(view.edited()).toBe(false);
+    view.save();
+    http.expectNone('/api/scenarios/scenario-1/staffing/allocation');
+  });
+  it('saves the counts as the scenario allocation and stays on its own revision', () => {
+    const fixture = component();
+    const view = fixture.componentInstance;
+    const changed = vi.fn();
+    view.changed.subscribe(changed);
+    view.step(view.rows[0], 1);
+    view.save();
+    const call = http.expectOne('/api/scenarios/scenario-1/staffing/allocation');
+    expect(call.request.method).toBe('PUT');
+    expect(call.request.body).toEqual({
+      revision: 3,
+      checkpoints: [{ checkpointId: 'cp-1', staffCount: 3 }],
+    });
+    const saved: ScenarioDetails = {
+      ...scenario,
+      scenario: { ...scenario.scenario, revision: 4 },
+      inputs: {
+        ...scenario.inputs,
+        staffAllocations: ['a', 'b', 'c'].map((id) => ({ staffMemberId: id, checkpointId: 'cp-1' })),
+      },
+    };
+    call.flush(saved);
+    fixture.componentRef.setInput('scenario', saved);
+    fixture.detectChanges();
+    expect(changed).toHaveBeenCalledWith(saved);
+    expect(view.rows[0]).toMatchObject({ currentStaff: 3, target: 3 });
+    expect(view.settings()?.revision).toBe(4);
+    expect(view.busy()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Am salvat personalul');
+    http.expectNone('/api/scenarios/scenario-1/staffing/settings');
+  });
+  it('proposes a split of the counted people and shows whether each control keeps up', () => {
+    const fixture = component();
+    const view = fixture.componentInstance;
+    view.step(view.rows[0], 1);
+    view.propose();
+    const call = http.expectOne('/api/scenarios/scenario-1/staffing/proposals');
+    expect(call.request.body.availableStaff).toBe(3);
+    call.flush({
+      ...unsolved('optimal', 'OPTIMAL'),
+      score: 0,
+      assignments: [
+        { checkpointId: 'cp-1', staffCount: 2, estimatedCapacityMilli: 4000, unmetDemandMilli: 0, changePenalty: 0 },
+      ],
+      constraints: {
+        ...unsolved().constraints,
+        checkpoints: [{ checkpointId: 'cp-1', currentStaff: 2, demandMilli: 3000, capacityMilli: 2000 }],
+      },
+    });
+    fixture.detectChanges();
+    expect(view.rows[0].target).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('Suficient · la vârf sosesc 3 pas/min, pot controla 4');
+    view.step(view.rows[0], -1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Prea puțini · la vârf sosesc 3 pas/min, pot controla 2');
+  });
 });

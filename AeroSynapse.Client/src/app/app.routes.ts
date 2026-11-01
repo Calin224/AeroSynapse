@@ -33,17 +33,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'operator-workflow',
-    canActivate: [workspaceGuard],
-    data: { write: true },
-    title: 'Incident → decizie | AeroSynapse',
-    canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
-    loadComponent: () =>
-      import('./features/operator-workflow/operator-workflow.component').then(
-        (m) => m.OperatorWorkflowComponent,
-      ),
-  },
-  {
     path: 'control-tower',
     canActivate: [workspaceGuard],
     title: 'Control Tower | AeroSynapse',
@@ -69,6 +58,17 @@ export const routes: Routes = [
           import('./features/scenario-studio/scenario-studio').then((m) => m.ScenarioStudio),
       },
       {
+        path: 'decision',
+        canActivate: [workspaceGuard],
+        data: { write: true },
+        canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
+        title: 'Flux de decizie | Control Tower',
+        loadComponent: () =>
+          import('./features/operator-workflow/operator-workflow.component').then(
+            (m) => m.OperatorWorkflowComponent,
+          ),
+      },
+      {
         path: 'compare',
         canActivate: [workspaceGuard],
         data: { write: true },
@@ -90,6 +90,7 @@ export const routes: Routes = [
   { path: 'scenario-studio', pathMatch: 'full', redirectTo: simulationRedirect('configure') },
   { path: 'batches', pathMatch: 'full', redirectTo: simulationRedirect('batches') },
   { path: 'compare', pathMatch: 'full', redirectTo: simulationRedirect('compare') },
+  { path: 'operator-workflow', pathMatch: 'full', redirectTo: simulationRedirect('decision') },
   {
     path: 'replay',
     canActivate: [workspaceGuard],

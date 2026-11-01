@@ -4,6 +4,7 @@ import { finalize, Subscription } from 'rxjs';
 import { WriteAccess } from '../../core/auth/write-access';
 import { ApiClient } from '../../core/http/api-client';
 import { ApiError } from '../../core/http/api-error.interceptor';
+import { COST_BASIS, costText, netSaving } from '../../shared/ui/cost-estimate';
 
 export interface OptimizationSide {
   meanWaitMinutes: number | null;
@@ -147,6 +148,9 @@ const silent: Record<string, string> = {
               <ul class="facts">
                 <li>{{ staff(option) }}</li>
                 <li>Coadă maximă {{ value.baseline.maxQueue }} → {{ option.result.maxQueue }}</li>
+                @if (option.recommended && cost(value.baseline, option); as text) {
+                  <li [title]="costBasis">{{ text }}</li>
+                }
               </ul>
               @if (option.explanation) {
                 <p class="why">{{ option.explanation }}</p>
@@ -385,6 +389,10 @@ export class AiOptimization {
   readonly runId = input.required<string>();
   /** The scenario moved past the simulated revision: the server would refuse every apply, so none is offered. */
   readonly stale = input(false);
+  /** The run's size, for estimating what an option saves; no estimate is shown without it. */
+  readonly passengers = input(0);
+  readonly durationMinutes = input(0);
+  readonly costBasis = COST_BASIS;
   readonly result = signal<RunOptimization | null>(null);
   readonly loading = signal(false);
   readonly failed = signal(false);
@@ -453,6 +461,19 @@ export class AiOptimization {
     if (delta === 0) return 'Fără personal suplimentar';
     const count = `${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'operator' : 'operatori'}`;
     return delta > 0 ? `+${count}` : `Economisește ${count}`;
+  }
+  /** Everyone's wait saved over the run, minus the staff the option adds (or plus the ones it frees). */
+  cost(baseline: OptimizationSide, option: OptimizationOption) {
+    const before = baseline.meanWaitMinutes,
+      after = option.result.meanWaitMinutes,
+      passengers = this.passengers();
+    if (before === null || after === null || passengers <= 0) return null;
+    return costText(
+      netSaving(
+        (passengers * (before - after)) / 60,
+        (option.operatorDelta * this.durationMinutes()) / 60,
+      ),
+    );
   }
   silentReason(status: string) {
     return silent[status] ?? 'Modelul AI nu a fost disponibil';

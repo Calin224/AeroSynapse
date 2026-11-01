@@ -162,6 +162,23 @@
 .deck .run:disabled {
   opacity: 0.75;
 }
+/* The guided incident flow, one step below running the scenario. */
+.deck .guided {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: var(--dp-typography-strong);
+  text-decoration: none;
+}
+.deck .guided:hover {
+  border-color: var(--on-accent);
+  background: rgb(255 255 255 / 0.1);
+}
 .history {
   display: grid;
   gap: 8px;

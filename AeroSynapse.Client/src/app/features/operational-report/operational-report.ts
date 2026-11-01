@@ -9,6 +9,7 @@ import { RunPicker, statusLabels } from '../../shared/ui/run-picker';
 import { RunComparison } from '../operations/comparison.models';
 import { RunDetails } from '../operations/operations.models';
 import { prepareReplay, ReplayEnvelope } from '../replay/replay.models';
+import { reportDocument, printReport } from './report-print';
 import {
   ReportRun,
   checkpointResults,
@@ -47,6 +48,7 @@ export class OperationalReport {
   readonly compared = signal<{ run: ReportRun; problem: string } | null>(null);
   readonly comparing = signal(false);
   readonly queueOpen = signal(false);
+  readonly exportError = signal('');
 
   readonly replay = computed(() => this.run()?.replay ?? null);
   readonly results = computed(() => (this.replay() ? checkpointResults(this.replay()!) : []));
@@ -138,10 +140,22 @@ export class OperationalReport {
     });
   }
 
+  async exportPdf() {
+    const replay = this.replay();
+    if (!replay || this.loading() || this.comparing()) return;
+    this.exportError.set('');
+    try {
+      await printReport(reportDocument(replay, this.otherReplay(), this.compared()?.problem ?? ''));
+    } catch {
+      this.exportError.set('Exportul PDF nu a putut fi pregătit. Încearcă din nou.');
+    }
+  }
+
   private reset() {
     this.pending?.unsubscribe();
     this.pendingCompare?.unsubscribe();
     this.run.set(null);
+    this.exportError.set('');
     this.loading.set(false);
     this.compareId.set('');
     this.compared.set(null);

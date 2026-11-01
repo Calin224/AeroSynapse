@@ -134,7 +134,7 @@ public sealed class ResourceTests
     [InlineData("terminal")]
     [InlineData("unknown-gate")]
     [InlineData("unknown-worker")]
-    [InlineData("missing-flight")]
+    [InlineData("duplicate-flight")]
     [InlineData("flight-change")]
     [InlineData("outside-horizon")]
     public void Model_activation_rejects_incompatible_scenarios_without_relaxing_existing_security_rules(string mutation)
@@ -149,7 +149,7 @@ public sealed class ResourceTests
             case "terminal": layout.Staff[0].TerminalId = Guid.NewGuid(); break;
             case "unknown-gate": config = config with { Gates = config.Gates.Select(item => item with { GateId = Guid.NewGuid() }).ToArray() }; break;
             case "unknown-worker": config = config with { Workers = config.Workers.Select(item => item with { StaffMemberId = Guid.NewGuid() }).ToArray() }; break;
-            case "missing-flight": config = config with { Requirements = [config.Requirements[0]] }; break;
+            case "duplicate-flight": config = config with { Requirements = [config.Requirements[0], config.Requirements[0]] }; break;
             case "outside-horizon": inputs = inputs with { Flights = inputs.Flights.Select((item,index) => index == 0
                 ? item with { BoardingOpensAtUtc = inputs.StartsAtUtc.AddMinutes(-1) } : item).ToArray() }; break;
             case "flight-change": inputs = inputs with { Events = [new(Guid.NewGuid(), "flight_change", inputs.StartsAtUtc.AddMinutes(1), null, null, inputs.Flights[0].Id, "{\"delayMinutes\":5}")] }; break;
@@ -157,5 +157,30 @@ public sealed class ResourceTests
         Assert.Throws<ScenarioValidationException>(() => IntegratedResourceScenarios.Validate(inputs with { IntegratedResources = config }, layout));
         IntegratedResourceScenarios.Validate(inputs with { IntegratedResources = null }, layout);
         if (mutation == "outside-horizon") ScenarioValidator.Validate(scenario with { Inputs = inputs with { IntegratedResources = null } }, layout);
+    }
+
+    [Fact]
+    public void Missing_flight_overrides_default_to_configured_gates_in_the_current_terminal()
+    {
+        var (scenario, layout) = Scenario();
+        var retained = scenario.Inputs.IntegratedResources!.Requirements[0];
+        var inputs = scenario.Inputs with { IntegratedResources = scenario.Inputs.IntegratedResources with { Requirements = [retained] } };
+        IntegratedResourceScenarios.Validate(inputs, layout);
+        var summary = new ScenarioSummary(Guid.NewGuid(), scenario.Code, scenario.Name, scenario.Description,
+            scenario.SceneId, scenario.LayoutVersionId, 1, inputs.StartsAtUtc, inputs.StartsAtUtc, true);
+        var model = IntegratedResourceScenarios.Build(new(summary, inputs), layout, 1);
+        Assert.Equal(inputs.Flights.Count, model.Resources.Requirements.Count);
+        var explicitRequirement = model.Resources.Requirements.Single(item => item.FlightId == retained.FlightId);
+        Assert.Equal(retained.CompatibleGateIds, explicitRequirement.CompatibleGateIds);
+        Assert.Equal(retained.RequiredSkills, explicitRequirement.RequiredSkills);
+        Assert.Equal(retained.MinimumTeamSize, explicitRequirement.MinimumTeamSize);
+        foreach (var requirement in model.Resources.Requirements.Where(item => item.FlightId != retained.FlightId))
+        {
+            var gate = layout.Gates.Single(item => item.Id == inputs.Flights.Single(flight => flight.Id == requirement.FlightId).GateId);
+            Assert.Equal(inputs.IntegratedResources.Gates.Select(item => item.GateId)
+                .Where(id => layout.Gates.Single(item => item.Id == id).TerminalId == gate.TerminalId), requirement.CompatibleGateIds);
+            Assert.Empty(requirement.RequiredSkills);
+            Assert.Equal(1, requirement.MinimumTeamSize);
+        }
     }
 }

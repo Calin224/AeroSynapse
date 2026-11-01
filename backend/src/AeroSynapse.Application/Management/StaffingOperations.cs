@@ -13,10 +13,14 @@ public sealed record GetStaffingSettingsQuery(Guid ScenarioId) : IRequest<Staffi
 public sealed record ProposeStaffingQuery(Guid ScenarioId, StaffingProposalRequest Value) : IRequest<StaffingSolveResult>;
 public sealed record BuildStaffingModelQuery(Guid ScenarioId, StaffingProposalRequest Value) : IRequest<StaffingSolveRequest>;
 public sealed record BuildShiftPlanQuery(Guid ScenarioId, StaffingProposalRequest Value, ShiftRules Rules, double TimeLimitSeconds) : IRequest<ShiftPlanRequest>;
+public sealed record StaffingCount(Guid CheckpointId, int StaffCount);
+public sealed record StaffingAllocationRequest(int Revision, IReadOnlyList<StaffingCount> Checkpoints);
+public sealed record ApplyStaffingCommand(Guid ScenarioId, StaffingAllocationRequest Value) : IRequest<ScenarioDetails>;
 
 public sealed class StaffingOperations(IScenarioService scenarios, IPassengerGenerator generator, IStaffingPlanner planner) :
     IRequestHandler<GetStaffingSettingsQuery, StaffingSettings>, IRequestHandler<ProposeStaffingQuery, StaffingSolveResult>,
-    IRequestHandler<BuildStaffingModelQuery, StaffingSolveRequest>, IRequestHandler<BuildShiftPlanQuery, ShiftPlanRequest>
+    IRequestHandler<BuildStaffingModelQuery, StaffingSolveRequest>, IRequestHandler<BuildShiftPlanQuery, ShiftPlanRequest>,
+    IRequestHandler<ApplyStaffingCommand, ScenarioDetails>
 {
     public async Task<StaffingSettings> Handle(GetStaffingSettingsQuery query, CancellationToken token)
     {
@@ -32,6 +36,25 @@ public sealed class StaffingOperations(IScenarioService scenarios, IPassengerGen
             terminals.Select(id => new StaffingPool(id, layout.Layout.Staff.Count(member => member.TerminalId == id))).ToArray(),
             layout.Layout.Checkpoints.OrderBy(item => item.Code, StringComparer.Ordinal).Select(item => new StaffingCheckpointChoice(item.Id,
                 item.TerminalId, item.Name, StaffShiftScenarios.StaffCount(scenario.Inputs, item.Id))).ToArray());
+    }
+
+    /// <summary>Staff every checkpoint with a fixed count, keeping current people first; a shift plan gives way to it.</summary>
+    public async Task<ScenarioDetails> Handle(ApplyStaffingCommand command, CancellationToken token)
+    {
+        var value = command.Value;
+        var scenario = await Require(command.ScenarioId, token);
+        if (scenario.Scenario.DeletedAtUtc is not null) throw new ScenarioConflictException("Archived scenarios cannot change staffing.");
+        if (value.Revision != scenario.Scenario.Revision) throw new ScenarioConflictException("Scenario has changed. Reload before changing staffing.");
+        var layout = await Layout(scenario, token);
+        var counts = value.Checkpoints ?? [];
+        if (counts.Any(item => item is null || item.StaffCount < 0) || counts.Select(item => item.CheckpointId).Distinct().Count() != counts.Count
+            || !counts.Select(item => item.CheckpointId).ToHashSet().SetEquals(layout.Layout.Checkpoints.Select(item => item.Id)))
+            throw Invalid("checkpoints", "Provide one non-negative staff count for every checkpoint in the captured layout.");
+        var inputs = scenario.Inputs with { StaffShifts = null, StaffAllocations = StaffShiftScenarios.Allocate(scenario.Inputs, layout.Layout,
+            counts.ToDictionary(item => item.CheckpointId, item => item.StaffCount), "checkpoints") };
+        var summary = scenario.Scenario;
+        return await scenarios.UpdateAsync(command.ScenarioId, new(summary.Code, summary.Name, summary.Description,
+            summary.SceneId, summary.LayoutVersionId, inputs, value.Revision), token);
     }
 
     public async Task<StaffingSolveResult> Handle(ProposeStaffingQuery query, CancellationToken token) =>

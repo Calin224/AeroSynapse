@@ -7,7 +7,10 @@ unui model demonstrativ, nu o predicție validată pentru un aeroport real.
 1. **Creează un scenariu** (`/scenario-studio`): alege exemplul recomandat sau
    construiește unul cu propriile zboruri, numărul de pasageri și personalul.
    Parcurge pașii, verifică și salvează. [Ghidul editorului](simulation-journey.md)
-   explică și setările detaliate.
+   explică și setările detaliate. Pentru o demonstrație alege **Prezentare
+   completă**: o singură rulare cu vârf de plecări, check-in, un val de pasageri,
+   un control închis și redeschis, o întârziere de zbor și doi operatori în
+   rezervă, ca fiecare pagină de mai jos să aibă ce arăta.
 2. **Scenariile mele** (`/scenario`): alege scenariul și apasă **Pornește
    simularea**. La final poți citi indicatorii, urmări terminalul și trece la
    comparație sau la repetarea testului. Dacă vii din editor, scenariul salvat
@@ -43,3 +46,18 @@ rămân disponibile ulterior. Revezi rulările persistate în Time Travel după 
 Agentul cu mutări de personal activate poate propune deschiderea unui punct de control existent, fără operatori, folosind rezerva sau un operator disponibil de la alt control. Poate redistribui și o parte din pasagerii încă aflați în coadă către un control cu capacitate liberă. Acțiunile respectă terminalul, disponibilitatea, personalul și timpul de transfer; motorul verifică din nou accesul spre poartă. Procesarea deja începută continuă, iar istoricul KPI rămâne capturat. Un pasager poate schimba coada o singură dată într-o rulare.
 
 În **AI Copilot**, acțiunea **Puncte de control și cozi** afișează variante calculate din snapshot-ul selectat și datele folosite. Analiza nu aplică modificări. Numărul propus de pasageri este o limită de transfer, iar beneficiul trebuie verificat în simulator. „Punct suplimentar” înseamnă un punct existent în layout, nu crearea unei noi infrastructuri.
+
+### Raport operațional și export PDF
+
+În **Raport operațional**, selectează o rulare finalizată cu rezultate valide.
+După încărcare, apasă **Exportă PDF detaliat**, apoi alege **Salvează ca PDF** în
+fereastra de imprimare a browserului. Documentul A4 include rezumatul, indicatorii
+explicați, rezultatele și starea finală pe puncte de control, graficul și tabelul
+cozilor, personalul, zborurile, evenimentele și sursele rulării. Anteturile de tabel
+se repetă la schimbarea paginii; paginile sunt numerotate.
+
+Dacă ai selectat o comparație, exportul așteaptă verificarea ei. Include rezultate
+comparative numai când serverul confirmă comparabilitatea; altfel păstrează motivul
+excluderii. Valorile lipsă sunt marcate explicit. Timpii și procentele folosesc două
+zecimale, iar numerele de pasageri rămân întregi. Configurația provine din captura
+rulării, inclusiv alocările nominale, și nu din scenariul modificat ulterior.

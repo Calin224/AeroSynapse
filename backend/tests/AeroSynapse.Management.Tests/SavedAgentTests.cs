@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AeroSynapse.Application.Contracts;
 using AeroSynapse.Application.Management;
 using AeroSynapse.Application.Storage;
 using AeroSynapse.Infrastructure.Storage;
@@ -19,6 +20,14 @@ public sealed class SavedAgentTests
     public async Task A_saved_agent_no_longer_changes_the_run()
     {
         await using var host = await ManagementHost.CreateAsync();
+        using var engine = new HttpClient { BaseAddress = new Uri(Environment.GetEnvironmentVariable("SIMULATION_TEST_URL") ?? "http://intelligence:8000") };
+        // Passenger-profile captures need real observed results, while the recorder keeps the exact engine input.
+        host.Engine.Behavior = async (request, token) =>
+        {
+            using var response = await engine.PostAsJsonAsync("/simulation/kpi-run", request, ContractJson.Options, token);
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<SimulationResponse>(ContractJson.Options, token))!;
+        };
         var source = await StaffingEvaluationTests.Create(host, multipleCheckpoints: true);
         using var changed = await host.Client.PutAsJsonAsync($"/scenarios/{source.Scenario.Id}", new ScenarioWriteRequest(source.Scenario.Code,
             source.Scenario.Name, source.Scenario.Description, source.Scenario.SceneId, source.Scenario.LayoutVersionId,

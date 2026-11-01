@@ -63,8 +63,8 @@ public sealed record OptimizationBrief(OptimizationPeak? Bottleneck, string? Rec
 public static class RunOptimizationPlanner
 {
     /// <summary>
-    /// Up to four alternatives around the control with the longest queue ("hot") and the calmest control that keeps
-    /// at least one operator ("cold"): move one operator, add one, add two, and save one where it is least needed.
+    /// Up to five alternatives around the control with the longest queue ("hot") and the calmest control that keeps
+    /// at least one operator ("cold"): move one operator, move two, add one, add two, and save one where it is least needed.
     /// Controls with a shift plan are left out: the plan, not the staff count, decides who is on duty there.
     /// With queued check-in desks, one and two more open desks too, ahead of the controls when the desks are the bottleneck.
     /// Whether the scenario has the people for an option is decided afterwards by <see cref="Staff"/>.
@@ -86,8 +86,19 @@ public static class RunOptimizationPlanner
         if (queued)
         {
             if (cold is not null)
+            {
                 candidates.Add(new("move", "move", $"Mută un operator de la {Name(cold.CheckpointId)} la {Name(hot!.CheckpointId)}",
                     new Dictionary<Guid, int> { [cold.CheckpointId] = -1, [hot.CheckpointId] = 1 }));
+                // Two at once, so a gap two people wide closes in one revision instead of the same move applied twice.
+                // Every donor keeps at least one operator: the calmest gives two, or it and the next calmest one each.
+                var next = open.Skip(1).LastOrDefault(c => c.CheckpointId != cold.CheckpointId && c.StaffCount >= 2);
+                if (cold.StaffCount >= 3)
+                    candidates.Add(new("move-2", "move", $"Mută doi operatori de la {Name(cold.CheckpointId)} la {Name(hot.CheckpointId)}",
+                        new Dictionary<Guid, int> { [cold.CheckpointId] = -2, [hot.CheckpointId] = 2 }));
+                else if (next is not null)
+                    candidates.Add(new("move-2", "move", $"Mută câte un operator de la {Name(cold.CheckpointId)} și {Name(next.CheckpointId)} la {Name(hot.CheckpointId)}",
+                        new Dictionary<Guid, int> { [cold.CheckpointId] = -1, [next.CheckpointId] = -1, [hot.CheckpointId] = 2 }));
+            }
             candidates.Add(new("add-1", "add", $"Adaugă un operator la {Name(hot!.CheckpointId)}",
                 new Dictionary<Guid, int> { [hot.CheckpointId] = 1 }));
             candidates.Add(second is null

@@ -60,6 +60,7 @@ describe('Operational report page', () => {
   }
   afterEach(() => {
     http.verify();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
   async function until(predicate: () => boolean) {
@@ -101,10 +102,20 @@ describe('Operational report page', () => {
       (o) => o.value,
     );
     expect(options).toEqual(['', ids.otherRun]);
-    expect(host.querySelector('path.other')).toBeNull();
+    expect(host.querySelector('rect.other')).toBeNull();
+    host.querySelector<HTMLButtonElement>('[data-export-pdf]')!.click();
+    const printFrame = document.querySelector<HTMLIFrameElement>(
+      'iframe[title="Raport operațional pentru export PDF"]',
+    )!;
+    expect(printFrame.srcdoc).toContain(ids.run);
+    expect(printFrame.srcdoc).toContain('1,25 min');
+    printFrame.remove();
+    view.scenarioChanged();
+    await fixture.whenStable();
+    expect(host.querySelector('[data-export-pdf]')).toBeNull();
   });
 
-  it('adds a comparison run on request, in the cards and as a dashed line', async () => {
+  it('adds a comparison run on request, in the cards and as paired columns', async () => {
     const { fixture, view, host } = await setup();
     flushPicker([listed(ids.run, 'completed', 2), listed(ids.otherRun, 'completed', 5)]);
     await flushRun(view, ids.run);
@@ -112,6 +123,8 @@ describe('Operational report page', () => {
     const select = host.querySelector<HTMLSelectElement>('.compare select')!;
     select.value = ids.otherRun;
     select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(host.querySelector<HTMLButtonElement>('[data-export-pdf]')?.disabled).toBe(true);
     http.expectOne(`/api/runs/${ids.otherRun}`).flush(details(ids.otherRun));
     http.expectOne(`/api/runs/${ids.otherRun}/replay`).flush(await replayEnvelope(candidateData()));
     http.expectOne(`/api/runs/${ids.run}/compare/${ids.otherRun}`).flush(comparisonFixture());
@@ -120,7 +133,7 @@ describe('Operational report page', () => {
     expect(host.querySelector('[data-card="meanWait"]')?.textContent).toContain(
       'Rularea de comparat: 38 s (acum cu 38 s mai mult)',
     );
-    expect(host.querySelector('path.other')?.getAttribute('d')).toMatch(/^M/);
+    expect(Number(host.querySelector('rect.other')?.getAttribute('height'))).toBeGreaterThan(0);
     expect(host.textContent).toContain('Rularea de comparat');
   });
 
@@ -146,7 +159,7 @@ describe('Operational report page', () => {
     );
     expect(view.otherReplay()).toBeNull();
     expect(host.querySelector('.versus')).toBeNull();
-    expect(host.querySelector('path.other')).toBeNull();
+    expect(host.querySelector('rect.other')).toBeNull();
     // The linked run stays selectable even though the picker did not list it.
     expect(view.choices().map((choice) => choice.id)).toEqual([ids.otherRun]);
   });
@@ -168,6 +181,22 @@ describe('Operational report page', () => {
     expect(host.querySelector('[data-card]')).toBeNull();
     expect(host.querySelector('svg')).toBeNull();
     http.expectNone(`/api/runs/${ids.run}/replay`);
+    expect(host.querySelector('[data-export-pdf]')).toBeNull();
+  });
+
+  it('shows a recoverable error if the browser cannot prepare the print document', async () => {
+    const { fixture, view, host } = await setup({ baselineRunId: ids.run });
+    http.expectOne('/api/scenarios').flush([]);
+    await flushRun(view, ids.run);
+    vi.spyOn(document.body, 'append').mockImplementationOnce(() => {
+      throw new Error('Print unavailable');
+    });
+    await view.exportPdf();
+    await fixture.whenStable();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'Exportul PDF nu a putut fi pregătit. Încearcă din nou.',
+    );
+    expect(host.querySelector<HTMLButtonElement>('[data-export-pdf]')?.disabled).toBe(false);
   });
 
   it('rejects a replay that belongs to another run', async () => {

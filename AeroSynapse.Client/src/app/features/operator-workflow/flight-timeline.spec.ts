@@ -10,6 +10,8 @@ const flight = (id: string, cancelled = false): TimelineFlight => ({
   departure: '13:45',
   departureAt: 75,
   arrivals: { left: 10, width: 40 },
+  arrivalPeak: cancelled ? null : 30,
+  arrivalsLabel: '13:10–13:30',
   boarding: null,
   cancelled,
 });
@@ -31,6 +33,10 @@ describe('Flight timeline', () => {
     expect(first.getAttribute('aria-pressed')).toBe('true');
     expect(first.querySelector('.surge')).not.toBeNull();
     expect(second.disabled).toBe(true);
+    // Arrivals peak where most passengers come; even arrivals stay a flat band.
+    expect(first.querySelector('.arrivals path').getAttribute('d')).toContain('50,0');
+    expect(second.querySelector('.arrivals path').getAttribute('d')).toContain('L100,45');
+    expect(first.getAttribute('aria-label')).toContain('sosiri 13:10–13:30');
     first.click();
     expect(picked).toEqual(['ro1']);
     fixture.componentRef.setInput('disabled', true);

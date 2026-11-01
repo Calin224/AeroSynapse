@@ -1,39 +1,77 @@
-<div class="timeline" role="group" aria-label="Cronologia zborurilor">
-  <div class="axis" aria-hidden="true">
-    @for (tick of line().ticks; track tick.left) {
-      <span [style.left.%]="tick.left">{{ tick.label }}</span>
-    }
+<div class="board" role="group" aria-label="Cronologia zborurilor">
+  <header class="board-head">
+    <div>
+      <p class="eyebrow"><i class="pi pi-send" aria-hidden="true"></i> Plecări</p>
+      <p class="hint">Alege zborul la care apare valul de pasageri.</p>
+    </div>
+    <ul class="legend">
+      <li class="lg-arrivals">sosiri pasageri</li>
+      <li class="lg-boarding">îmbarcare</li>
+      <li class="lg-surge">val de pasageri</li>
+      <li class="lg-departure"><i class="pi pi-send" aria-hidden="true"></i> plecare</li>
+    </ul>
+  </header>
+
+  <div class="row head" aria-hidden="true">
+    <span>Zbor</span>
+    <span>Plecare</span>
+    <span>Poartă</span>
+    <span>Pasageri</span>
+    <span class="axis">
+      @for (tick of line().ticks; track tick.left) {
+        <span [style.left.%]="tick.left">{{ tick.label }}</span>
+      }
+    </span>
   </div>
+
   @for (flight of line().flights; track flight.id) {
     <button
       type="button"
-      class="flight"
+      class="row flight"
       [class.selected]="selected() === flight.id"
+      [class.cancelled]="flight.cancelled"
       [disabled]="disabled() || flight.cancelled"
       [attr.aria-pressed]="selected() === flight.id"
+      [attr.aria-label]="label(flight)"
       (click)="pick.emit(flight.id)"
     >
-      <span class="flight-name">
+      <span class="code">
         <strong>{{ flight.code }}</strong>
-        <small
-          >plecare {{ flight.departure }} · {{ flight.gate }} · {{ flight.passengers }} pasageri{{
-            flight.cancelled ? ' · anulat' : ''
-          }}</small
-        >
+        @if (flight.cancelled) {
+          <em class="chip warn">anulat</em>
+        } @else if (selected() === flight.id) {
+          <em class="chip">ales</em>
+        }
       </span>
+      <span class="time">{{ flight.departure }}</span>
+      <span class="gate">{{ flight.gate }}</span>
+      <span class="pax"><i class="pi pi-users" aria-hidden="true"></i>{{ flight.passengers }}</span>
       <span class="track" aria-hidden="true">
-        @for (tick of line().ticks; track tick.left) {
-          <i class="grid" [style.left.%]="tick.left"></i>
+        @for (band of bands(); track band.left) {
+          <i class="band" [style.left.%]="band.left" [style.width.%]="band.width"></i>
         }
         @if (flight.arrivals; as span) {
-          <i class="arrivals" [style.left.%]="span.left" [style.width.%]="span.width"></i>
+          <svg
+            class="arrivals"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            [style.left.%]="span.left"
+            [style.width.%]="span.width"
+          >
+            <path [attr.d]="curve(flight)" />
+          </svg>
+          @if (flight.arrivalsLabel) {
+            <span class="span-label" [style.left.%]="span.left">{{ flight.arrivalsLabel }}</span>
+          }
         }
         @if (flight.boarding; as span) {
           <i class="boarding" [style.left.%]="span.left" [style.width.%]="span.width"></i>
         }
         @if (line().surge; as band) {
           @if (band.flightId === flight.id) {
-            <i class="surge" [style.left.%]="band.left" [style.width.%]="band.width"></i>
+            <i class="surge" [style.left.%]="band.left" [style.width.%]="band.width"
+              ><span>{{ band.label }}</span></i
+            >
           }
         }
         @if (flight.departureAt !== null) {
@@ -44,10 +82,4 @@
       </span>
     </button>
   }
-  <ul class="legend">
-    <li class="arrivals">sosiri pasageri</li>
-    <li class="boarding">îmbarcare</li>
-    <li class="surge">valul de pasageri</li>
-    <li class="departure"><i class="pi pi-send" aria-hidden="true"></i> plecare</li>
-  </ul>
 </div>

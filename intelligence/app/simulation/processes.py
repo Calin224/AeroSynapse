@@ -14,7 +14,7 @@ from app.navigation.planner import plan_population, summarize, without_closed_ch
 from app.optimization.planning import recommend
 from app.passengers.generator import generate_population
 from app.simulation import check_in
-from app.simulation.balancing import MOVE_MINUTES, Walks, balance
+from app.simulation.balancing import INTERVAL_MINUTES, MOVE_MINUTES, Walks, decide, lanes
 from app.simulation.events import ordered, planned_at
 from app.simulation.metrics import ENGINE, KpiCollector, sample_minutes
 
@@ -83,10 +83,11 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         # Generated and surge arrivals are terminal arrivals; check-in moves the control arrival of hold-baggage passengers.
         people, late, check_in_records = check_in.route(request.check_in, request.seed, request.duration_minutes, people)
     people.sort(key=lambda person:(person['arrivalMinute'],person['id']))
-    rebalanced = set()
-    if request.passenger_generation is not None and len(stations) > 1:
-        walks = Walks(navigation,samples,flights) if navigation is not None else None
-        rebalanced = balance(people,surged,{key:station['input'] for key,station in stations.items()},flights,schedules,walks)
+    dynamic = request.passenger_generation is not None and len(stations) > 1 and navigation is not None
+    lane_map = {}
+    if dynamic:
+        lane_map = {key:lanes(flight,{item:station['input'] for item,station in stations.items()}) for key,flight in flights.items()}
+        dynamic = any(lane_map.values())
     collector=KpiCollector(request,stations,[person for person in people if person['id'] not in surged],
                            [person for person in late if person['id'] not in surged]) if request.engine==ENGINE else None
     routing = Routing(navigation, samples, flights, journeys) if events and navigation is not None else None
@@ -381,7 +382,43 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
             env.process(process(person))
 
     env.process(arrivals())
-    # Passengers still at check-in never reach their gate: at boarding close they count as missed.
+
+    rerouted, groups = set(), {}
+    walks = Walks(navigation,samples,flights) if dynamic else None
+
+    def reroute(minute):
+        """Every few minutes the arrivals of the next window go to the control with the least wait plus walk."""
+        def lanes_of(person):
+            options = lane_map.get(person['flightId'], {})
+            return options if person['checkpointId'] in options and (routing is None or routing.bound(person['checkpointId'])) else {}
+        window = [person for person in people if minute <= person['arrivalMinute'] < minute+INTERVAL_MINUTES
+                  and person['id'] in samples and person['id'] not in surged and not person['errorCode']
+                  and 'assignedCheckpointId' not in person and lanes_of(person)]
+        if not window: return
+        state = {key:{'capacity':capacity_now(station) if routing is None or routing.bound(key) else 0,
+                      'rate':station['input'].service_rate_per_minute,
+                      'ahead':station['queuedCount']+station['processingCount']} for key,station in stations.items()}
+        graph = routing.graph() if routing is not None else None
+        by_id = {person['id']:person for person in window}
+        for identifier,target in decide(window,env.now,state,lanes_of,groups,walks,graph).items():
+            person = by_id[identifier]
+            source = person['checkpointId']
+            options = lane_map[person['flightId']]
+            person['assignedCheckpointId'] = source
+            person['serviceMinutes'] *= stations[source]['input'].service_rate_per_minute / stations[target]['input'].service_rate_per_minute
+            person['walkingMinutes'] = walks.minutes(person,target,graph) or person['walkingMinutes']*options[target]/options[source]
+            person['checkpointId'] = target
+            if collector is not None: collector.move(source,target)
+            if person['boardingCloseMinute'] is not None:
+                stations[source]['riskPopulation']-=1; stations[target]['riskPopulation']+=1
+            rerouted.add(identifier)
+
+    # Decisions act at the start of their minute, before that minute's arrivals.
+    for minute in range(0,request.duration_minutes+1,INTERVAL_MINUTES) if dynamic else ():
+        trigger = simpy.Event(env)
+        trigger._ok, trigger._value = True, None
+        trigger.callbacks.append(lambda _, minute=minute: reroute(minute))
+        env.schedule(trigger, URGENT, minute)    # Passengers still at check-in never reach their gate: at boarding close they count as missed.
     for person in (*people, *late):
         if person['boardingCloseMinute'] is not None and person['id'] not in surged: watch(person)
     step = max(1,(request.duration_minutes+59)//60)
@@ -397,7 +434,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
                 station = stations[zone['zoneId']]
                 zone['notArrivedPassengers'] = collector.populations[zone['zoneId']] - station['arrivedCount'] - station['unreachableCount']
         if collector is not None and minute in snapshot_minutes:
-            collector.sample(minute,stations,{key:capacity_now(station) for key,station in stations.items()} if request.events is not None else None)
+            collector.sample(minute,stations,{key:capacity_now(station) for key,station in stations.items()} if request.events is not None or dynamic else None)
         if on_progress is not None and minute in progress_minutes: on_progress({'simulationMinute':minute,'zones':zones})
         if minute == stop_at: return observe(minute)
     for person in people:
@@ -413,7 +450,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         'horizonMinutes':request.duration_minutes,'populationCount':population_count,'arrivedCount':len(people),
         'notArrivedCount':population_count-len(people),'deadlineMissedCount':sum(person['deadlineMissed'] for person in people),
         'checkpoints':[],'passengers':people,'offset':0,'returnedCount':len(people),'hasMore':False}
-    if request.events is not None: result['events'] = log
+    if request.events is not None or dynamic: result['events'] = log
     for field,stage in [('queuedCount','queued'),('processingCount','processing'),('walkingCount','walking'),('atGateCount','at_gate'),('unreachableCount','unreachable')]:
         result[field] = sum(person['stage']==stage for person in people)
     recorded = (request.starts_at_utc+timedelta(minutes=request.duration_minutes)).isoformat().replace('+00:00','Z')
@@ -424,7 +461,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
         envelope['metrics'].append({'zoneId':key,'recordedAtUtc':recorded,'meanWaitMinutes':mean,'throughputPerMinute':round(processed/request.duration_minutes,6),'processedPassengers':processed})
         envelope['snapshots'].append({'contractVersion':'1.0','zoneId':key,'elapsedMinutes':request.duration_minutes,'queuedPassengers':station['queuedCount'],'processedPassengers':processed})
     if navigation_result is not None:
-        reassigned = {person['id']: person['checkpointId'] for person in people if 'redistributedAtMinute' in person or person['id'] in rebalanced}
+        reassigned = {person['id']: person['checkpointId'] for person in people if 'redistributedAtMinute' in person or person['id'] in rerouted}
         if reassigned:
             adjusted = population | {'passengers': [sample | {'checkpointId': reassigned.get(sample['id'], sample['checkpointId'])}
                                                   for sample in population['passengers']]}
@@ -434,7 +471,7 @@ def simulate(request, on_progress=None, stop_at=None, limits=None):
             journey = journeys.get(person['id'])
             if journey is None: continue
             journey['boardingCloseMinute'] = person['boardingCloseMinute']
-            if 'redistributedAtMinute' in person or person['id'] in rebalanced: journey['walkingMinutes'] = person['walkingMinutes']
+            if 'redistributedAtMinute' in person or person['id'] in rerouted: journey['walkingMinutes'] = person['walkingMinutes']
             if journey['error']: continue
             if person['gateArrivalMinute'] is not None:
                 journey.update(queueWaitMinutes=person['queueWaitMinutes'],gateArrivalMinute=person['gateArrivalMinute'],boardingRisk=person['boardingRisk'])

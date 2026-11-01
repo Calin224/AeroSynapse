@@ -3,6 +3,7 @@
   --tone-1: #3c6e9e;
   --tone-2: #a26b2c;
   --tone-3: #7a4f9a;
+  --more: #1c6b58;
   display: grid;
   gap: 0.75rem;
 }
@@ -10,12 +11,51 @@ h3 {
   margin: 0;
   font-size: 1rem;
 }
-.rejected {
+.shift-head {
+  display: grid;
+  gap: 0.6rem;
+}
+.compare-only {
   margin: 0;
-  padding: 0.6rem 0.9rem;
-  border-left: 3px solid var(--warning);
-  background: var(--panel);
-  font-size: 0.85rem;
+  padding: 0.65rem 0.9rem;
+  border-left: 4px solid var(--signal);
+  background: var(--surface-raised);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.key li::before {
+  content: '';
+  width: 1rem;
+  height: 0.75rem;
+  border-radius: 2px;
+}
+.key-arrivals::before {
+  background: #355b4466;
+}
+.key-more::before {
+  background: color-mix(in srgb, var(--more) 35%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--more);
+}
+.key-less::before {
+  box-shadow: inset 0 0 0 1.5px var(--signal);
+}
+.key-closed::before {
+  background: repeating-linear-gradient(-45deg, var(--border) 0 2px, transparent 2px 5px);
 }
 .hidden {
   position: absolute;
@@ -25,6 +65,11 @@ h3 {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
 .scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -32,17 +77,19 @@ h3 {
   background: var(--panel);
 }
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 2px;
   font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
 }
 th,
 td {
-  min-width: 1.6rem;
-  padding: 0.25rem 0.1rem;
+  min-width: 1.75rem;
+  padding: 0.3rem 0.1rem;
   text-align: center;
 }
 thead th {
+  padding-top: 0.6rem;
   font-family: var(--font-mono);
   font-weight: 500;
   color: var(--text-muted);
@@ -53,47 +100,74 @@ thead th {
   position: sticky;
   left: 0;
   z-index: 1;
-  min-width: 7.5rem;
+  min-width: 6rem;
   padding-inline: 0.6rem;
   background: var(--panel);
+  color: var(--text-muted);
+  font-weight: 500;
   text-align: left;
-  font-weight: 600;
   white-space: nowrap;
 }
-.now .name,
-.proposed .name {
-  font-weight: 400;
+thead .name {
+  border-left: 0;
+}
+.group th {
+  position: sticky;
+  left: 0;
+  padding: 0.9rem 0.6rem 0.2rem;
+  text-align: left;
+  white-space: nowrap;
+}
+.group strong {
+  margin-right: 0.6rem;
+  font-size: 0.92rem;
+}
+.group span {
   color: var(--text-muted);
+  font-weight: 400;
 }
 .arrivals td {
-  position: relative;
   height: 2.2rem;
   vertical-align: bottom;
 }
 .arrivals i {
   display: block;
-  margin: 0 auto;
-  width: 70%;
+  width: 72%;
   min-height: 1px;
+  margin: 0 auto;
   border-radius: 2px 2px 0 0;
   background: #355b4466;
-}
-.arrivals th,
-.arrivals td {
-  border-top: 1px solid var(--border);
 }
 .now td {
   color: var(--text-muted);
 }
+.now .constant {
+  padding-left: 0.6rem;
+  border-radius: 2px;
+  background: var(--surface-raised);
+  color: var(--text);
+  text-align: left;
+}
 .proposed td {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text) calc(var(--level, 0) * 14%), transparent);
   font-weight: 700;
 }
 .proposed .more {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--more) calc(18% + var(--level, 0) * 30%), transparent);
+  box-shadow: inset 0 0 0 1.5px var(--more);
+  color: var(--more);
 }
 .proposed .less {
+  box-shadow: inset 0 0 0 1.5px var(--signal);
+  color: var(--signal);
+}
+/* A closed control says so by its hatching alone, even when today it had people. */
+.proposed .closed {
+  background: repeating-linear-gradient(-45deg, var(--border) 0 2px, transparent 2px 5px);
+  box-shadow: none;
   color: var(--text-muted);
+  font-weight: 400;
 }
 details summary {
   cursor: pointer;

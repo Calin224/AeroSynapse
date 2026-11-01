@@ -225,26 +225,46 @@ describe('Operational report figures and wording', () => {
     );
   });
 
-  it('draws the queue over local clock time with a gap for missing snapshots', async () => {
+  it('draws the longest queue per clock slot, with no column where a snapshot is missing', async () => {
     const data = replayData();
     data.samples = data.samples.filter((row) => row.minute !== 2);
     const chart = queueChart(await prepared(data), await prepared(candidateData()));
+    expect(chart.slot).toBe(2);
     expect(chart.ticks.map((tick) => tick.label)).toEqual([
       '13:00',
+      '13:01',
       '13:02',
       '13:03',
+      '13:04',
       '13:05',
       '13:06',
     ]);
-    expect(chart.peak).toEqual({ value: 20, time: '13:00', x: 50, y: 30 });
-    expect(chart.area).toMatch(/Z$/);
-    expect(chart.path.match(/M/g)).toHaveLength(2);
-    expect(chart.otherPath.match(/M/g)).toHaveLength(1);
-    expect(chart.rows.map((row) => [row.value, row.other])).toEqual([
-      [20, 10],
-      [null, 8],
-      [12, 6],
-      [8, 4],
+    expect(chart.grid.map((line) => line.label)).toEqual(['0', '10', '20']);
+    expect(chart.peak).toEqual({ value: 20, time: '13:00' });
+    // The closing snapshot (8 at 13:06) joins the last slot instead of opening its own.
+    expect(chart.columns.map((column) => [column.label, column.value, column.other])).toEqual([
+      ['13:00–13:02', 20, 10],
+      ['13:02–13:04', null, 8],
+      ['13:04–13:06', 12, 6],
+    ]);
+    expect(chart.columns[1].tip).toBe(
+      '13:02–13:04 · fără date · rularea de comparat: cel mult 8 pasageri',
+    );
+    expect(chart.columns[1].mine).toBeNull();
+    expect(chart.columns[1].theirs?.height).toBeGreaterThan(0);
+    expect(chart.mark).toMatchObject({ value: 20, y: 24 });
+  });
+
+  it('starts slots on round clock times when the run does not', async () => {
+    // The prepared replay is frozen; a copy lets the clock start one minute past the hour.
+    const replay = structuredClone(await prepared());
+    replay.data.captured.scenario.inputs.startsAtUtc = '2026-10-16T10:01:00Z';
+    const chart = queueChart(replay, null);
+    expect(chart.columns.map((column) => column.label)).toEqual([
+      '13:01–13:02',
+      '13:02–13:04',
+      '13:04–13:06',
+      '13:06–13:07',
     ]);
   });
 

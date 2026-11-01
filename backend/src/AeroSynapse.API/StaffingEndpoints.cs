@@ -43,6 +43,9 @@ internal static class StaffingEndpoints
         group.MapGet("/settings", async (Guid id, ISender sender, CancellationToken token) =>
             Results.Ok(await sender.Send(new GetStaffingSettingsQuery(id), token)))
             .Document<StaffingSettings>("Read available staff and current checkpoint assignments from the captured layout");
+        group.MapPut("/allocation", async (Guid id, StaffingAllocationRequest request, ISender sender, CancellationToken token) =>
+            Results.Ok(await sender.Send(new ApplyStaffingCommand(id, request), token)))
+            .Document<AeroSynapse.Application.Storage.ScenarioDetails>("Staff each checkpoint with a fixed count using the scenario revision; replaces any shift plan");
         group.MapPost("/proposals", async (Guid id, JsonElement payload, ISender sender, CancellationToken token) =>
             Results.Ok(await sender.Send(new ProposeStaffingQuery(id, ContractJson.Read<StaffingProposalRequest>(payload, "StaffingProposalRequest")), token)))
             .AddEndpointFilter<AeroSynapse.API.Audit.AuditCalculationFilter>().Accepts<StaffingProposalRequest>("application/json")

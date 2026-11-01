@@ -250,9 +250,10 @@ public sealed class EventTimeline
     /// <summary>Whether a passenger is part of demand at a time: surge demand exists from its event minute.</summary>
     public bool Visible(ProcessPassenger person, double time) => Surge(person.Id) is not { } surge || surge.Event.Minute <= time;
 
-    /// <summary>The applied-event log must exist exactly when the request declares events, in application order.</summary>
+    /// <summary>The applied-event log must exist when the request declares events, in application order; without events an
+    /// engine that reroutes during the run may still report its empty log.</summary>
     public bool Matches(IReadOnlyList<AppliedEvent>? applied) => declared
         ? applied is not null && ordered.Select((pair, index) => new AppliedEvent(pair.Event.EventId, pair.Event.Type, pair.Event.Minute, index + 1)).SequenceEqual(applied)
-        : applied is null;
+        : applied is null or [];
     private readonly bool declared;
 }

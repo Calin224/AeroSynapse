@@ -1,12 +1,23 @@
-<h3 id="shift-plan-title">Alocare personal pe controale · intervale de 15 minute</h3>
-@if (!plan().recommended) {
-  <p class="rejected" role="note">Plan nerecomandat.</p>
-}
+<header class="shift-head">
+  <h3 id="shift-plan-title">{{ plan().title }} · ziua pe intervale de 15 minute</h3>
+  @if (!plan().recommended) {
+    <p class="compare-only" role="note">
+      <strong>Doar pentru comparație, nu e planul recomandat.</strong>
+      {{ plan().reason ?? 'Alt plan a ieșit mai bine în simulare.' }}
+    </p>
+  }
+  <ul class="key" aria-label="Cum se citește tabelul">
+    <li class="key-arrivals">sosiri de pasageri</li>
+    <li class="key-more">mai mulți operatori decât acum</li>
+    <li class="key-less">mai puțini decât acum</li>
+    <li class="key-closed">control fără personal</li>
+  </ul>
+</header>
 
 <div class="scroll" tabindex="0" role="region" aria-labelledby="shift-plan-title">
   <table>
     <caption class="hidden">
-      Alocare personal pe controale la intervale de 15 minute: referință și plan pe ture
+      Operatori la fiecare control pe intervale de 15 minute: acum și cu planul pe ture
     </caption>
     <thead>
       <tr>
@@ -16,39 +27,62 @@
         }
       </tr>
     </thead>
-    <tbody>
-      @for (row of plan().rows; track row.checkpointId) {
+    @for (row of plan().rows; track row.checkpointId) {
+      <tbody>
+        <tr class="group">
+          <th scope="rowgroup" [attr.colspan]="plan().slots + 1">
+            <strong>{{ row.name }}</strong>
+            <span>{{ row.summary }}</span>
+          </th>
+        </tr>
         <tr class="arrivals">
-          <th scope="row" class="name">{{ row.name }}</th>
+          <th scope="row" class="name">Sosiri</th>
           @for (count of row.arrivals; track $index) {
-            <td>
+            <td [attr.title]="plan().slotTimes[$index] + ' · ' + count + ' pasageri'">
               <i [style.height.%]="(count / row.peak) * 100" aria-hidden="true"></i>
               <span class="hidden">{{ count }} pasageri</span>
             </td>
           }
         </tr>
         <tr class="now">
-          <th scope="row" class="name">Referință</th>
-          @for (count of row.now; track $index) {
-            <td>{{ count }}</td>
+          <th scope="row" class="name">Acum</th>
+          @if (row.constantNow !== null) {
+            <td class="constant" [attr.colspan]="plan().slots">
+              {{ row.constantNow === 1 ? '1 operator' : row.constantNow + ' operatori' }} toată ziua
+            </td>
+          } @else {
+            @for (count of row.now; track $index) {
+              <td>{{ count }}</td>
+            }
           }
         </tr>
         <tr class="proposed">
           <th scope="row" class="name">Pe ture</th>
           @for (count of row.proposed; track $index) {
-            <td [class.more]="count > row.now[$index]" [class.less]="count < row.now[$index]">
+            <td
+              [class.more]="count > row.now[$index]"
+              [class.less]="count < row.now[$index]"
+              [class.closed]="count === 0"
+              [style.--level]="row.most ? count / row.most : 0"
+              [attr.title]="
+                plan().slotTimes[$index] + ' · ' + count + ' pe ture, ' + row.now[$index] + ' acum'
+              "
+            >
               {{ count }}
             </td>
           }
         </tr>
-      }
-    </tbody>
+      </tbody>
+    }
   </table>
 </div>
+<p class="hint">
+  O coloană înseamnă 15 minute. Numerele sunt operatorii de serviciu la acel control.
+</p>
 
 <details>
   <summary>
-    Alocări individuale · {{ plan().people.length }} operatori,
+    Tura fiecărui operator · {{ plan().people.length }} operatori,
     {{ plan().moves === 1 ? 'o mutare' : plan().moves + ' mutări' }} între controale
   </summary>
   <ul class="legend">

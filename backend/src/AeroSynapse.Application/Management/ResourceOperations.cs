@@ -25,7 +25,8 @@ public sealed class ResourceOperations(IScenarioService scenarios, IResourcePlan
         var scenario = await Require(query.ScenarioId, token); var layout = await Layout(scenario, token);
         var flights = scenario.Inputs.Flights.Where(item => item.Status != "cancelled").ToArray();
         var reason = IntegratedResourceScenarios.IncompatibilityReason(scenario.Inputs);
-        var security = scenario.Inputs.StaffAllocations.Select(item => item.StaffMemberId).ToHashSet();
+        var security = scenario.Inputs.StaffAllocations.Select(item => item.StaffMemberId)
+            .Concat(scenario.Inputs.StaffShifts?.Shifts.Select(item => item.StaffMemberId) ?? []).ToHashSet();
         return new(query.ScenarioId, scenario.Scenario.Revision, scenario.Inputs.StartsAtUtc, scenario.Inputs.DurationMinutes,
             reason is null, reason, scenario.Inputs.IntegratedResources, flights.Select(item => FlightScheduling.Resolve(item, scenario.Inputs.StartsAtUtc)).ToArray(),
             layout.Layout.Gates.Select(item => new ResourceGateChoice(item.Id, item.Name, item.TerminalId)).ToArray(),

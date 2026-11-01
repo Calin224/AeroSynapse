@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   computed,
@@ -11,6 +11,7 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { finalize, Subscription, timeout } from 'rxjs';
 import { ApiClient } from '../../core/http/api-client';
 import { OPERATION_REQUEST_TIMEOUT_MS, operationError } from '../../core/http/operation-request';
@@ -81,13 +82,16 @@ export interface StaffingResult {
 }
 interface Row extends Omit<Constraint, 'physicalLimit'> {
   name: string;
+  terminalId: string;
   currentStaff: number;
+  /** The count the operator is about to save. */
+  target: number;
   physicalLimit: number | null;
 }
 
 @Component({
   selector: 'app-staffing-panel',
-  imports: [FormsModule, DecimalPipe, StaffingEvaluationPanel],
+  imports: [FormsModule, DecimalPipe, NgTemplateOutlet, RouterLink, StaffingEvaluationPanel],
   templateUrl: './staffing-panel.html',
   styleUrl: './setup-panels.css',
 })
@@ -106,6 +110,16 @@ export class StaffingPanel {
   readonly busy = signal(false);
   readonly result = signal<StaffingResult | null>(null);
   readonly message = signal('');
+  readonly notice = signal('');
+  /** Peak arrivals and one operator's capacity per checkpoint, in passengers per minute, from the last proposal. */
+  readonly estimate = signal(new Map<string, { demand: number; capacity: number }>());
+  /** The scenario staffs its controls with shifts, so per-control counts are peaks, not people. */
+  readonly shiftPlan = computed(() => !!this.scenario().inputs.staffShifts?.shifts?.length);
+  /** People the scenario itself puts on the controls: its shift roster, or its fixed allocations. */
+  readonly ownStaff = computed(() => {
+    const inputs = this.scenario().inputs;
+    return inputs.staffShifts?.shifts?.length || inputs.staffAllocations.length;
+  });
   rows: Row[] = [];
   availableStaff = 0;
   timeLimitSeconds = 5;
@@ -129,6 +143,8 @@ export class StaffingPanel {
           if (context !== this.approvedContext) {
             this.settings.set(null);
             this.rows = [];
+            this.estimate.set(new Map());
+            this.notice.set('');
           }
           this.approvedContext = '';
           this.result.set(null);
@@ -160,11 +176,17 @@ export class StaffingPanel {
             return;
           }
           this.settings.set(settings);
-          this.availableStaff = settings.availableStaff;
+          // Redistribute the scenario's own people; the layout's whole roster is only the ceiling.
+          this.availableStaff = Math.min(
+            settings.availableStaff,
+            this.ownStaff() || settings.availableStaff,
+          );
           this.rows = settings.checkpoints.map((item) => ({
             checkpointId: item.id,
             name: item.name,
+            terminalId: item.terminalId,
             currentStaff: item.currentStaff,
+            target: item.currentStaff,
             minimumStaff: item.currentStaff ? 1 : 0,
             maximumStaff: Math.min(10000, settings.availableStaff),
             // Assume no post limit below the staff budget; "Setări avansate" shows the
@@ -182,6 +204,66 @@ export class StaffingPanel {
   invalidate() {
     this.result.set(null);
     this.message.set('');
+    this.notice.set('');
+  }
+  total() {
+    return this.rows.reduce((sum, row) => sum + row.target, 0);
+  }
+  /** People still free in the row's terminal. */
+  spare(row: Row) {
+    const pool =
+      this.settings()?.staffPools.find((item) => item.terminalId === row.terminalId)?.availableStaff ?? 0;
+    return this.rows.reduce((left, item) => (item.terminalId === row.terminalId ? left - item.target : left), pool);
+  }
+  step(row: Row, delta: number) {
+    if (this.blocked() || (delta > 0 && this.spare(row) <= 0) || row.target + delta < 0) return;
+    row.target += delta;
+    this.invalidate();
+  }
+  edited() {
+    return this.rows.some((row) => row.target !== row.currentStaff);
+  }
+  reset() {
+    for (const row of this.rows) row.target = row.currentStaff;
+    this.invalidate();
+  }
+  coverage(row: Row) {
+    const estimate = this.estimate().get(row.checkpointId);
+    if (!estimate) return null;
+    const capacity = row.target * estimate.capacity;
+    return {
+      demand: estimate.demand,
+      capacity,
+      percent: estimate.demand ? Math.min(100, (capacity / estimate.demand) * 100) : 100,
+      short: capacity < estimate.demand,
+    };
+  }
+  /** Writes the counts as the scenario's fixed allocation; the server picks the people. */
+  save() {
+    const settings = this.settings();
+    if (this.readOnly() || this.blocked() || !settings || !this.edited()) return;
+    this.invalidate();
+    this.busy.set(true);
+    this.working.emit(true);
+    this.pending = this.api
+      .put<ScenarioDetails>(`scenarios/${settings.scenarioId}/staffing/allocation`, {
+        revision: settings.revision,
+        checkpoints: this.rows.map((row) => ({ checkpointId: row.checkpointId, staffCount: row.target })),
+      })
+      .pipe(
+        timeout(OPERATION_REQUEST_TIMEOUT_MS),
+        finalize(() => {
+          this.busy.set(false);
+          this.working.emit(false);
+        }),
+      )
+      .subscribe({
+        next: (scenario) => {
+          this.approved(scenario);
+          this.notice.set('Am salvat personalul în scenariu. Rulează din nou simularea ca să vezi efectul.');
+        },
+        error: (error) => this.report(error),
+      });
   }
   blocked() {
     return this.disabled() || this.loading() || this.busy() || this.reviewing();
@@ -202,7 +284,11 @@ export class StaffingPanel {
           }
         : null,
     );
-    this.rows = this.rows.map((row) => ({ ...row, currentStaff: count(row.checkpointId) }));
+    this.rows = this.rows.map((row) => ({
+      ...row,
+      currentStaff: count(row.checkpointId),
+      target: count(row.checkpointId),
+    }));
     this.changed.emit(scenario);
   }
   proposal(): StaffingProposal | null {
@@ -229,7 +315,7 @@ export class StaffingPanel {
       revision: settings.revision,
       availableStaff: this.availableStaff,
       timeLimitSeconds: this.timeLimitSeconds,
-      checkpoints: this.rows.map(({ name, currentStaff, ...constraint }) => ({
+      checkpoints: this.rows.map(({ name, terminalId, currentStaff, target, ...constraint }) => ({
         ...constraint,
         physicalLimit: constraint.physicalLimit!,
       })),
@@ -238,6 +324,8 @@ export class StaffingPanel {
   propose() {
     const settings = this.settings();
     if (this.readOnly() || this.blocked() || !settings?.passengerProfilesActive) return;
+    // Outside the guided flow the counters set the budget: "split these people better".
+    if (!this.workflowStage()) this.availableStaff = this.total();
     const proposal = this.proposal();
     if (!proposal) {
       this.message.set(
@@ -254,7 +342,22 @@ export class StaffingPanel {
         finalize(() => this.busy.set(false)),
       )
       .subscribe({
-        next: (result) => this.result.set(result),
+        next: (result) => {
+          this.result.set(result);
+          this.estimate.set(
+            new Map(
+              result.constraints.checkpoints.map((item) => [
+                item.checkpointId,
+                { demand: item.demandMilli / 1000, capacity: item.capacityMilli / 1000 },
+              ]),
+            ),
+          );
+          if (this.workflowStage()) return;
+          for (const item of result.assignments) {
+            const row = this.rows.find((value) => value.checkpointId === item.checkpointId);
+            if (row) row.target = item.staffCount;
+          }
+        },
         error: (error) => this.report(error),
       });
   }

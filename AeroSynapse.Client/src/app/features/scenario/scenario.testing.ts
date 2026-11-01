@@ -72,6 +72,8 @@ export class SimulationPanelStub {
 class AiOptimizationStub {
   readonly runId = input('');
   readonly stale = input(false);
+  readonly passengers = input(0);
+  readonly durationMinutes = input(0);
   readonly applied = output<void>();
 }
 

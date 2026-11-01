@@ -379,18 +379,26 @@ export class ScenarioStudio {
       );
       return;
     }
-    const lastDeparture = Math.max(
-      Date.parse(this.draft.inputs.startsAtUtc),
-      ...flights
-        .filter((row) => row.status !== 'cancelled')
-        .map((row) => Date.parse(addMinutes(row.departureAtUtc, row.delayMinutes ?? 0)))
-        .filter(Number.isFinite),
-    );
+    const start = this.draft.inputs.startsAtUtc;
+    const lastDeparture = (rows: ScenarioFlight[]) =>
+      Math.max(
+        Date.parse(start),
+        ...rows
+          .filter((row) => row.status !== 'cancelled')
+          .map((row) => Date.parse(addMinutes(row.departureAtUtc, row.delayMinutes ?? 0)))
+          .filter(Number.isFinite),
+      );
     const spacing =
       this.draft.inputs.minimumDepartureSpacingMinutes ?? MINIMUM_DEPARTURE_SPACING_MINUTES;
-    const departureAtUtc = addMinutes(new Date(lastDeparture).toISOString(), spacing);
+    // A new flight leaves 15 minutes after the last one, later if its gate still needs the spacing.
     const horizon =
-      (Date.parse(departureAtUtc) - Date.parse(this.draft.inputs.startsAtUtc)) / 60000;
+      (Math.max(
+        lastDeparture(flights) + 15 * 60000,
+        lastDeparture(flights.filter((row) => row.gateId === gate.id)) + spacing * 60000,
+      ) -
+        Date.parse(start)) /
+      60000;
+    const departureAtUtc = addMinutes(start, horizon);
     if (!departureAtUtc || horizon > 10080) {
       this.message.set(
         'Adăugarea zborului depășește orizontul de simulare permis. Este necesară ajustarea orarului.',

@@ -3,7 +3,7 @@ import type {
   StaffingEvaluatedVariant,
   StaffingEvaluationDetails,
 } from '../operations/staffing-evaluation.models';
-import { assessmentLabel } from '../operations/staffing-evaluation-panel';
+import { assessmentLabel, reasonLabel } from '../operations/staffing-evaluation-panel';
 import {
   flightPassengers,
   incidentArrivalWindow,
@@ -41,6 +41,10 @@ export interface TimelineFlight {
   /** Departure position, or null when the flight leaves outside the simulated window. */
   departureAt: number | null;
   arrivals: TimelineSpan | null;
+  /** Where most passengers arrive, in percent of the axis; null when arrivals are even across the window. */
+  arrivalPeak: number | null;
+  /** "01:36–03:06", for the arrivals curve's label. */
+  arrivalsLabel: string | null;
   boarding: TimelineSpan | null;
   cancelled: boolean;
 }
@@ -77,6 +81,7 @@ export function flightTimeline(
     .map((flight): TimelineFlight => {
       const departure = Date.parse(flight.departureAtUtc);
       const window = incidentArrivalWindow(inputs, flight.id);
+      const peak = window ? arrivalPeak(inputs, flight.id, window) : null;
       return {
         id: flight.id,
         code: flight.code,
@@ -85,6 +90,10 @@ export function flightTimeline(
         departure: scenarioClock(inputs, flight.departureAtUtc),
         departureAt: departure >= start && departure <= end ? at(departure) : null,
         arrivals: window ? between(window.start, window.end) : null,
+        arrivalPeak: peak === null ? null : at(peak),
+        arrivalsLabel: window
+          ? `${scenarioClock(inputs, window.start)}–${scenarioClock(inputs, window.end)}`
+          : null,
         boarding:
           flight.boardingOpensAtUtc && flight.boardingClosesAtUtc
             ? between(flight.boardingOpensAtUtc, flight.boardingClosesAtUtc)
@@ -109,6 +118,25 @@ export function flightTimeline(
           }
         : null,
   };
+}
+
+/** The instant most passengers arrive: the profile's mode, or mid-window when the API derives it from the flows. */
+function arrivalPeak(
+  inputs: ScenarioInputs,
+  flightId: string,
+  window: { start: string; end: string },
+) {
+  const batch = inputs.passengerGeneration?.batches.find((row) => row.flightId === flightId);
+  const offset =
+    batch?.arrival.kind === 'triangular'
+      ? batch.arrival.mode
+      : batch?.arrival.kind === 'normal'
+        ? batch.arrival.mean
+        : null;
+  if (batch) return offset === null ? null : Date.parse(addMinutes(inputs.startsAtUtc, offset));
+  return inputs.flows.some((row) => row.flightId === flightId)
+    ? (Date.parse(window.start) + Date.parse(window.end)) / 2
+    : null;
 }
 
 /** Where a new surge on this flight should start: when its passengers begin to arrive. */
@@ -140,8 +168,16 @@ export interface StaffMove {
   beforePeople: number[];
   afterPeople: number[];
 }
+/** What a plan changes against today, before it is valued in money. */
+export interface PlanSavings {
+  passengerHoursSaved: number;
+  /** Operator hours on duty over the day beyond today's; negative when the plan needs fewer. */
+  operatorHoursAdded: number;
+}
 export interface EvaluationSummary {
   recommended: boolean;
+  /** The recommended (or best simulated) plan against today; null without waits to compare. */
+  savings: PlanSavings | null;
   /** Plain sentence naming where operators move, e.g. "Mutăm 2 operatori la CP-1". */
   headline: string;
   waitBefore: string;
@@ -151,20 +187,73 @@ export interface EvaluationSummary {
   candidates: {
     runId: string;
     position: number;
-    /** "Varianta 2", or what kind of plan it is when the evaluation compared shift plans. */
+    /** "Varianta 2", or what kind of plan it is when the evaluation compared shift plans; unique within the list. */
     title: string;
+    /** "12 operatori · 6 în plus față de acum". */
+    subtitle: string;
+    /** Why a variant lost, in plain words; null for the recommended one or without a reason. */
+    reason: string | null;
+    /** People whose control changes against today, the plain reading of the cost. */
+    changes: number;
     status: string;
     label: string;
     wait: string;
     /** Mean wait as a share of the baseline's, for a bar; null without both values. */
     waitShare: number | null;
+    /** The plan makes passengers wait longer than today. */
+    worse: boolean;
     cost: number;
     recommended: boolean;
     configuration: { checkpointId: string; name: string; count: number; delta: number }[];
   }[];
 }
 
+/** Paid operator hours over the day: each shift from start to end, breaks and gaps included; else staffed slots; else fixed counts all day. */
+function operatorHours(variant: StaffingEvaluatedVariant, durationMinutes: number) {
+  const schedule = variant.schedule;
+  if (schedule?.shifts?.length)
+    return (
+      schedule.shifts.reduce(
+        (sum, shift) =>
+          sum + shift.segments[shift.segments.length - 1].endMinute - shift.segments[0].startMinute,
+        0,
+      ) / 60
+    );
+  return schedule?.checkpoints.length
+    ? (schedule.checkpoints.reduce((sum, row) => sum + row.staff.reduce((a, b) => a + b, 0), 0) *
+        schedule.slotMinutes) /
+        60
+    : (total(variant.configuration) * durationMinutes) / 60;
+}
+function planSavings(
+  baseline: StaffingEvaluatedVariant,
+  variant: StaffingEvaluatedVariant,
+  durationMinutes: number,
+): PlanSavings | null {
+  const before = baseline.metrics,
+    after = variant.metrics;
+  if (before?.meanWaitMinutes == null || after?.meanWaitMinutes == null) return null;
+  if (before.populationCount <= 0) return null;
+  return {
+    passengerHoursSaved:
+      (before.populationCount * (before.meanWaitMinutes - after.meanWaitMinutes)) / 60,
+    operatorHoursAdded:
+      operatorHours(variant, durationMinutes) - operatorHours(baseline, durationMinutes),
+  };
+}
+
 const PEOPLE_CAP = 12;
+const total = (rows: readonly { staffCount: number }[]) =>
+  rows.reduce((sum, row) => sum + row.staffCount, 0);
+/** Repeated titles get " · A", " · B", so two plans of the same kind can be told apart. */
+function distinct(titles: string[]) {
+  return titles.map((title, index) => {
+    const same = titles.filter((other) => other === title);
+    return same.length > 1
+      ? `${title} · ${String.fromCharCode(65 + titles.slice(0, index).filter((o) => o === title).length)}`
+      : title;
+  });
+}
 const people = (count: number) => Array.from({ length: Math.min(count, PEOPLE_CAP) }, (_, i) => i);
 const operators = (count: number) => (count === 1 ? '1 operator' : `${count} operatori`);
 
@@ -194,7 +283,13 @@ function planTitle(variant: StaffingEvaluatedVariant) {
 
 /** Per-slot staffing of a shift plan beside today's, and every person's shift as bars on one day axis. */
 export interface ShiftPlanView {
+  /** The plan's name, as its card in the compared plans says it. */
+  title: string;
+  /** Why it lost, when it is shown only for comparison. */
+  reason: string | null;
   slots: number;
+  /** Clock time each slot starts, for the cells' titles. */
+  slotTimes: string[];
   ticks: { left: number; label: string }[];
   rows: {
     checkpointId: string;
@@ -202,7 +297,13 @@ export interface ShiftPlanView {
     arrivals: number[];
     peak: number;
     now: number[];
+    /** Today's staffing when it never changes, so the row says it once instead of in every slot. */
+    constantNow: number | null;
     proposed: number[];
+    /** The most anyone plans at once here. */
+    most: number;
+    /** "Acum: 1 operator toată ziua · pe ture: 0–5, cei mai mulți la 02:36". */
+    summary: string;
   }[];
   people: {
     id: string;
@@ -232,8 +333,19 @@ export function shiftPlanView(
   const at = (minute: number) => Math.min(100, Math.max(0, (minute / day) * 100));
   const slots = plan.schedule.checkpoints[0]?.staff.length ?? 0;
   const order = plan.schedule.checkpoints.map((row) => row.checkpointId);
+  const slotTimes = Array.from({ length: slots }, (_, slot) =>
+    scenarioClock(inputs, addMinutes(inputs.startsAtUtc, (slot * day) / Math.max(1, slots))),
+  );
+  const titles = distinct(evaluation.variants.filter((row) => row.position > 0).map(planTitle));
+  const position = evaluation.variants.filter((row) => row.position > 0).indexOf(plan);
   return {
+    title: titles[position] ?? planTitle(plan),
+    reason:
+      plan.runId === evaluation.recommendedRunId || !plan.assessment.reasons.length
+        ? null
+        : reasonLabel(plan.assessment.reasons[0], baseline.configuration),
     slots,
+    slotTimes,
     ticks: Array.from({ length: Math.floor(day / 60) + 1 }, (_, hour) => hour * 60).map(
       (minute) => ({
         left: at(minute),
@@ -242,15 +354,23 @@ export function shiftPlanView(
     ),
     rows: plan.schedule.checkpoints.map((row) => {
       const arrivals = row.arrivals ?? [];
+      const now =
+        baseline.schedule!.checkpoints.find((other) => other.checkpointId === row.checkpointId)
+          ?.staff ?? [];
+      const constantNow = now.length && now.every((count) => count === now[0]) ? now[0] : null;
+      const most = Math.max(0, ...row.staff),
+        least = Math.min(...row.staff);
+      const busiest = slotTimes[row.staff.indexOf(most)] ?? '';
       return {
         checkpointId: row.checkpointId,
         name: row.name,
         arrivals,
         peak: Math.max(1, ...arrivals),
-        now:
-          baseline.schedule!.checkpoints.find((other) => other.checkpointId === row.checkpointId)
-            ?.staff ?? [],
+        now,
+        constantNow,
         proposed: row.staff,
+        most,
+        summary: `Acum: ${constantNow === null ? 'variază pe parcursul zilei' : `${operators(constantNow)} toată ziua`} · pe ture: ${least === most ? operators(most) : `între ${least} și ${most} operatori`}${most > least ? `, cei mai mulți la ${busiest}` : ''}`,
       };
     }),
     people: [...plan.schedule.shifts]
@@ -288,7 +408,11 @@ export function shiftPlanView(
 }
 
 /** The baseline against the recommended (or best simulated) candidate, in plain outcomes. */
-export function evaluationSummary(evaluation: StaffingEvaluationDetails): EvaluationSummary | null {
+export function evaluationSummary(
+  evaluation: StaffingEvaluationDetails,
+  /** The simulated day's length, for valuing staff in plans without a schedule. */
+  durationMinutes: number,
+): EvaluationSummary | null {
   const baseline = evaluation.variants.find((row) => row.position === 0);
   if (!baseline) return null;
   const others = evaluation.variants.filter((row) => row.position > 0);
@@ -309,8 +433,7 @@ export function evaluationSummary(evaluation: StaffingEvaluationDetails): Evalua
   const waitRow = (key: string, label: string, read: (metrics: Metrics) => number | null) => {
     const before = base.metrics ? read(base.metrics) : null,
       after = best?.metrics ? read(best.metrics) : null,
-      scale = (value: number | null) =>
-        value === null ? null : seconds ? value * 60 : value;
+      scale = (value: number | null) => (value === null ? null : seconds ? value * 60 : value);
     return {
       key,
       label,
@@ -335,18 +458,24 @@ export function evaluationSummary(evaluation: StaffingEvaluationDetails): Evalua
   });
   const gains = moves.filter((move) => move.after > move.before);
   const shifts = best?.schedule?.shifts;
+  const before = total(baseline.configuration),
+    after = best ? total(best.configuration) : before;
   const headline = !best
     ? 'Nicio variantă simulată nu are rezultate complete'
     : shifts?.length
       ? `Plan pe ture: ${operators(shifts.length)} alocați în funcție de sosiri`
-      : !gains.length
-        ? 'Alocare de personal nemodificată'
-        : gains.length === 1
-          ? `Realocare: ${operators(gains[0].after - gains[0].before)} la ${gains[0].name}`
-          : `Realocare operatori la ${gains.map((move) => move.name).join(' și ')}`;
+      : after !== before
+        ? // People are added or sent home, not just moved, so the totals say it first.
+          `${operators(after)} în loc de ${before} (${after > before ? '+' : '−'}${Math.abs(after - before)})`
+        : !gains.length
+          ? 'Alocare de personal nemodificată'
+          : gains.length === 1
+            ? `Realocare: ${operators(gains[0].after - gains[0].before)} la ${gains[0].name}`
+            : `Realocare operatori la ${gains.map((move) => move.name).join(' și ')}`;
   const baselineWait = baseline.metrics?.meanWaitMinutes ?? null;
   return {
     recommended: !!recommended,
+    savings: best ? planSavings(baseline, best, durationMinutes) : null,
     headline,
     waitBefore: formatWait(baselineWait),
     waitAfter: formatWait(best?.metrics?.meanWaitMinutes),
@@ -369,17 +498,27 @@ export function evaluationSummary(evaluation: StaffingEvaluationDetails): Evalua
         ]
       : [],
     moves,
-    candidates: others.map((variant) => {
+    candidates: distinct(others.map(planTitle)).map((title, index) => {
+      const variant = others[index];
       const wait = variant.metrics?.meanWaitMinutes ?? null;
+      const count = total(variant.configuration);
+      const recommendedHere = variant.runId === evaluation.recommendedRunId;
       return {
         runId: variant.runId,
         position: variant.position,
-        title: planTitle(variant),
+        title,
+        subtitle: `${operators(count)} · ${count === before ? 'la fel ca acum' : `${Math.abs(count - before)} ${count > before ? 'în plus' : 'mai puțin'} față de acum`}`,
+        reason:
+          recommendedHere || !variant.assessment.reasons.length
+            ? null
+            : reasonLabel(variant.assessment.reasons[0], baseline.configuration),
+        changes: variant.reallocatedPeople,
         status: variant.assessment.status,
         label: assessmentLabel(variant.assessment.status),
         wait: formatWait(wait),
         waitShare:
           wait === null || !baselineWait ? null : Math.min(100, (wait / baselineWait) * 100),
+        worse: wait !== null && baselineWait !== null && wait > baselineWait,
         cost: variant.reallocationCost,
         recommended: variant.runId === evaluation.recommendedRunId,
         configuration: baseline.configuration.map((item) => {

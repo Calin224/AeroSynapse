@@ -1,145 +1,194 @@
 <section class="panel" aria-labelledby="resources-panel-title" [attr.aria-busy]="loading() || busy()">
   <header class="panel-heading">
     <div>
-      <h2 id="resources-panel-title">Resurse integrate</h2>
-      <p>Spune ce porți, oameni și echipe ai, apoi cere o propunere de poartă și echipă pentru fiecare zbor.</p>
+      <h2 id="resources-panel-title">Porți și echipe de handling</h2>
+      <p>
+        Spune ce porți sunt deschise și ce echipe ai. Calculăm la ce poartă pleacă fiecare zbor și
+        cine îl deservește, iar mutările le poți aplica direct în orar.
+      </p>
     </div>
     @if (settings(); as settings) {
-      <span class="meta-chip">{{ settings.resources ? 'Activ' : 'Neactivat' }}</span>
+      <span class="meta-chip">{{ settings.resources ? 'Plan salvat' : 'Plan nou' }}</span>
     }
   </header>
   <div class="panel-body">
     @if (message()) { <p class="notice" role="alert">{{ message() }}</p> }
-    @if (busy()) { <p role="status">Se procesează cererea…</p> }
-    @if (loading()) { <p role="status">Se încarcă resursele…</p> }
-    @if (!settings() && !loading()) { <button type="button" (click)="load()">Reîncearcă încărcarea</button> }
+    @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+    @if (loading()) { <p role="status">Se încarcă porțile și personalul…</p> }
+    @if (!settings() && !loading()) {
+      <button class="btn-secondary" type="button" (click)="load()">Reîncearcă încărcarea</button>
+    }
     @if (settings(); as settings) {
-      @if (!settings.compatible) { <p class="notice" role="status">Scenariul nu permite resurse integrate: {{ settings.incompatibilityReason }}</p> }
-      @if (draft; as draft) {
-      <ol class="checklist" aria-label="Pașii de configurare">
-        <li [class.done]="gatesReady()"><span class="check" aria-hidden="true">{{ gatesReady() ? '✓' : '1' }}</span>
-          <span><strong>Porți</strong> · {{ draft.gates.length }} alese<span class="visually-hidden">{{ gatesReady() ? ', gata' : ', de făcut' }}</span></span></li>
-        <li [class.done]="workersReady()"><span class="check" aria-hidden="true">{{ workersReady() ? '✓' : '2' }}</span>
-          <span><strong>Personal</strong> · {{ draft.workers.length }} persoane<span class="visually-hidden">{{ workersReady() ? ', gata' : ', de făcut' }}</span></span></li>
-        <li [class.done]="teamsReady()"><span class="check" aria-hidden="true">{{ teamsReady() ? '✓' : '3' }}</span>
-          <span><strong>Echipe</strong> · {{ draft.teams.length }} formate<span class="visually-hidden">{{ teamsReady() ? ', gata' : ', de făcut' }}</span></span></li>
-        <li [class.done]="flightsReady()"><span class="check" aria-hidden="true">{{ flightsReady() ? '✓' : '4' }}</span>
-          <span><strong>Zboruri</strong> · {{ flightsReady() ? 'toate au porți' : 'alege porțile potrivite' }}<span class="visually-hidden">{{ flightsReady() ? ', gata' : ', de făcut' }}</span></span></li>
-      </ol>
-      <fieldset class="steps" [disabled]="blocked() || !settings.compatible">
-        <legend class="visually-hidden">Porți, personal, echipe și zboruri</legend>
-
-        <details class="resource-step" open><summary>1. Porți · {{ draft.gates.length }} alese</summary>
-        <fieldset class="picks"><legend>Bifează porțile folosite</legend>
-          @for (gate of settings.gates; track gate.id) {
-            <label><input type="checkbox" [checked]="hasGate(gate.id)" [disabled]="!hasGate(gate.id) && draft.gates.length >= 50"
-              (change)="$any($event.target).checked ? includeGate(gate.id) : removeGate(gate.id)" />{{ gate.name }}</label>
-          } @empty { <p>Layoutul nu are porți.</p> }
-        </fieldset>
-        @for (gate of draft.gates; track gate.gateId) {
-          <fieldset><legend>{{ name(gate.gateId) }} · când e disponibilă</legend>
-            @if (!gate.availability.length) { <p class="notice">Adaugă un interval pentru ca această poartă să fie disponibilă.</p> }
-            @for (window of gate.availability; track $index; let i = $index) {
-              <div class="window">
-                <label>De la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.startMinute" (ngModelChange)="edit()" /></label>
-                <label>Până la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.endMinute" (ngModelChange)="edit()" /></label>
-                <span class="hint">{{ clock(window.startMinute) }}–{{ clock(window.endMinute) }}</span>
-                <button type="button" class="btn-sm" (click)="removeWindow(gate.availability, i)">Șterge intervalul</button>
-              </div>
-            }
-            <button type="button" class="btn-sm" (click)="addWindow(gate.availability)">Adaugă disponibilitate</button>
-          </fieldset>
-        }
-        </details>
-        <details class="resource-step"><summary>2. Personal · {{ draft.workers.length }} persoane</summary>
-        <p class="hint">Personalul de la securitate nu apare aici. Pentru fiecare persoană aleasă, adaugă tura și competențele.</p>
-        <fieldset class="picks"><legend>Bifează persoanele disponibile</legend>
-          @for (worker of freeStaff(); track worker.id) {
-            <label><input type="checkbox" [checked]="hasWorker(worker.id)" [disabled]="!hasWorker(worker.id) && draft.workers.length >= 200"
-              (change)="$any($event.target).checked ? includeWorker(worker.id) : removeWorker(worker.id)" />{{ worker.name }}</label>
-          } @empty { <p>Niciun operator disponibil pentru handling.</p> }
-        </fieldset>
-        @for (worker of draft.workers; track worker.staffMemberId) {
-          <fieldset><legend>{{ name(worker.staffMemberId) }}</legend>
-            <label>Competențe, separate prin virgulă <input [ngModel]="worker.skills.join(', ')" (ngModelChange)="worker.skills = skills($event); edit()" /></label>
-            @if (!worker.shifts.length) { <p class="notice">Adaugă o tură pentru a putea aloca această persoană.</p> }
-            @for (window of worker.shifts; track $index; let i = $index) {
-              <div class="window">
-                <label>Tură de la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.startMinute" (ngModelChange)="edit()" /></label>
-                <label>Până la minutul <input type="number" min="0" step="any" [max]="settings.durationMinutes" [(ngModel)]="window.endMinute" (ngModelChange)="edit()" /></label>
-                <span class="hint">{{ clock(window.startMinute) }}–{{ clock(window.endMinute) }}</span>
-                <button type="button" class="btn-sm" (click)="removeWindow(worker.shifts, i)">Șterge tura</button>
-              </div>
-            }
-            <button type="button" class="btn-sm" (click)="addWindow(worker.shifts)">Adaugă tură</button>
-          </fieldset>
-        }
-        </details>
-        <details class="resource-step"><summary>3. Echipe · {{ draft.teams.length }} formate</summary>
-        <p class="hint">Bifează membrii echipei și porțile pe care le pot deservi.</p>
-        @for (team of draft.teams; track team.teamId; let i = $index) {
-          <fieldset><legend>Echipă {{ i + 1 }}</legend>
-            <label>Nume <input maxlength="100" [(ngModel)]="team.name" (ngModelChange)="edit()" /></label>
-            <fieldset class="choices"><legend>Membri</legend>
-              @for (worker of draft.workers; track worker.staffMemberId) {
-                <label><input type="checkbox" [ngModel]="team.memberIds.includes(worker.staffMemberId)" (ngModelChange)="team.memberIds = selectResource(team.memberIds, worker.staffMemberId, $event)" />{{ name(worker.staffMemberId) }}</label>
-              } @empty { <p>Alege mai întâi persoane la pasul 2.</p> }
-            </fieldset>
-            <fieldset class="choices"><legend>Porți deservite</legend>
-              @for (gate of draft.gates; track gate.gateId) {
-                <label><input type="checkbox" [ngModel]="team.gateIds.includes(gate.gateId)" (ngModelChange)="team.gateIds = selectResource(team.gateIds, gate.gateId, $event)" />{{ name(gate.gateId) }}</label>
-              } @empty { <p>Alege mai întâi o poartă la pasul 1.</p> }
-            </fieldset>
-            <button type="button" class="btn-sm btn-danger" (click)="removeTeam(i)">Șterge echipa</button>
-          </fieldset>
-        }
-        <button type="button" class="btn-sm" [disabled]="draft.teams.length >= 50" (click)="addTeam()">Adaugă echipă</button>
-        </details>
-        <details class="resource-step"><summary>4. Zboruri · {{ draft.requirements.length }}</summary>
-        <p class="hint">Pentru fiecare zbor, bifează porțile la care poate pleca și ce echipă îi trebuie.</p>
-        @for (requirement of draft.requirements; track requirement.flightId) {
-          <fieldset><legend>{{ name(requirement.flightId) }} · {{ interval(requirement.flightId) }}</legend>
-            <fieldset class="choices"><legend>Porți compatibile</legend>
-              @for (gate of draft.gates; track gate.gateId) {
-                <label><input type="checkbox" [ngModel]="requirement.compatibleGateIds.includes(gate.gateId)" (ngModelChange)="requirement.compatibleGateIds = selectResource(requirement.compatibleGateIds, gate.gateId, $event)" />{{ name(gate.gateId) }}</label>
-              } @empty { <p>Alege mai întâi o poartă la pasul 1.</p> }
-            </fieldset>
-            <label>Competențe necesare, separate prin virgulă <input [ngModel]="requirement.requiredSkills.join(', ')" (ngModelChange)="requirement.requiredSkills = skills($event); edit()" /></label>
-            <label>Membri minimi în echipă <input type="number" min="1" max="100" [(ngModel)]="requirement.minimumTeamSize" (ngModelChange)="edit()" /></label>
-          </fieldset>
-        }
-        </details>
-      </fieldset>
-      <div class="toolbar">
-        <button type="button" [disabled]="blocked() || !settings.compatible || !draft.gates.length" (click)="save()"
-          [attr.aria-describedby]="saveBlocker(settings) ? 'resources-save-why' : null">{{ settings.resources ? 'Salvează resursele' : 'Salvează și activează resursele' }}</button>
-        <button type="button" class="btn-primary" [disabled]="blocked() || !settings.compatible || !settings.resources || dirty()" (click)="propose()"
-          [attr.aria-describedby]="proposeBlocker(settings) ? 'resources-propose-why' : null">Calculează propunerea</button>
-      </div>
-      @if (saveBlocker(settings); as why) { <p id="resources-save-why" class="hint">{{ why }}</p> }
-      @if (proposeBlocker(settings); as why) { <p id="resources-propose-why" class="hint" role="status">{{ why }}</p> }
-      <details class="disclosure">
-        <summary>Setări avansate</summary>
-        <label>Timp maxim de calcul (secunde, 0–30) <input type="number" min="0" max="30" step="any" [(ngModel)]="timeLimitSeconds" [disabled]="blocked()" /></label>
-        @if (settings.resources) {
-          <div class="toolbar"><button type="button" class="btn-danger" [disabled]="blocked()" (click)="save(true)">Dezactivează modelul integrat</button></div>
-        }
-      </details>
+      @if (!settings.compatible) {
+        <p class="notice" role="status">Planul nu se poate calcula pentru acest scenariu: {{ settings.incompatibilityReason }}</p>
       }
-      @if (result(); as result) {
-        <section class="result" aria-live="polite">
-          <h3>{{ status(result) }}</h3>
-          <p>Este doar o propunere pentru revizia {{ result.constraints.scenarioRevision }}: nimic nu a fost schimbat în scenariu.</p>
-          @if (result.score !== null) { <p>Schimbări de poartă față de plan: {{ result.score }} · minimul posibil: {{ result.bestBound }}</p> }
-          @if (result.assignments.length) {
-            <div class="table-wrap"><table><caption>Poartă și echipă propuse pentru fiecare zbor</caption><thead><tr><th scope="col">Zbor</th><th scope="col">Interval</th><th scope="col">Poartă</th><th scope="col">Echipă</th><th scope="col">Membri</th></tr></thead>
-              <tbody>@for (assignment of result.assignments; track assignment.flightId) { <tr><td>{{ name(assignment.flightId) }}</td><td>{{ assignmentInterval(assignment.flightId) }}</td><td>{{ name(assignment.gateId) }}</td><td>{{ name(assignment.teamId) }}</td><td>{{ memberNames(assignment.teamId) }}</td></tr> }</tbody>
-            </table></div>
+      @if (draft; as draft) {
+        <fieldset class="plan" [disabled]="blocked() || !settings.compatible">
+          <legend class="visually-hidden">Porți, echipe și zboruri</legend>
+
+          <h3>1. Porți</h3>
+          <p class="hint">Bifează porțile folosite și orele când sunt deschise. Poți adăuga o pauză cu „+ interval”.</p>
+          <ul class="gate-list">
+            @for (gate of settings.gates; track gate.id) {
+              <li [class.off]="!opened(gate.id)">
+                <label class="gate-name">
+                  <input type="checkbox" [checked]="!!opened(gate.id)" [disabled]="!opened(gate.id) && draft.gates.length >= 50"
+                    (change)="opened(gate.id) ? removeGate(gate.id) : includeGate(gate.id)" />
+                  <strong>{{ gate.name }}</strong>
+                </label>
+                @if (opened(gate.id); as chosen) {
+                  <span class="windows">
+                    @for (window of chosen.availability; track $index; let i = $index) {
+                      <span class="window">
+                        <select [(ngModel)]="window.startMinute" (ngModelChange)="edit()" [attr.aria-label]="gate.name + ' deschisă de la'">
+                          @for (minute of times(window.startMinute); track minute) { <option [ngValue]="minute">{{ clock(minute) }}</option> }
+                        </select>
+                        <span aria-hidden="true">–</span>
+                        <select [(ngModel)]="window.endMinute" (ngModelChange)="edit()" [attr.aria-label]="gate.name + ' deschisă până la'">
+                          @for (minute of times(window.endMinute); track minute) { <option [ngValue]="minute">{{ clock(minute) }}</option> }
+                        </select>
+                        <button type="button" class="btn-sm" (click)="removeWindow(chosen.availability, i)" [attr.aria-label]="'Șterge intervalul ' + (i + 1) + ' la ' + gate.name">
+                          <i class="pi pi-times" aria-hidden="true"></i>
+                        </button>
+                      </span>
+                    } @empty { <span class="hint">Închisă toată ziua</span> }
+                    <button type="button" class="btn-sm" (click)="addWindow(chosen.availability)">+ interval</button>
+                  </span>
+                } @else { <span class="hint">Nefolosită</span> }
+              </li>
+            } @empty { <li class="hint">Layoutul nu are porți.</li> }
+          </ul>
+
+          <h3>2. Echipe de handling</h3>
+          <p class="hint">Un zbor primește o echipă întreagă. Personalul de la securitate nu apare aici.</p>
+          <div class="teams">
+            @for (team of draft.teams; track team.teamId; let i = $index) {
+              <div class="team">
+                <div class="team-head">
+                  <input class="team-name" maxlength="100" [(ngModel)]="team.name" (ngModelChange)="edit()" [attr.aria-label]="'Numele echipei ' + (i + 1)" />
+                  <button type="button" class="btn-sm" (click)="removeTeam(i)" [attr.aria-label]="'Șterge ' + team.name">
+                    <i class="pi pi-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="choices" role="group" [attr.aria-label]="'Membrii echipei ' + team.name">
+                  @for (id of team.memberIds; track id) {
+                    <span class="member">{{ name(id) }}
+                      <button type="button" (click)="toggleMember(team, id)" [attr.aria-label]="'Scoate ' + name(id) + ' din ' + team.name">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                  } @empty { <span class="hint">Fără membri</span> }
+                  <select [attr.aria-label]="'Adaugă o persoană în ' + team.name"
+                    (change)="toggleMember(team, $any($event.target).value); $any($event.target).value = ''">
+                    <option value="">+ persoană</option>
+                    @for (worker of freeStaff(); track worker.id) {
+                      @if (!team.memberIds.includes(worker.id)) { <option [value]="worker.id">{{ worker.name }}</option> }
+                    }
+                  </select>
+                </div>
+                <div class="choices" role="group" [attr.aria-label]="'Porțile deservite de ' + team.name">
+                  <span class="hint">Deservește:</span>
+                  @for (gate of draft.gates; track gate.gateId) {
+                    <label><input type="checkbox" [checked]="team.gateIds.includes(gate.gateId)" (change)="team.gateIds = toggle(team.gateIds, gate.gateId)" />{{ name(gate.gateId) }}</label>
+                  }
+                </div>
+              </div>
+            } @empty { <p class="hint">Nicio echipă încă.</p> }
+          </div>
+          <button type="button" class="btn-sm" [disabled]="draft.teams.length >= 50" (click)="addTeam()">+ echipă</button>
+
+          <details class="disclosure">
+            <summary>3. Reguli pe zbor (opțional) · {{ draft.requirements.length }} zboruri</summary>
+            <p class="hint">Implicit, un zbor poate pleca de la orice poartă folosită din terminalul lui, cu o echipă de cel puțin o persoană.</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">Zbor</th><th scope="col">Porți permise</th><th scope="col">Oameni în echipă, minim</th></tr></thead>
+                <tbody>
+                  @for (requirement of draft.requirements; track requirement.flightId) {
+                    <tr>
+                      <th scope="row">{{ name(requirement.flightId) }}<br /><small class="hint">{{ interval(requirement.flightId) }}</small></th>
+                      <td>
+                        <div class="choices" role="group" [attr.aria-label]="'Porți permise pentru ' + name(requirement.flightId)">
+                          @for (gate of draft.gates; track gate.gateId) {
+                            <label><input type="checkbox" [checked]="requirement.compatibleGateIds.includes(gate.gateId)"
+                              (change)="requirement.compatibleGateIds = toggle(requirement.compatibleGateIds, gate.gateId)" />{{ name(gate.gateId) }}</label>
+                          }
+                        </div>
+                      </td>
+                      <td><input type="number" min="1" max="100" [(ngModel)]="requirement.minimumTeamSize" (ngModelChange)="edit()"
+                        [attr.aria-label]="'Oameni minim pentru ' + name(requirement.flightId)" /></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </fieldset>
+
+        <div class="toolbar">
+          <button type="button" class="btn-primary" (click)="calculate()" [disabled]="blocked() || !settings.compatible || !draft.gates.length">
+            {{ busy() ? 'Se calculează…' : 'Calculează porțile și echipele' }}
+          </button>
+        </div>
+        @if (!draft.gates.length) { <p class="hint">Bifează cel puțin o poartă.</p> }
+
+        @if (result(); as result) {
+          <section class="result" aria-live="polite">
+            <h3>{{ status(result) }}</h3>
+            @if (result.assignments.length) {
+              <p>
+                @if (moves().length) {
+                  {{ moves().length === 1 ? 'Un zbor trebuie mutat' : moves().length + ' zboruri trebuie mutate' }} la altă poartă.
+                  Celelalte rămân unde sunt.
+                } @else {
+                  Orarul actual merge: niciun zbor nu trebuie mutat. Vezi mai jos ce echipă ia fiecare zbor.
+                }
+              </p>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th scope="col">Zbor</th><th scope="col">Interval</th><th scope="col">Poartă</th><th scope="col">Echipă</th></tr></thead>
+                  <tbody>
+                    @for (assignment of result.assignments; track assignment.flightId) {
+                      <tr [class.moved]="assignment.gateId !== currentGate(assignment.flightId)">
+                        <th scope="row">{{ name(assignment.flightId) }}</th>
+                        <td>{{ assignmentInterval(assignment.flightId) }}</td>
+                        <td>
+                          @if (assignment.gateId !== currentGate(assignment.flightId)) {
+                            {{ name(currentGate(assignment.flightId)) }} → <strong>{{ name(assignment.gateId) }}</strong>
+                          } @else { {{ name(assignment.gateId) }} }
+                        </td>
+                        <td>{{ name(assignment.teamId) }} <small class="hint">· {{ memberNames(assignment.teamId) }}</small></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (moves().length) {
+                <div class="toolbar">
+                  <button type="button" class="btn-primary" (click)="apply()" [disabled]="blocked()">
+                    Mută {{ moves().length === 1 ? 'zborul' : 'cele ' + moves().length + ' zboruri' }} în orar
+                  </button>
+                </div>
+              }
+            }
+            @if (result.rules.length) {
+              <p>Ce nu se potrivește:</p>
+              <ul>@for (item of result.rules; track $index) { <li>{{ rule(item) }}</li> }</ul>
+            }
+          </section>
+        }
+
+        <details class="disclosure">
+          <summary>Setări avansate</summary>
+          <label>Timp maxim de calcul (secunde, 0–30)
+            <input type="number" min="0" max="30" step="any" [(ngModel)]="timeLimitSeconds" [disabled]="blocked()" />
+          </label>
+          @if (settings.resources) {
+            <div class="toolbar">
+              <button type="button" class="btn-danger" [disabled]="blocked()" (click)="deactivate()">Șterge planul salvat</button>
+            </div>
           }
-          @if (result.rules.length) {
-            <ul>@for (rule of result.rules; track $index) { <li><strong>{{ rule.code }} · {{ name(rule.flightId) }} {{ name(rule.resourceId) }}</strong>: {{ rule.message }}</li> }</ul>
-          }
-        </section>
+        </details>
       }
     }
   </div>

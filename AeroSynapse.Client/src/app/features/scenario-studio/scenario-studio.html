@@ -66,7 +66,7 @@
       </details>
       <div class="preset-grid">
         @for (preset of presets; track preset.id) {
-          @if (preset.id === 'principal' || showOtherPresets()) {
+          @if (preset.id === 'principal' || preset.id === 'showcase' || showOtherPresets()) {
             <button
               type="button"
               class="preset"
@@ -84,7 +84,9 @@
                         ? 'pi-chart-line'
                         : preset.id === 'bottleneck'
                           ? 'pi-exclamation-triangle'
-                          : 'pi-send')
+                          : preset.id === 'showcase'
+                            ? 'pi-star'
+                            : 'pi-send')
                   "
                   aria-hidden="true"
                 ></i>
@@ -103,7 +105,9 @@
                     ? 'Evaluarea operațiunilor la un volum redus de pasageri.'
                     : preset.id === 'peak'
                       ? 'Evaluarea congestiei în condiții de cerere ridicată.'
-                      : 'Evaluarea impactului alocării de personal asupra cozilor.'
+                      : preset.id === 'showcase'
+                        ? 'Toată aplicația într-o rulare: vârf, check-in, un control închis și o întârziere.'
+                        : 'Evaluarea impactului alocării de personal asupra cozilor.'
               }}</span>
               <span class="preset-facts"
                 >{{ preset.detail }} <i class="pi pi-arrow-right" aria-hidden="true"></i

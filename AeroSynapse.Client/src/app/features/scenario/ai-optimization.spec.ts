@@ -106,6 +106,13 @@ describe('AI optimization after a run', () => {
     expect(cards[0].textContent).toContain('Fără personal suplimentar');
     expect(cards[1].textContent).toContain('30 s');
     expect(cards[1].textContent).toContain('Economisește 1 operator');
+    expect(cards[0].textContent).not.toContain('Economie estimată');
+    // 600 passengers × 6 min = 60 h × 22,89 €, no staff added; only the recommended card says it.
+    fixture.componentRef.setInput('passengers', 600);
+    fixture.componentRef.setInput('durationMinutes', 120);
+    fixture.detectChanges();
+    expect(cards[0].textContent).toContain('Economie estimată: 1.373 €');
+    expect(cards[1].textContent).not.toContain('Economie estimată');
     expect(fixture.nativeElement.querySelector('.summary').textContent).toContain(answer.summary!);
     // The action is the card's title, said once, with the explanation under the numbers.
     expect(cards[0].querySelector('h4')?.textContent).toBe('Mută un operator de la CP-3 la CP-1');

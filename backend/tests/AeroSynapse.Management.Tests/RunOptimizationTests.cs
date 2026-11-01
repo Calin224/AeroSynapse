@@ -22,13 +22,19 @@ public sealed class RunOptimizationTests
         CheckpointInput[] checkpoints = [new(Hot, 1, 2), new(Calm, 1, 3)];
         KpiSnapshot[] reference = [At(Hot, 60, 40, 18), At(Calm, 60, 0, 1)];
         var candidates = RunOptimizationPlanner.Candidates(checkpoints, reference, Names, new HashSet<Guid>());
-        Assert.Equal(["move", "add-1", "add-2", "save"], candidates.Select(c => c.Id));
+        Assert.Equal(["move", "move-2", "add-1", "add-2", "save"], candidates.Select(c => c.Id));
         Assert.Equal("Mută un operator de la CP-2 la CP-1", candidates[0].Action);
         Assert.Equal(0, candidates[0].OperatorDelta);
+        // Two at once from a donor that keeps one, so the same move needs no second revision.
+        Assert.Equal("Mută doi operatori de la CP-2 la CP-1", candidates[1].Action);
+        Assert.Equal(0, candidates[1].OperatorDelta);
         var applied = RunOptimizationPlanner.Apply(new("v", Guid.Empty, Guid.Empty, 1, Guid.Empty, default, "UTC", 60, 1, 10, 1, checkpoints,
             new PassengerGenerationRequest("g", 1, 60, checkpoints, [], [])), Guid.NewGuid(), candidates[0]);
         Assert.Equal([3, 2], applied.Checkpoints.Select(c => c.StaffCount));
         Assert.Equal(applied.Checkpoints, applied.PassengerGeneration!.Checkpoints);
+        var both = RunOptimizationPlanner.Apply(new("v", Guid.Empty, Guid.Empty, 1, Guid.Empty, default, "UTC", 60, 1, 10, 1, checkpoints,
+            new PassengerGenerationRequest("g", 1, 60, checkpoints, [], [])), Guid.NewGuid(), candidates[1]);
+        Assert.Equal([4, 1], both.Checkpoints.Select(c => c.StaffCount));
 
         Assert.Empty(RunOptimizationPlanner.Candidates(checkpoints, reference, Names, new HashSet<Guid> { Hot, Calm }));
     }
@@ -90,12 +96,26 @@ public sealed class RunOptimizationTests
     }
 
     [Fact]
+    public void Two_operators_come_one_from_each_calm_control_when_none_can_spare_two()
+    {
+        var third = Guid.Parse("00000000-0000-0000-0000-000000000003");
+        var names = new Dictionary<Guid, string>(Names) { [third] = "CP-3" };
+        CheckpointInput[] checkpoints = [new(Hot, 1, 1), new(Calm, 1, 2), new(third, 1, 2)];
+        KpiSnapshot[] reference = [At(Hot, 60, 40, 18), At(Calm, 60, 2, 1), At(third, 60, 0, 1)];
+        var both = Assert.Single(RunOptimizationPlanner.Candidates(checkpoints, reference, names, new HashSet<Guid>()), c => c.Id == "move-2");
+        Assert.Equal("Mută câte un operator de la CP-3 și CP-2 la CP-1", both.Action);
+        Assert.Equal(new Dictionary<Guid, int> { [third] = -1, [Calm] = -1, [Hot] = 2 }, both.StaffDelta);
+        // A single donor with two people can spare only one, so there is no two-person move.
+        Assert.DoesNotContain(RunOptimizationPlanner.Candidates(checkpoints[..2], reference[..2], names, new HashSet<Guid>()), c => c.Id == "move-2");
+    }
+
+    [Fact]
     public void A_check_in_bottleneck_gets_desk_options_first_within_its_desks_and_people()
     {
         CheckpointInput[] checkpoints = [new(Hot, 1, 2), new(Calm, 1, 3)];
         KpiSnapshot[] reference = [At(Hot, 60, 10, 4), At(Calm, 60, 0, 1)];
         var candidates = RunOptimizationPlanner.Candidates(checkpoints, reference, Names, new HashSet<Guid>(), new("CHECK-IN", 8, 12, 25, 94));
-        Assert.Equal(["desk-1", "desk-2", "move", "add-1", "add-2", "save"], candidates.Select(c => c.Id));
+        Assert.Equal(["desk-1", "desk-2", "move", "move-2", "add-1", "add-2", "save"], candidates.Select(c => c.Id));
         Assert.Equal(2, candidates[1].OperatorDelta);
         // A security queue longer than the desks' keeps the controls first.
         Assert.Equal("move", RunOptimizationPlanner.Candidates(checkpoints, [At(Hot, 60, 120, 30)], Names, new HashSet<Guid>(), new("CHECK-IN", 8, 12, 25, 94))[0].Id);

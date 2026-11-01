@@ -179,8 +179,11 @@ export class OperatorWorkflowComponent {
       : 0;
   });
   readonly summary = computed(() => {
-    const value = this.evaluation();
-    return value && !this.evaluating() ? evaluationSummary(value) : null;
+    const value = this.evaluation(),
+      scenario = this.tower.selected();
+    return value && scenario && !this.evaluating()
+      ? evaluationSummary(value, scenario.inputs.durationMinutes)
+      : null;
   });
   readonly shiftPlan = computed(() => {
     const value = this.evaluation(),

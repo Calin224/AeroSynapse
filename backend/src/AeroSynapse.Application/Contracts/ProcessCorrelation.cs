@@ -2,6 +2,24 @@ namespace AeroSynapse.Application.Contracts;
 
 public static class ProcessCorrelation
 {
+    /// <summary>How often the engine reroutes the next window's arrivals between lanes (balancing.INTERVAL_MINUTES).</summary>
+    public const int RerouteIntervalMinutes = 5;
+
+    /// <summary>
+    /// The minute the engine sent an arrival to another lane of its spread flight before it arrived, or null. With routes,
+    /// every <see cref="RerouteIntervalMinutes"/> it reassigns the generated arrivals of the next window to the open lane
+    /// with the least wait plus walk; a redirect away from a closed control is another rule and stays out of this.
+    /// </summary>
+    public static double? ReroutedAt(SimulationRequest request, EventTimeline timeline, ProcessPassenger person)
+    {
+        var seat = person.Transfers is [var first, ..] ? first.FromCheckpointId : person.CheckpointId;
+        return person.AssignedCheckpointId is { } original && original != seat && request.Navigation is not null
+            && timeline.Surge(person.Id) is null && timeline.Available(original, person.ArrivalMinute)
+            && person.FlightId is { } id && request.PassengerGeneration?.Flights.FirstOrDefault(f => f.FlightId == id) is { } flight
+            && flight.Allows(original) && flight.Allows(seat)
+                ? Math.Floor(person.ArrivalMinute / RerouteIntervalMinutes) * RerouteIntervalMinutes : null;
+    }
+
     public static bool Valid(SimulationRequest request, SimulationResponse response)
     {
         // Stage routes have no single-control process report; every other captured SimPy run must return one.
@@ -71,14 +89,16 @@ public static class ProcessCorrelation
             var assigned = person.AssignedCheckpointId ?? person.CheckpointId;
             if (person.AssignedCheckpointId is { } original)
             {
-                // Only arrivals meeting an unavailable control are redirected, to a control that can serve. Each later move
+                // Arrivals meeting an unavailable control are redirected, to a control that can serve, and with routes an
+                // arrival may be rerouted beforehand to another lane of its flight (ReroutedAt). Each later move
                 // leaves an unavailable control (it closed, or closed while they walked to it) or follows a queue_redistribution,
                 // for a control with staff, once the previous walk has ended.
                 var hops = person.Transfers ?? [];
                 var seat = hops.Count > 0 ? hops[0].FromCheckpointId : person.CheckpointId;
                 var free = person.ArrivalMinute;
                 if (!checkpoints.ContainsKey(original) || (hops.Count > 0) != person.RedistributedAtMinute.HasValue
-                    || seat != original && (timeline.Available(original, person.ArrivalMinute) || timeline.Capacity(seat, person.ArrivalMinute) == 0)) return false;
+                    || seat != original && ReroutedAt(request, timeline, person) is null
+                        && (timeline.Available(original, person.ArrivalMinute) || timeline.Capacity(seat, person.ArrivalMinute) == 0)) return false;
                 foreach (var hop in hops)
                 {
                     if (hop.FromCheckpointId != seat || !checkpoints.ContainsKey(hop.ToCheckpointId) || hop.Minute < free

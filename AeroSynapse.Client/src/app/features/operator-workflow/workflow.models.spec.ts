@@ -102,7 +102,7 @@ describe('Decision flow presentation', () => {
     );
   });
   it('compares the baseline with the recommended candidate in plain outcomes', () => {
-    const summary = evaluationSummary(workflowEvaluation())!;
+    const summary = evaluationSummary(workflowEvaluation(), 60)!;
     expect(summary.recommended).toBe(true);
     expect(summary.outcomes[0]).toMatchObject({ before: 2, after: 1, percent: -50 });
     expect(summary.outcomes[2]).toMatchObject({ before: 0, after: 0, percent: null });
@@ -121,7 +121,7 @@ describe('Decision flow presentation', () => {
     ];
     quick.variants[0].metrics!.meanWaitMinutes = 0.5;
     quick.variants[1].metrics!.meanWaitMinutes = 0.1;
-    const plain = evaluationSummary(quick)!;
+    const plain = evaluationSummary(quick, 60)!;
     // Short waits read in seconds, and the headline names where people move.
     expect(plain.headline).toBe('Realocare: 2 operatori la CP-1');
     expect([plain.waitBefore, plain.waitAfter]).toEqual(['30.00 s', '6.00 s']);
@@ -130,7 +130,7 @@ describe('Decision flow presentation', () => {
     quick.variants[0].metrics!.meanWaitMinutes = 0.178;
     quick.variants[0].metrics!.p95WaitMinutes = 1.04;
     quick.variants[1].metrics!.p95WaitMinutes = 0.14;
-    const rounded = evaluationSummary(quick)!;
+    const rounded = evaluationSummary(quick, 60)!;
     expect(rounded.waitBefore).toBe('10.68 s');
     expect(rounded.outcomes[0]).toMatchObject({ before: 10.68, after: 6 });
     expect(rounded.outcomes[1].unit).toBe('secunde');
@@ -138,7 +138,7 @@ describe('Decision flow presentation', () => {
     expect(rounded.outcomes[1].after).toBeCloseTo(8.4);
     quick.variants[0].metrics!.meanWaitMinutes = 2 / 60;
     quick.variants[1].metrics!.meanWaitMinutes = 1.8 / 60;
-    const precise = evaluationSummary(quick)!;
+    const precise = evaluationSummary(quick, 60)!;
     expect([precise.waitBefore, precise.waitAfter]).toEqual(['2.00 s', '1.80 s']);
     expect(precise.outcomes[0].before).toBeCloseTo(2);
     expect(precise.outcomes[0].after).toBeCloseTo(1.8);
@@ -147,12 +147,15 @@ describe('Decision flow presentation', () => {
     expect(plain.candidates[0].configuration[1]).toMatchObject({ count: 0, delta: -2 });
     expect(plain.candidates[0].waitShare).toBeCloseTo(20);
     const unrecommended = { ...workflowEvaluation(), recommendedRunId: null };
-    expect(evaluationSummary(unrecommended)!.recommended).toBe(false);
+    expect(evaluationSummary(unrecommended, 60)!.recommended).toBe(false);
     expect(
-      evaluationSummary({
-        ...unrecommended,
-        variants: unrecommended.variants.filter((row) => row.runId !== baselineRunId),
-      }),
+      evaluationSummary(
+        {
+          ...unrecommended,
+          variants: unrecommended.variants.filter((row) => row.runId !== baselineRunId),
+        },
+        60,
+      ),
     ).toBeNull();
   });
 });
@@ -204,15 +207,15 @@ describe('Shift plans in the decision flow', () => {
     return value;
   }
   it('names shift variants by their moves and leads with the shift plan', () => {
-    const summary = evaluationSummary(evaluation())!;
+    const summary = evaluationSummary(evaluation(), 60)!;
     expect(summary.headline).toBe('Plan pe ture: 2 operatori alocați în funcție de sosiri');
     expect(summary.candidates[0].title).toBe('Plan pe ture · o mutare');
     const fixed = evaluation();
     fixed.variants[1].schedule!.shifts = null;
-    expect(evaluationSummary(fixed)!.candidates[0].title).toBe(
+    expect(evaluationSummary(fixed, 60)!.candidates[0].title).toBe(
       'Plan fix · alocare constantă, fără pauze',
     );
-    expect(evaluationSummary(workflowEvaluation())!.candidates[0].title).toBe('Varianta 1');
+    expect(evaluationSummary(workflowEvaluation(), 60)!.candidates[0].title).toBe('Varianta 1');
   });
   it('lays the plan out per slot beside today and every shift on the day axis', () => {
     const plan = shiftPlanView(evaluation(), inputs, new Map([[P1, 'Ana Pop']]))!;
@@ -232,5 +235,50 @@ describe('Shift plans in the decision flow', () => {
     ]);
     expect(second).toMatchObject({ name: 'Operator 2', breaks: [{ left: 50, width: 25 }] });
     expect(shiftPlanView(workflowEvaluation(), inputs)).toBeNull();
+  });
+  it('says a constant staffing once, sums up each control and names why a plan only compares', () => {
+    const value = evaluation();
+    value.recommendedRunId = null;
+    value.variants[1].assessment = { status: 'rejected', reasons: ['mean_wait_degradation'] };
+    const plan = shiftPlanView(value, inputs)!;
+    expect(plan.title).toBe('Plan pe ture · o mutare');
+    expect(plan.reason).toBe('Așteptarea medie crește peste limita acceptată.');
+    expect(plan.slotTimes).toEqual(['13:00', '13:15', '13:30', '13:45']);
+    expect(plan.rows[0]).toMatchObject({ constantNow: 1, most: 2 });
+    expect(plan.rows[0].summary).toBe(
+      'Acum: 1 operator toată ziua · pe ture: între 0 și 2 operatori, cei mai mulți la 13:15',
+    );
+  });
+  it('counts what a plan saves: passenger hours and operator hours on duty', () => {
+    const value = evaluation();
+    // 20 passengers wait 1 min less: 1/3 h. Today 8 slots of 15 min = 2 h; the shifts are paid
+    // start to end, the 13:30 pause included: 60 + 45 min = 1.75 h, so 0.25 h freed.
+    const summary = evaluationSummary(value, 60)!;
+    expect(summary.savings!.passengerHoursSaved).toBeCloseTo(20 / 60);
+    expect(summary.savings!.operatorHoursAdded).toBeCloseTo(-0.25);
+    // Without schedules, the fixed counts are on duty the whole day: 5 instead of 2 for an hour.
+    const fixed = workflowEvaluation();
+    fixed.variants[0].configuration = [{ checkpointId: 'cp-1', name: 'CP-1', staffCount: 2 }];
+    fixed.variants[1].configuration = [{ checkpointId: 'cp-1', name: 'CP-1', staffCount: 5 }];
+    expect(evaluationSummary(fixed, 60)!.savings!.operatorHoursAdded).toBe(3);
+    fixed.variants[1].metrics = null;
+    expect(evaluationSummary(fixed, 60)!.savings).toBeNull();
+  });
+  it('leads with the totals when a plan adds people instead of moving them', () => {
+    const value = workflowEvaluation();
+    value.variants[0].configuration = [{ checkpointId: 'cp-1', name: 'CP-1', staffCount: 2 }];
+    value.variants[1].configuration = [{ checkpointId: 'cp-1', name: 'CP-1', staffCount: 5 }];
+    expect(evaluationSummary(value, 60)!.headline).toBe('5 operatori în loc de 2 (+3)');
+  });
+  it('tells plans of the same kind apart and says what each costs in people', () => {
+    const value = evaluation();
+    value.variants.push({ ...value.variants[1], runId: 'twin', position: 2 });
+    const [first, second] = evaluationSummary(value, 60)!.candidates;
+    expect([first.title, second.title]).toEqual([
+      'Plan pe ture · o mutare · A',
+      'Plan pe ture · o mutare · B',
+    ]);
+    expect(first.changes).toBe(value.variants[1].reallocatedPeople);
+    expect(first.subtitle).toMatch(/operatori · /);
   });
 });

@@ -97,4 +97,47 @@ public sealed class ResourceApiTests
         var after = (await host.Client.GetFromJsonAsync<ScenarioDetails>($"/scenarios/{scenario.Scenario.Id}", Json, Token))!;
         Assert.Equal(JsonSerializer.Serialize(scenario, Json), JsonSerializer.Serialize(after, Json));
     }
+
+    [Fact]
+    public async Task Saved_resources_survive_schedule_edits_and_a_proposal_moves_flights_to_its_gates()
+    {
+        await using var host = await ManagementHost.CreateAsync(realEngine: true);
+        var original = await host.CreateScenarioAsync(); var id = original.Scenario.Id; var path = $"/scenarios/{id}/resources";
+        var settings = (await host.Client.GetFromJsonAsync<ResourceSettings>(path + "/settings", Json, Token))!;
+        var flight = settings.Flights[0];
+        var terminal = settings.Gates.Single(item => item.Id == flight.GateId).TerminalId;
+        var gates = settings.Gates.Where(item => item.TerminalId == terminal).ToArray();
+        var workers = settings.Staff.Where(item => !item.ReservedForSecurity && item.TerminalId == terminal).ToArray();
+        var target = gates.First(item => item.Id != flight.GateId).Id;
+        // A rule for one flight only: the others may use any configured gate of their terminal.
+        var config = new IntegratedResourceConfig("1.0", gates.Select(item => new ResourceGate(item.Id, [new(0, settings.DurationMinutes)])).ToArray(),
+            workers.Select(item => new ResourceWorker(item.Id, [], [new(0, settings.DurationMinutes)])).ToArray(),
+            workers.Select(item => new HandlingTeam(Guid.NewGuid(), item.Name, [item.Id], gates.Select(gate => gate.Id).ToArray())).ToArray(),
+            [new(flight.Id, [target], [], 1)]);
+        using var saved = await host.Client.PutAsJsonAsync(path + "/settings", new ResourceConfigWriteRequest(settings.Revision, config), Json, Token);
+        Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync(Token));
+        var scenario = (await saved.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        using var proposal = await host.Client.PostAsJsonAsync(path + "/proposals", new ResourceProposalRequest(scenario.Scenario.Revision, 5), Json, Token);
+        Assert.True(proposal.IsSuccessStatusCode, await proposal.Content.ReadAsStringAsync(Token));
+        var result = (await proposal.Content.ReadFromJsonAsync<ResourceSolveResult>(ContractJson.Options, Token))!;
+        Assert.Equal("optimal", result.Status); Assert.Equal(settings.Flights.Count, result.Assignments.Count);
+        Assert.Equal(target, result.Assignments.Single(item => item.FlightId == flight.Id).GateId);
+        var moves = result.Assignments.Where(item => item.GateId != settings.Flights.Single(f => f.Id == item.FlightId).GateId)
+            .Select(item => new FlightGateChange(item.FlightId, item.GateId)).ToArray();
+        foreach (var (invalid, status) in new[]
+        {
+            (new FlightGateMoveRequest(scenario.Scenario.Revision + 1, moves), HttpStatusCode.Conflict),
+            (new FlightGateMoveRequest(scenario.Scenario.Revision, [new(Guid.NewGuid(), target)]), HttpStatusCode.BadRequest),
+            (new FlightGateMoveRequest(scenario.Scenario.Revision, [new(flight.Id, Guid.NewGuid())]), HttpStatusCode.BadRequest),
+        })
+        {
+            using var rejected = await host.Client.PostAsJsonAsync(path + "/apply", invalid, Json, Token);
+            Assert.Equal(status, rejected.StatusCode);
+        }
+        using var applied = await host.Client.PostAsJsonAsync(path + "/apply", new FlightGateMoveRequest(scenario.Scenario.Revision, moves), Json, Token);
+        Assert.True(applied.StatusCode == HttpStatusCode.OK, await applied.Content.ReadAsStringAsync(Token));
+        var moved = (await applied.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        Assert.Equal(scenario.Scenario.Revision + 1, moved.Scenario.Revision);
+        Assert.All(result.Assignments, item => Assert.Equal(item.GateId, moved.Inputs.Flights.Single(f => f.Id == item.FlightId).GateId));
+    }
 }

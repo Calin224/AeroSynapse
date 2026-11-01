@@ -46,7 +46,7 @@ test('timed Flux de decizie with internet denied, calculated evidence, modest lo
   const scenario = await saveCongestionScenario(page);
   expect(scenario.scenario.isSynthetic).toBe(true);
   const scenarioId: string = scenario.scenario.id;
-  await page.goto(`/operator-workflow?scenarioId=${scenarioId}`);
+  await page.goto(`/control-tower/decision?scenarioId=${scenarioId}`);
   await expect(
     page.getByRole('heading', { name: '1. Configurare incident', exact: true }),
   ).toBeVisible();

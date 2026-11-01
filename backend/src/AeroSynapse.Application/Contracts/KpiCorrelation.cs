@@ -11,13 +11,14 @@ public static class KpiCorrelation
         var absent = CheckInCorrelation.Absent(response);
         if (request.Engine != result.Engine || result.RunId != request.RunId || result.IntervalMinutes != request.SnapshotIntervalMinutes
             || result.HorizonMinutes != request.DurationMinutes || result.PopulationCount != request.PassengerCount + timeline.SurgeTotal
-            || result.EventCount != request.Events?.Count
+            || (result.EventCount ?? 0) != (request.Events?.Count ?? 0)
             || result.Offset != 0 || result.HasMore || result.MatchedSnapshotCount != result.SnapshotCount
             || result.ReturnedSnapshotCount != result.SnapshotCount || response.ProcessResult is not { } processes
             || result.ProcessedCount != processes.Checkpoints.Sum(cp => cp.ProcessedCount)
             || result.ArrivedCount != processes.ArrivedCount || result.NotArrivedCount != processes.NotArrivedCount
             || result.UnreachableCount != processes.UnreachableCount || result.Definitions != KpiConventions.Definitions) return false;
         var zones = request.Checkpoints.OrderBy(cp => cp.CheckpointId.ToString(), StringComparer.Ordinal).ToArray();
+        var rerouted = processes.Passengers.ToDictionary(person => person.Id, person => ProcessCorrelation.ReroutedAt(request, timeline, person));
         var groups = processes.Passengers.ToLookup(person => person.CheckpointId);
         var snapshots = result.Snapshots.ToLookup(row => row.ZoneId);
         var grid = KpiConventions.Minutes(request.DurationMinutes, result.IntervalMinutes);
@@ -30,14 +31,14 @@ public static class KpiCorrelation
                 .Select(person => (Close: CheckInCorrelation.BoardingClose(timeline, person), From: timeline.Surge(person.Id)?.Event.Minute ?? 0)).ToArray();
             // A redirected arrival belongs to its assigned control until it arrives; surge demand exists from its event minute.
             ProcessPassenger[] Demand(int time) => processes.Passengers.Where(person => timeline.Visible(person, time)
-                && person.CheckpointAt(time) == zone.CheckpointId).ToArray();
+                && person.CheckpointAt(time, rerouted[person.Id]) == zone.CheckpointId).ToArray();
             var rows = snapshots[zone.CheckpointId].OrderBy(row => row.Minute).ToArray();
             if (!rows.Select(row => row.Minute).SequenceEqual(grid)) return false;
             foreach (var row in rows)
             {
                 var time = row.Minute; var start = row.WindowStartMinute;
                 var present = processes.Passengers.Where(person =>
-                    person.CheckpointAt(time) == zone.CheckpointId).ToArray();
+                    person.CheckpointAt(time, rerouted[person.Id]) == zone.CheckpointId).ToArray();
                 bool Arrived(ProcessPassenger person) => person.ArrivalMinute <= time;
                 var waits = people.Where(person => person.SecurityClearedMinute <= time).Select(person => person.QueueWaitMinutes!.Value).Order().ToArray();
                 var median = waits.Length == 0 ? (double?)null : (waits[waits.Length / 2] + waits[(waits.Length - 1) / 2]) / 2;
@@ -56,7 +57,9 @@ public static class KpiCorrelation
                 var transferredCount = processes.Passengers.Sum(p => p.Transfers?.Count(hop => hop.FromCheckpointId == zone.CheckpointId && hop.Minute <= time) ?? 0);
                 int? transferred = transferredCount > 0 ? transferredCount : null;
                 if (row.TransferredOutPassengers != transferred || row.Capacity != zone.StaffCount || row.PopulationCount != population
-                    || row.EffectiveCapacity != (request.Events is null ? null : timeline.Capacity(zone.CheckpointId, time)) || row.WaitSampleCount != waits.Length
+                    // Reported whenever capacity can change during the run (events, or rerouting); then it must be the timeline's.
+                    || (row.EffectiveCapacity is { } effective ? effective != timeline.Capacity(zone.CheckpointId, time) : request.Events is not null)
+                    || row.WaitSampleCount != waits.Length
                     || !KpiContractValidation.Timestamp(row.RecordedAtUtc, out var recorded) || recorded != request.StartsAtUtc.AddMinutes(time)
                     || row.ArrivedPassengers != present.Count(Arrived)
                     || row.UnreachablePassengers != present.Count(person => Arrived(person) && person.ErrorCode is not null)

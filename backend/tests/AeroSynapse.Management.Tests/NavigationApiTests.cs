@@ -23,7 +23,7 @@ public sealed class NavigationApiTests
     }
     private static async Task<ScenarioDetails> Create(ManagementHost host,bool passengerProfiles=true)
     {
-        var request=(await host.DraftAsync()).Request;
+        var (request,layout)=await host.DraftAsync();
         var start=request.Inputs.StartsAtUtc;
         var flight=request.Inputs.Flights[0] with { PassengerCapacity=2,DepartureAtUtc=start.AddMinutes(10),BoardingOpensAtUtc=start.AddMinutes(1),BoardingClosesAtUtc=start.AddMinutes(3) };
         request=request with { Inputs=request.Inputs with { DurationMinutes=10,Flights=[flight],
@@ -32,7 +32,9 @@ public sealed class NavigationApiTests
         var scenario=await host.PostScenarioAsync(request);
         if (!passengerProfiles) return scenario;
         var settings=(await host.Client.GetFromJsonAsync<PassengerSettings>($"/scenarios/{scenario.Scenario.Id}/passengers/settings",Json,Token))!;
-        var batch=settings.Defaults.Batches[0] with { Arrival=new("constant",0,0,0,0,0),Service=new("constant",7,7,7,0,7),
+        // One minute of service, independent of the demo checkpoint's current base rate.
+        var rate=layout.Layout.Checkpoints.Single(cp => cp.Id == settings.Defaults.Batches[0].CheckpointId).CapacityPerMinute;
+        var batch=settings.Defaults.Batches[0] with { Arrival=new("constant",0,0,0,0,0),Service=new("constant",rate,rate,rate,0,rate),
             Travel=new("constant",1,1,1,0,1),Groups=[new("solo",1,1,1,1,1)] };
         using var configured=await host.Client.PutAsJsonAsync($"/scenarios/{scenario.Scenario.Id}/passengers/settings",
             new PassengerConfigWriteRequest(scenario.Scenario.Revision,42,new("1.0",[batch])),Json,Token);

@@ -101,15 +101,20 @@ public static class ScenarioValidator
                     && row.Flight.DepartureAtUtc != default && row.Flight.DepartureAtUtc.Kind == DateTimeKind.Utc
                     && FlightScheduling.TryDelayed(row.Flight.DepartureAtUtc, row.Flight.DelayMinutes, out _))
                 .Select(row => (row.Flight, row.Index, Time: row.Flight.DepartureAtUtc.AddMinutes(row.Flight.DelayMinutes)))
-                .OrderBy(row => row.Time).ToArray();
-            for (var index = 1; index < departures.Length; index++)
+                .OrderBy(row => row.Time).GroupBy(row => row.Flight.GateId);
+            // Only a shared gate forces spacing; different gates may depart together.
+            foreach (var gate in departures)
             {
-                var first = departures[index - 1];
-                var second = departures[index];
-                if (second.Time - first.Time >= TimeSpan.FromMinutes(minimum)) continue;
-                var message = $"Plecările {first.Flight.Code} și {second.Flight.Code} trebuie distanțate cu minimum {minimum} de minute, inclusiv întârzierile configurate.";
-                Error($"inputs.flights[{first.Index}].departureAtUtc", message);
-                Error($"inputs.flights[{second.Index}].departureAtUtc", message);
+                var ordered = gate.ToArray();
+                for (var index = 1; index < ordered.Length; index++)
+                {
+                    var first = ordered[index - 1];
+                    var second = ordered[index];
+                    if (second.Time - first.Time >= TimeSpan.FromMinutes(minimum)) continue;
+                    var message = $"Plecările {first.Flight.Code} și {second.Flight.Code} de la aceeași poartă trebuie distanțate cu minimum {minimum} de minute, inclusiv întârzierile configurate.";
+                    Error($"inputs.flights[{first.Index}].departureAtUtc", message);
+                    Error($"inputs.flights[{second.Index}].departureAtUtc", message);
+                }
             }
         }
         foreach (var conflict in inputs.Journey is not null ? [] : FlightScheduling.Conflicts(inputs with { Flights = (inputs.Flights ?? []).Where(x => x is not null).ToArray() }))

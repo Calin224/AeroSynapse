@@ -5,15 +5,94 @@
     </p>
     <h3>{{ result().headline }}</h3>
     <p class="verdict-line">
-      Așteptare medie de referință: <strong>{{ result().waitBefore }}</strong
-      >. Varianta evaluată: <strong>{{ result().waitAfter }}</strong
-      >.
+      Așteptarea medie: <strong>{{ result().waitBefore }}</strong> acum,
+      <strong>{{ result().waitAfter }}</strong>
+      {{ result().recommended ? 'cu planul recomandat' : 'cu cel mai bun plan simulat' }}.
     </p>
+    @if (cost(); as text) {
+      <p class="cost-line" [title]="costBasis">{{ text }} pe ziua simulată</p>
+    }
   </div>
   @if (result().outcomes.length) {
     <strong class="figure">{{ signed(result().outcomes[0].percent) }}</strong>
   }
 </div>
+
+@if (result().outcomes.length) {
+  <app-outcome-cards
+    [rows]="result().outcomes"
+    beforeLabel="Referință"
+    [afterLabel]="result().recommended ? 'Propus' : 'Evaluat'"
+    note="la finalul zilei simulate"
+  />
+}
+
+@if (result().candidates.length) {
+  <section class="variants" aria-labelledby="variants-title">
+    <header class="variants-head">
+      <h3 id="variants-title">Planurile comparate</h3>
+      <p>
+        Fiecare plan a fost simulat pe aceeași zi. Recomandăm planul cu cei mai puțini pasageri
+        întârziați sau necontrolați, apoi cu cea mai scurtă așteptare; la egalitate, pe cel cu mai
+        puține schimbări de personal.
+      </p>
+    </header>
+    <ul class="candidates" aria-label="Variantele simulate">
+      @for (candidate of result().candidates; track candidate.runId) {
+        <li [attr.data-status]="candidate.status" [class.recommended]="candidate.recommended">
+          <header>
+            <div class="names">
+              <strong>{{ candidate.title }}</strong>
+              <small>{{ candidate.subtitle }}</small>
+            </div>
+            @if (candidate.recommended) {
+              <span class="badge"><i class="pi pi-check" aria-hidden="true"></i> Recomandat</span>
+            } @else {
+              <span class="tag">{{ candidate.label }}</span>
+            }
+          </header>
+          @if (candidate.reason) {
+            <p class="reason">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>{{ candidate.reason }}
+            </p>
+          }
+          <div class="figures">
+            <div>
+              <span>Așteptare medie</span>
+              <strong>{{ candidate.wait }}</strong>
+              <small>acum {{ result().waitBefore }}</small>
+            </div>
+            <div>
+              <span>Schimbări de personal</span>
+              <strong>{{ candidate.changes }}</strong>
+              <small
+                >{{ candidate.changes === 1 ? 'o persoană' : 'persoane' }} mutate sau
+                adăugate</small
+              >
+            </div>
+          </div>
+          <span class="wait-bar" [class.worse]="candidate.worse" aria-hidden="true"
+            ><i [style.width.%]="candidate.waitShare ?? 0"></i
+          ></span>
+          <ul class="config" aria-label="Operatori pe controale">
+            @for (item of candidate.configuration; track item.checkpointId) {
+              <li [class.up]="item.delta > 0" [class.down]="item.delta < 0">
+                <span>{{ item.name }}</span>
+                <strong>{{ item.count }}</strong>
+                @if (item.delta) {
+                  <small
+                    >{{ item.delta > 0 ? '+' : '−'
+                    }}{{ item.delta > 0 ? item.delta : -item.delta }}</small
+                  >
+                }
+              </li>
+            }
+          </ul>
+        </li>
+      }
+    </ul>
+  </section>
+}
 
 @if (shiftPlan(); as plan) {
   <app-shift-plan [plan]="plan" />
@@ -56,52 +135,4 @@
       </div>
     }
   </div>
-}
-
-@if (result().outcomes.length) {
-  <app-outcome-cards
-    [rows]="result().outcomes"
-    beforeLabel="Referință"
-    [afterLabel]="result().recommended ? 'Propus' : 'Evaluat'"
-    note="la finalul zilei simulate"
-  />
-}
-
-@if (result().candidates.length) {
-  <h3 class="section-title">Variante evaluate</h3>
-  <ul class="candidates" aria-label="Variantele simulate">
-    @for (candidate of result().candidates; track candidate.runId) {
-      <li [attr.data-status]="candidate.status" [class.recommended]="candidate.recommended">
-        <header>
-          <strong>{{ candidate.title }}</strong>
-          @if (candidate.recommended) {
-            <span class="badge">Recomandată</span>
-          } @else {
-            <span class="tag">{{ candidate.label }}</span>
-          }
-        </header>
-        <ul class="config" aria-label="Operatori pe controale">
-          @for (item of candidate.configuration; track item.checkpointId) {
-            <li [class.up]="item.delta > 0" [class.down]="item.delta < 0">
-              {{ item.name }}: {{ item.count }}
-              @if (item.delta) {
-                <small
-                  >({{ item.delta > 0 ? '+' : '−'
-                  }}{{ item.delta > 0 ? item.delta : -item.delta }})</small
-                >
-              }
-            </li>
-          }
-        </ul>
-        <div class="wait">
-          <span>Așteptare medie</span>
-          <span class="wait-bar" aria-hidden="true"
-            ><i [style.width.%]="candidate.waitShare ?? 0"></i
-          ></span>
-          <strong>{{ candidate.wait }}</strong>
-        </div>
-        <small>referință: {{ result().waitBefore }} · cost de realocare {{ candidate.cost }}</small>
-      </li>
-    }
-  </ul>
 }

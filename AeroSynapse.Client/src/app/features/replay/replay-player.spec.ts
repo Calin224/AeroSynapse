@@ -64,7 +64,6 @@ describe('Single replay cursor for animation, KPI and events', () => {
     expect(vi.mocked(renderer.setPassengers!).mock.calls.at(-1)![0]).toMatchObject({
       timeMinutes: 2.75,
       snapshotMinute: 2,
-      interpolateAggregates: false,
     });
     view.seek(6);
     view.seek(2.75);
@@ -123,7 +122,7 @@ describe('Single replay cursor for animation, KPI and events', () => {
     );
     await fixture.whenStable();
     expect(view.time()).toBe(0);
-    expect(view.speed()).toBe(1);
+    expect(view.speed()).toBe(16);
     expect(view.playing()).toBe(false);
     expect(view.zoneId()).toBe('');
     expect(view.selectedEvent()).toBe('');

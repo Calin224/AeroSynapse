@@ -63,14 +63,23 @@ export function incidentArrivalWindow(inputs: ScenarioInputs, flightId: string |
     (flight.delayMinutes ?? 0) * 60000;
   const batch = inputs.passengerGeneration?.batches.find((row) => row.flightId === flightId);
   if (inputs.passengerGeneration && !batch) return null;
+  // Without profiles the API derives them from the flight's flows window (PassengerScenarios.DefaultBatch).
+  const flows = batch ? [] : inputs.flows.filter((row) => row.flightId === flightId);
   // Only the legacy passenger-profile contract uses offsets. Convert them to instants at this boundary.
-  const minimum = Math.max(
-    scenarioStart,
-    batch ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.minimum)) : scenarioStart,
-  );
+  const from = batch
+    ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.minimum))
+    : flows.length
+      ? Math.min(...flows.map((row) => Date.parse(row.startsAtUtc)))
+      : scenarioStart;
+  const to = batch
+    ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.maximum))
+    : flows.length
+      ? Math.max(...flows.map((row) => Date.parse(row.endsAtUtc)))
+      : close;
+  const minimum = Math.max(scenarioStart, from);
   const maximum = Math.min(
     Date.parse(addMinutes(inputs.startsAtUtc, inputs.durationMinutes)),
-    batch ? Date.parse(addMinutes(inputs.startsAtUtc, batch.arrival.maximum)) : close,
+    to,
     close,
   );
   return Number.isFinite(minimum) && Number.isFinite(maximum) && maximum > minimum

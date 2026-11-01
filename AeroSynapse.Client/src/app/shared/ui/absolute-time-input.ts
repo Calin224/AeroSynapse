@@ -12,7 +12,7 @@ import { localDateTime, utcDateTime } from '../absolute-time';
         [id]="id"
         type="datetime-local"
         lang="ro"
-        step="any"
+        [attr.step]="draft().length > 16 ? 'any' : null"
         required
         [ngModel]="draft()"
         [ngModelOptions]="{ standalone: true }"

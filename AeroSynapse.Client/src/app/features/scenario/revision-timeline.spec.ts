@@ -121,6 +121,61 @@ describe('Scenario revision history', () => {
     expect(element.textContent).toContain('Nicio revizie înregistrată încă.');
   });
 
+  it('brings an older revision back from its run as a new revision, only where a run captured it', () => {
+    const { fixture, element, open } = render();
+    fixture.componentRef.setInput('canRestore', true);
+    const restored: ScenarioDetails[] = [];
+    fixture.componentInstance.restored.subscribe((value) => restored.push(value));
+    open();
+    http.expectOne('/api/scenarios/s-1/revisions').flush(history);
+    fixture.detectChanges();
+    const rows = [...element.querySelectorAll<HTMLElement>('ol > li')];
+    // The current revision and a revision without runs cannot be brought back.
+    expect(rows[0].textContent).toContain('curentă');
+    expect(rows[0].querySelector('.restore')).toBeNull();
+    expect(rows[1].querySelector('.restore')).toBeNull();
+    rows[2].querySelector<HTMLButtonElement>('.restore')!.click();
+    const captured = {
+      scenario: { revision: 1, layoutVersionId: 'layout-1' },
+      inputs: { seed: 7 },
+    };
+    http
+      .expectOne('/api/runs/r-1')
+      .flush({ id: 'r-1', inputSnapshotJson: JSON.stringify({ scenario: captured }) });
+    const save = http.expectOne('/api/scenarios/s-1');
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body).toMatchObject({
+      layoutVersionId: 'layout-1',
+      inputs: { seed: 7 },
+      revision: 3,
+    });
+    save.flush({ ...scenario, scenario: { id: 's-1', revision: 4 } });
+    fixture.detectChanges();
+    expect(restored.map((value) => value.scenario.revision)).toEqual([4]);
+    expect(element.textContent).toContain('Revizia 1 a fost restaurată ca revizia 4.');
+  });
+
+  it('says plainly when the scenario changed before the restore was saved', () => {
+    const { fixture, element, open } = render();
+    fixture.componentRef.setInput('canRestore', true);
+    open();
+    http.expectOne('/api/scenarios/s-1/revisions').flush(history);
+    fixture.detectChanges();
+    element
+      .querySelectorAll<HTMLElement>('ol > li')[2]
+      .querySelector<HTMLButtonElement>('.restore')!
+      .click();
+    http.expectOne('/api/runs/r-1').flush({
+      id: 'r-1',
+      inputSnapshotJson: JSON.stringify({ scenario: { scenario: { revision: 1 }, inputs: {} } }),
+    });
+    http
+      .expectOne('/api/scenarios/s-1')
+      .flush({ title: 'Conflict' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Scenariul s-a modificat între timp');
+  });
+
   it('words counts, removed items and unnamed events plainly', () => {
     const label = (kind: string, action: 'added' | 'changed' | 'removed', ids: string[]) =>
       changeLabel({ kind, action, ids }, scenario);

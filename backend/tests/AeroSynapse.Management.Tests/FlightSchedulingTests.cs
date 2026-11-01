@@ -28,17 +28,20 @@ public sealed class FlightSchedulingTests
     }
 
     [Theory]
-    [InlineData(0, 0, false, false)]
-    [InlineData(59, 0, false, false)]
-    [InlineData(60, 0, false, true)]
-    [InlineData(61, 0, false, true)]
-    [InlineData(60, 1, false, false)]
-    [InlineData(1, 0, true, true)]
-    public void New_scenario_departure_spacing_applies_across_gates_including_delays(int gap, int firstDelay, bool cancelled, bool valid)
+    [InlineData(0, 0, false, true, false)]
+    [InlineData(59, 0, false, true, false)]
+    [InlineData(60, 0, false, true, true)]
+    [InlineData(61, 0, false, true, true)]
+    [InlineData(60, 1, false, true, false)]
+    [InlineData(1, 0, true, true, true)]
+    [InlineData(0, 0, false, false, true)]
+    [InlineData(1, 0, false, false, true)]
+    public void New_scenario_departure_spacing_applies_per_gate_including_delays(int gap, int firstDelay, bool cancelled, bool sameGate, bool valid)
     {
         var first = Flight() with { DelayMinutes = firstDelay };
         var second = Flight(1) with
         {
+            GateId = sameGate ? first.GateId : Gates[1].Id,
             DepartureAtUtc = first.DepartureAtUtc.AddMinutes(gap),
             BoardingOpensAtUtc = first.BoardingOpensAtUtc!.Value.AddMinutes(gap),
             BoardingClosesAtUtc = first.BoardingClosesAtUtc!.Value.AddMinutes(gap),

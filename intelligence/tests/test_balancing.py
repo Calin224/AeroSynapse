@@ -1,55 +1,46 @@
-from types import SimpleNamespace as NS
-
-from app.simulation.balancing import balance
-
-A, B = 'a', 'b'
+from app.simulation.balancing import MOVE_MINUTES, decide
 
 
-def controls(staff_a=1, staff_b=1):
-    return {A: NS(staff_count=staff_a, service_rate_per_minute=1.0), B: NS(staff_count=staff_b, service_rate_per_minute=1.0)}
+def person(identifier, arrival=1.0, own='a', group=None):
+    return {'id': identifier, 'flightId': 'f', 'groupId': group, 'arrivalMinute': arrival, 'checkpointId': own,
+            'serviceMinutes': 1.0, 'walkingMinutes': 3.0}
 
 
-def flight(spread=True):
-    routes = [NS(checkpoint_id=A, route_travel_minutes=3.0), NS(checkpoint_id=B, route_travel_minutes=3.0)] if spread else None
-    return {'f': NS(checkpoint_routes=routes)}
+def state(a_ahead, b_ahead, a_capacity=1, b_capacity=1):
+    return {'a': {'capacity': a_capacity, 'rate': 1.0, 'ahead': a_ahead},
+            'b': {'capacity': b_capacity, 'rate': 1.0, 'ahead': b_ahead}}
 
 
-def person(number, group=None, arrival=0.0, flight_id='f'):
-    return {'id': f'p{number:02d}', 'flightId': flight_id, 'groupId': group or f'g{number:02d}', 'checkpointId': A,
-            'arrivalMinute': arrival, 'serviceMinutes': 2.0, 'walkingMinutes': 3.0, 'errorCode': None}
+LANES = {'a': 3.0, 'b': 3.0}
+EVEN = lambda _: LANES
 
 
-def test_a_crowd_at_one_control_is_shared_with_the_free_one():
-    people = [person(number) for number in range(12)]
-    moved = balance(people, set(), controls(), flight(), {})
-    assert moved and {item['id'] for item in people if item['checkpointId'] == B} == moved
-    assert abs(sum(item['checkpointId'] == A for item in people) - sum(item['checkpointId'] == B for item in people)) <= 2
+def test_moves_to_the_shorter_real_queue():
+    assert decide([person('p')], 0, state(30, 0), EVEN, {}) == {'p': 'b'}
 
 
-def test_a_move_is_not_worth_it_when_the_queue_is_short():
-    people = [person(0), person(1, arrival=10.0)]
-    assert balance(people, set(), controls(), flight(), {}) == set()
+def test_stays_when_the_gain_is_small():
+    assert decide([person('p')], 0, state(3, 2), EVEN, {}) == {}
 
 
-def test_only_spread_flights_pinned_people_and_errors_stay_put():
-    people = [person(number) for number in range(12)]
-    assert balance(people, set(), controls(), flight(spread=False), {}) == set()
-    assert balance(people, {item['id'] for item in people}, controls(), flight(), {}) == set()
-    for item in people: item['errorCode'] = 'route_unreachable'
-    assert balance(people, set(), controls(), flight(), {}) == set()
+def test_never_picks_a_control_without_an_operator():
+    assert decide([person('p')], 0, state(30, 0, b_capacity=0), EVEN, {}) == {}
+
+
+def test_leaves_a_closed_own_control():
+    assert decide([person('p')], 0, state(0, 0, a_capacity=0), EVEN, {}) == {'p': 'b'}
+
+
+def test_a_window_does_not_all_pick_the_same_control():
+    moved = decide([person(f'p{i}', own='a') for i in range(40)], 0, state(20, 0), EVEN, {})
+    assert 0 < len(moved) < 40
 
 
 def test_a_group_moves_together():
-    people = [person(number, group=f'g{number // 3}') for number in range(12)]
-    balance(people, set(), controls(), flight(), {})
-    for group in {item['groupId'] for item in people}:
-        assert len({item['checkpointId'] for item in people if item['groupId'] == group}) == 1
+    batch = [person('p1', 1.0, group='g'), person('p2', 1.2, group='g')]
+    assert set(decide(batch, 0, state(30, 0), EVEN, {})) == {'p1', 'p2'}
 
 
-def test_a_closed_control_is_never_chosen_and_balancing_is_deterministic():
-    people = [person(number) for number in range(12)]
-    assert balance(people, set(), controls(staff_b=0), flight(), {}) == set()
-    first, second = [person(number) for number in range(12)], [person(number) for number in range(12)]
-    balance(first, set(), controls(), flight(), {})
-    balance(second, set(), controls(), flight(), {})
-    assert first == second
+def test_walking_cost_counts():
+    lanes = {'a': 3.0, 'b': 3.0 + MOVE_MINUTES + 10}
+    assert decide([person('p')], 0, state(4, 0), lambda _: lanes, {}) == {}

@@ -20,6 +20,7 @@ public static class CheckInCorrelation
         double horizon = request.DurationMinutes;
         var checkpoints = request.Checkpoints.Select(cp => cp.CheckpointId).ToHashSet();
         var flights = request.PassengerGeneration.Flights.Select(flight => flight.FlightId).ToHashSet();
+        var lanes = request.PassengerGeneration.Flights.ToDictionary(flight => flight.FlightId);
         var arrived = processes.Passengers.ToDictionary(person => person.Id, StringComparer.Ordinal);
         var timeline = new EventTimeline(request);
         foreach (var person in result.Passengers)
@@ -43,11 +44,14 @@ public static class CheckInCorrelation
                 if (person.SecurityArrivalMinute is { } reported ? !KpiContractValidation.Near(reported, joins)
                     : joins < horizon && !KpiContractValidation.Near(joins, horizon)) return false;
             }
-            // The control sees the passenger at exactly the check-in join time, at the control the flight assigned.
+            // The control sees the passenger at exactly the check-in join time, at the control the flight assigned or, when the
+            // control balancer moved them, at another lane of a spread flight; surge passengers keep their event's control.
             if (person.SecurityArrivalMinute is { } security)
             {
-                if (!arrived.TryGetValue(person.Id, out var control) || control.ArrivalMinute != security
-                    || (control.AssignedCheckpointId ?? control.CheckpointId) != person.CheckpointId) return false;
+                if (!arrived.TryGetValue(person.Id, out var control) || control.ArrivalMinute != security) return false;
+                var seat = control.AssignedCheckpointId ?? control.CheckpointId;
+                if (seat != person.CheckpointId && (timeline.Surge(person.Id) is not null || control.FlightId is not { } id
+                    || !lanes.TryGetValue(id, out var flight) || !flight.Allows(seat) || !flight.Allows(person.CheckpointId))) return false;
             }
             else if (arrived.ContainsKey(person.Id)) return false;
         }

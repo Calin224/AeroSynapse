@@ -125,4 +125,33 @@ public sealed class StaffingApiTests
             item => Assert.Equal(10000000000000L, item.CapacityMilli));
         Assert.True(StaffingValidation.Valid(result.Constraints, result));
     }
+
+    [Fact]
+    public async Task Staff_counts_are_saved_as_a_fixed_allocation_that_keeps_current_people_first()
+    {
+        await using var host = await ManagementHost.CreateAsync();
+        var scenario = await host.CreateScenarioAsync(); var id = scenario.Scenario.Id;
+        var settings = (await host.Client.GetFromJsonAsync<StaffingSettings>($"/scenarios/{id}/staffing/settings", Json, Token))!;
+        var first = settings.Checkpoints[0];
+        var counts = settings.Checkpoints.Select(item => new StaffingCount(item.Id, item == first ? item.CurrentStaff + 2 : 0)).ToArray();
+        foreach (var (invalid, status) in new[]
+        {
+            (new StaffingAllocationRequest(settings.Revision + 1, counts), HttpStatusCode.Conflict),
+            (new StaffingAllocationRequest(settings.Revision, counts.Skip(1).ToArray()), HttpStatusCode.BadRequest),
+            (new StaffingAllocationRequest(settings.Revision, [counts[0] with { StaffCount = -1 }, .. counts.Skip(1)]), HttpStatusCode.BadRequest),
+            (new StaffingAllocationRequest(settings.Revision, [counts[0] with { StaffCount = settings.AvailableStaff + 1 }, .. counts.Skip(1)]), HttpStatusCode.BadRequest),
+        })
+        {
+            using var rejected = await host.Client.PutAsJsonAsync($"/scenarios/{id}/staffing/allocation", invalid, Json, Token);
+            Assert.Equal(status, rejected.StatusCode);
+        }
+        using var response = await host.Client.PutAsJsonAsync($"/scenarios/{id}/staffing/allocation", new StaffingAllocationRequest(settings.Revision, counts), Json, Token);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Token));
+        var saved = (await response.Content.ReadFromJsonAsync<ScenarioDetails>(Json, Token))!;
+        Assert.Equal(settings.Revision + 1, saved.Scenario.Revision); Assert.Null(saved.Inputs.StaffShifts);
+        Assert.Equal(first.CurrentStaff + 2, saved.Inputs.StaffAllocations.Count);
+        Assert.All(saved.Inputs.StaffAllocations, item => Assert.Equal(first.Id, item.CheckpointId));
+        Assert.Subset(saved.Inputs.StaffAllocations.Select(item => item.StaffMemberId).ToHashSet(),
+            scenario.Inputs.StaffAllocations.Where(item => item.CheckpointId == first.Id).Select(item => item.StaffMemberId).ToHashSet());
+    }
 }
